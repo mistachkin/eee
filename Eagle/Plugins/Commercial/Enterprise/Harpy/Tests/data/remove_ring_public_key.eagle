@@ -1,0 +1,35 @@
+###############################################################################
+#
+# remove_ring_public_key.eagle --
+#
+# Extensible Adaptable Generalized Logic Engine (Eagle)
+# Signed Script Test
+#
+# Copyright (c) 2007-2012 by Joe Mistachkin.  All rights reserved.
+#
+# See the file "license.terms" for information on usage and redistribution of
+# this file, and for a DISCLAIMER OF ALL WARRANTIES.
+#
+# RCS: @(#) $Id: $
+#
+###############################################################################
+
+# <<swapCommands>>
+
+#
+# NOTE: This is now required prior to any commands that may mutate state;
+#       however, in this case, the minimum version simply allows anything
+#       to be used.
+#
+requireVersion 0.0.0.0
+
+#
+# NOTE: This key pair is for use by the test suite only.  It will not work
+#       unless test-mode is (somehow) manually enabled at runtime.  It is
+#       designed for use with the configuration subsystem, i.e. a key pair
+#       can be signed with the embedded root key and then be used within a
+#       configuration file, after it is loaded via [addPublicKey] command.
+#       After the configuration file is fully loaded, the key pair will no
+#       longer be available for use.
+#
+removeRingPublicKey key

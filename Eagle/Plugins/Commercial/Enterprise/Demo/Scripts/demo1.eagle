@@ -1,0 +1,70 @@
+#
+# NOTE: Set a variable.
+#
+set x 9
+
+
+#
+# NOTE: Increment a variable.
+#
+incr x
+
+
+#
+# NOTE: Show whether command history is enabled.
+#
+debug history
+
+
+#
+# NOTE: Display [most] diagnostic information.  The curly braces here
+#       are optional.  Depending on the header flags for the host and
+#       the reported host size, varying amounts of information may be
+#       displayed.
+#
+{#show}
+
+
+#
+# NOTE: Load the Windows Forms assembly and import the namespaces.
+#
+object load -import System.Windows.Forms
+
+
+#
+# NOTE: Create a Windows Form.
+#
+set form [object create -alias Form]
+
+
+#
+# NOTE: Show the form.
+#
+$form Show
+
+
+#
+# NOTE: Service the event loop until canceled.  Please hit the Ctrl-C key
+#       combination to continue -OR- wait about 3 seconds.
+#
+after 0 nop; after 3000 [list interp cancel -unwind]; vwait forever
+
+
+#
+# NOTE: Cleanup any stray [after] events.  There may not be any and that
+#       is perfectly OK.  Use the test package procedure as that is the
+#       easiest way.
+#
+package require Eagle.Test; cleanupAfterEvents true
+
+
+#
+# NOTE: Close/dispose the form we created.
+#
+unset form
+
+
+#
+# NOTE: End-of-demo.  Restore input to normal.
+#
+demo shutdown

@@ -1,0 +1,74 @@
+<!--
+ *
+ * Badge.Builds.targets -
+ *
+ * WARNING: Contains more evil MSBuild hacks than your doctor recommended.
+ *
+ * Copyright (c) 2007-2012 by Joe Mistachkin.  All rights reserved.
+ *
+ * See the file "license.terms" for information on usage and redistribution of
+ * this file, and for a DISCLAIMER OF ALL WARRANTIES.
+ *
+ * RCS: @(#) $Id: $
+ *
+-->
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!--
+  ******************************************************************************
+  **                          Load Per-User Settings                          **
+  ******************************************************************************
+  -->
+
+  <!--
+      NOTE: If the per-user settings file exists, import it now.  The contained
+            settings, if any, will override the default ones provided below.
+  -->
+  <Import Condition="'$(BadgeDir)' != '' And
+                     !HasTrailingSlash('$(BadgeDir)') And
+                     Exists('$(BadgeDir)\Targets\Badge.Builds.targets.user')"
+          Project="$(BadgeDir)\Targets\Badge.Builds.targets.user" />
+
+  <!--
+  ******************************************************************************
+  **                            Badge Build Types                             **
+  ******************************************************************************
+  -->
+
+  <!--
+      NOTE: This is an "official release" build configuration.  This includes
+            the certificate and key pair management commands, policies for the
+            evaluation of signed scripts, and everything else.  As always, the
+            resulting assembly is obfuscated.
+
+      TODO: If any of the names for this build type change, make sure to update
+            the "Badge.targets" file as well.
+  -->
+  <PropertyGroup Condition="'$(AssemblyName)' == 'Badge' And
+                            ('$(BadgeBuildType)' == 'Default' Or
+                             '$(BadgeBuildType)' == 'DefaultSdk' Or
+                             '$(BadgeBuildType)' == 'Enterprise' Or
+                             '$(BadgeBuildType)' == 'EnterpriseSdk' Or
+                             '$(BadgeBuildType)' == 'Standard' Or
+                             '$(BadgeBuildType)' == 'StandardSdk' Or
+                             '$(BadgeBuildType)' == 'Full' Or
+                             '$(BadgeBuildType)' == 'FullSdk')">
+    <Obfuscate3 Condition="'$(Obfuscate3)' == ''">true</Obfuscate3>
+  </PropertyGroup>
+
+  <!--
+  ******************************************************************************
+  -->
+
+  <!--
+      NOTE: This is an "official release" build configuration.  It excludes the
+            certificate and key pair management commands.  However, it includes
+            the policies for the evaluation of signed scripts.  As always, the
+            resulting assembly is obfuscated.
+  -->
+  <PropertyGroup Condition="'$(AssemblyName)' == 'Badge' And
+                            '$(BadgeBuildType)' == 'Basic'">
+    <AssemblyName>$(AssemblyName).Basic</AssemblyName>
+    <Obfuscate3 Condition="'$(Obfuscate3)' == ''">true</Obfuscate3>
+    <PluginCommands Condition="'$(PluginCommands)' == ''">false</PluginCommands>
+  </PropertyGroup>
+</Project>

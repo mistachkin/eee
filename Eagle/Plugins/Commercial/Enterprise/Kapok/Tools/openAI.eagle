@@ -1,0 +1,73 @@
+###############################################################################
+#
+# openAI.eagle --
+#
+# Extensible Adaptable Generalized Logic Engine (Eagle)
+# Kapok Server for the OpenAI API
+#
+# Copyright (c) 2007-2012 by Joe Mistachkin.  All rights reserved.
+#
+# See the file "license.terms" for information on usage and redistribution of
+# this file, and for a DISCLAIMER OF ALL WARRANTIES.
+#
+# RCS: @(#) $Id: $
+#
+###############################################################################
+
+#
+# NOTE: Use our own namespace here because even though we do not directly
+#       support namespaces ourselves, we do not want to pollute the global
+#       namespace if this script actually ends up being evaluated in Tcl.
+#
+namespace eval ::Eagle {
+  #
+  # NOTE: This (anonymous) procedure in used to process the client OpenAI
+  #       API request.  All necessary parameters will be obtained from the
+  #       posted form data and/or the query string, in that order.
+  #
+  apply [list [list] {
+    global argv
+
+    if {[hasRuntimeOption kapokNopWrapperScript]} then {
+      return $argv
+    } else {
+      package require Eagle.Test
+
+      set address [getDictionaryValue $argv address]
+      set form [getDictionaryValue $argv form]
+      set query [getDictionaryValue $argv query]
+
+      if {[string is true -strict \
+          [getParameterFromAny $form $query nop]]} then {
+        return $argv
+      } else {
+        maybeInvokeForTester ::beforeOpenAI_serverSetup; # HOOK
+
+        set prompt [getParameterFromAny $form $query prompt]
+        set apiKey [getParameterFromAny $form $query apiKey]
+        set model [getParameterFromAny $form $query model]
+        set type [getParameterFromAny $form $query type]
+        set options [getParameterFromAny $form $query options]
+
+        set whatIf [string is true -strict \
+            [getParameterFromAny $form $query whatIf]]
+
+        set fake [string is true -strict \
+            [getParameterFromAny $form $query fake]]
+
+        maybeAddToAutoPath [file join [file dirname [info binary]] lib]
+        package require Eagle.OpenAI
+
+        set channel [getTestChannelOrDefault]
+        set quiet false
+
+        maybeInvokeForTester ::afterOpenAI_serverSetup; # HOOK
+
+        return [openAI_server_chatCompletion \
+            address $address prompt $prompt apiKey $apiKey model $model \
+            type $type options $options proxy false whatIf $whatIf fake \
+            $fake channel $channel quiet $quiet]
+      }
+    }
+  }]
+}

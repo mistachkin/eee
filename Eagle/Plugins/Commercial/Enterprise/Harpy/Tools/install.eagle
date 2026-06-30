@@ -1,0 +1,150 @@
+###############################################################################
+#
+# install.eagle --
+#
+# Extensible Adaptable Generalized Logic Engine (Eagle)
+# Enterprise Edition Certificate Install Tool
+#
+# Copyright (c) 2007-2012 by Joe Mistachkin.  All rights reserved.
+#
+# See the file "license.terms" for information on usage and redistribution of
+# this file, and for a DISCLAIMER OF ALL WARRANTIES.
+#
+# RCS: @(#) $Id: $
+#
+###############################################################################
+
+proc usage { error } {
+  # <help>
+  # This procedure prints the command-line usage summary for the certificate
+  # install tool and then terminates the process, signaling failure to
+  # whatever invoked it.  It is the single entry point for the "you called me
+  # incorrectly" path, and is also reused by the main script to report the
+  # "certificate already installed" condition as a hard error.
+  #
+  # How it works: when the error argument is a non-empty string it is written
+  # to standard output first; the usage line is then printed, naming the host
+  # shell executable and this script followed by the required positional
+  # argument (certificateFileName).  Finally it calls [exit 1].
+  #
+  # Tricky details: this procedure never returns to its caller -- it always
+  # exits the process with a non-zero (failure) status, so it must only be
+  # used on terminal error paths.
+  #
+  # Arguments:
+  #   error -- An optional leading error message.  When non-empty it is shown
+  #            before the usage text; pass an empty string to show plain usage.
+  #
+  # Results:
+  #   Does not return; the process exits with status code 1.
+  # </help>
+
+  if {[string length $error] > 0} then {puts stdout $error}
+
+  puts stdout "usage: [file tail [getShellExecutableName]]\
+[file tail [info script]] <certificateFileName>"
+
+  #
+  # NOTE: Indicate to the caller, if any, that we have failed.
+  #
+  exit 1
+}
+
+if {[llength $argv] == 1} then {
+  #
+  # NOTE: This tool requires Eagle.
+  #
+  package require Eagle
+
+  #
+  # NOTE: This tool requires the enterprise license features.
+  #
+  package require Licensing.Enterprise
+
+  try {
+    #
+    # NOTE: When running as a service, etc, use the local machine
+    #       registry hive and data protection scope; otherwise, use
+    #       those of the current user.
+    #
+    if {[object invoke \
+        Licensing.Components.Public.Utility ShouldUsePerMachine]} then {
+      set rootKey [object invoke -alias \
+          Microsoft.Win32.Registry LocalMachine]
+
+      set dataProtectionScope LocalMachine
+    } else {
+      set rootKey [object invoke -alias \
+          Microsoft.Win32.Registry CurrentUser]
+
+      set dataProtectionScope CurrentUser
+    }
+
+    #
+    # NOTE: Grab the first argument to this tool (the name of the
+    #       certificate file to install).
+    #
+    set fileName [file normalize [lindex $argv 0]]
+
+    #
+    # NOTE: Import the license certificate.
+    #
+    set certificate [certificate import -alias $fileName]
+
+    #
+    # NOTE: Figure out the value name for the registry setting.
+    #
+    set valueName [certificate hashstring \
+        -hexadecimal $certificate [appendArgs \
+        [$certificate Id.ToString D] .Quantity]]
+
+    #
+    # NOTE: Check if the encrypted value has already been written into the
+    #       registry.  If so, we cannot continue.
+    #
+    if {[catch {
+      object invoke Microsoft.Win32.Registry GetValue \
+          [appendArgs [$rootKey ToString] \\Software\\Harpy\\1.0] \
+          $valueName null
+    } valueData] == 0 && [string length $valueData] > 0} then {
+      #
+      # NOTE: This is an error, the certificate has already been installed.
+      #
+      usage [appendArgs "certificate \"" $fileName "\" already installed"]
+    }
+
+    #
+    # NOTE: Load the managed assembly containing the DPAPI wrapper.
+    #
+    object load -import System.Security
+
+    #
+    # NOTE: Figure out the encrypted value data to write into the registry.
+    #
+    set valueData [object invoke -create ProtectedData Protect [set bytes \
+        [object invoke -create -parametertypes Int64 BitConverter GetBytes \
+        [$certificate Quantity]]] [$certificate Key] $dataProtectionScope]
+
+    #
+    # NOTE: Write the encrypted value into the registry, at the location
+    #       where the certificate checking code expects to find it.
+    #
+    object invoke Microsoft.Win32.Registry SetValue \
+        [appendArgs [$rootKey ToString] \\Software\\Harpy\\1.0] \
+        $valueName $valueData Binary
+
+    #
+    # NOTE: Show that we installed it.
+    #
+    puts stdout [appendArgs "certificate \"" $fileName "\" installed"]
+  } finally {
+    unset -nocomplain rootKey dataProtectionScope fileName certificate \
+        valueName valueData bytes
+
+    object unimport -importpattern System.Security.*
+
+    object cleanup
+  }
+} else {
+  usage ""
+}

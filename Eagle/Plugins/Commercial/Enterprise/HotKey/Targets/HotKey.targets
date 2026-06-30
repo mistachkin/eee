@@ -1,0 +1,98 @@
+<!--
+ *
+ * HotKey.targets -
+ *
+ * WARNING: Contains more evil MSBuild hacks than your doctor recommended.
+ *
+ * Copyright (c) 2007-2012 by Joe Mistachkin.  All rights reserved.
+ *
+ * See the file "license.terms" for information on usage and redistribution of
+ * this file, and for a DISCLAIMER OF ALL WARRANTIES.
+ *
+ * RCS: @(#) $Id: $
+ *
+-->
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!--
+  ******************************************************************************
+  **                          Load Per-User Settings                          **
+  ******************************************************************************
+  -->
+
+  <!--
+      NOTE: If the per-user settings file exists, import it now.  The contained
+            settings, if any, will override the default ones provided below.
+  -->
+  <Import Condition="'$(MSBuildProjectDirectory)' != '' And
+                     !HasTrailingSlash('$(MSBuildProjectDirectory)') And
+                     Exists('$(MSBuildProjectDirectory)\Targets\HotKey.targets.user')"
+          Project="$(MSBuildProjectDirectory)\Targets\HotKey.targets.user" />
+
+  <!--
+  ******************************************************************************
+  **                              HotKey Targets                              **
+  ******************************************************************************
+  -->
+
+  <Target Name="CopyWshomExternals"
+          Condition="'$(CopyWshomExternals)' != 'false' And
+                     '$(EagleDir)' != '' And
+                     !HasTrailingSlash('$(EagleDir)') And
+                     '$(OutputPath)' != '' And
+                     HasTrailingSlash('$(OutputPath)') And
+                     Exists('$(OutputPath)')"
+          Inputs="$(TargetPath)"
+          Outputs="$(TargetPath).CopyWshomExternals.done">
+    <CreateItem Include="$(EagleDir)\Externals\wshom\*"
+                Exclude="$(EagleDir)\Externals\wshom\no_*">
+      <Output ItemName="CopyWshomExternalsItem" TaskParameter="Include" />
+    </CreateItem>
+
+    <Copy SourceFiles="@(CopyWshomExternalsItem)"
+          DestinationFolder="$(OutputPath)" />
+
+    <Touch AlwaysCreate="true"
+           Files="$(TargetPath).CopyWshomExternals.done" />
+  </Target>
+
+  <!--
+  ******************************************************************************
+  -->
+
+  <Target Name="CopyScintillaExternals"
+          Condition="'$(CopyScintillaExternals)' != 'false' And
+                     '$(EagleDir)' != '' And
+                     !HasTrailingSlash('$(EagleDir)') And
+                     '$(OutputPath)' != '' And
+                     HasTrailingSlash('$(OutputPath)') And
+                     Exists('$(OutputPath)')"
+          Inputs="$(TargetPath)"
+          Outputs="$(TargetPath).CopyScintillaExternals.done">
+    <CreateItem Include="$(EagleDir)\Externals\Scintilla\x86\*"
+                Exclude="$(EagleDir)\Externals\Scintilla\x86\no_*">
+      <Output ItemName="CopyScintillaExternalsItem1" TaskParameter="Include" />
+    </CreateItem>
+
+    <CreateItem Include="$(EagleDir)\Externals\Scintilla\x64\*"
+                Exclude="$(EagleDir)\Externals\Scintilla\x64\no_*">
+      <Output ItemName="CopyScintillaExternalsItem2" TaskParameter="Include" />
+    </CreateItem>
+
+    <CreateItem Include="$(EagleDir)\Externals\Scintilla\ARM\*"
+                Exclude="$(EagleDir)\Externals\Scintilla\ARM\no_*">
+      <Output ItemName="CopyScintillaExternalsItem3" TaskParameter="Include" />
+    </CreateItem>
+
+    <Copy SourceFiles="@(CopyScintillaExternalsItem1)"
+          DestinationFolder="$(OutputPath)" />
+
+    <Copy SourceFiles="@(CopyScintillaExternalsItem2)"
+          DestinationFolder="$(OutputPath)" />
+
+    <Copy SourceFiles="@(CopyScintillaExternalsItem3)"
+          DestinationFolder="$(OutputPath)" />
+
+    <Touch AlwaysCreate="true"
+           Files="$(TargetPath).CopyScintillaExternals.done" />
+  </Target>
+</Project>

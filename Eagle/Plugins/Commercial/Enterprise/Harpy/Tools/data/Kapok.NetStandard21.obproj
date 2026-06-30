@@ -1,0 +1,13 @@
+<Project ProjectFileVersion="4" UseRelativePaths="True" CheckVersionsWhileResolvingAssemblies="True" DisabledFromMSBuild="False" ID="{f56eef8d-349b-4ec5-abbe-e0ae31507234}">
+  <SearchDirectories>
+    <SearchDirectory Path="%ProgramFiles%\dotnet\packs\NETStandard.Library.Ref\2.1.0\ref\netstandard2.1" />
+    <SearchDirectory Path="%ProgramFiles%\dotnet\packs\Microsoft.NETCore.App.Ref\3.0.0\ref\netcoreapp3.0" />
+    <SearchDirectory Path="%ProgramFiles%\dotnet\packs\Microsoft.AspNetCore.App.Ref\3.0.0\ref\netcoreapp3.0" />
+    <SearchDirectory Path="%CRYPTO_OBFUSCATOR_OUTPUTROOT%\bin\netstandard2.1" />
+  </SearchDirectories>
+  <OutputSettings OutputPath="%CRYPTO_OBFUSCATOR_OUTPUTROOT%\bin\netcoreapp3.0\Obfuscated" MainAssemblyPath="" RunAssemblyPath="" SNPath="" SignToolPath="" LicensingDLLPath="" OverwriteInputFiles="False" BuildID="" MapFilesLocation="" FullParamNamesInMappingFile="False" />
+  <ObfuscationSettings RenamingScheme="2" UseOverloadedFieldNames="True" UseOverloadedMethodNames="True" HonorObfuscationAttributes="True" ExcludeSerializedTypes="True" ProcessInlineStrings="True" ForceXAMLProcessingModeExclude="False" ForceRenameParams="False" SymbolPrefix="" SymbolSuffix="" FakeFields="" FakeTypes="" FakeMethods="" EncryptionActive="True" CompressionActive="True" RemoveAccessedThroughPropertyAttribute="False" UseSaltForCryptographicRenaming="False" />
+  <Assembly Load="true" Path="%CRYPTO_OBFUSCATOR_OUTPUTROOT%\bin\netcoreapp3.0\Kapok.dll" XapEntryName="" KeyFilePath="%CRYPTO_OBFUSCATOR_KEYFILE%" KeyFileContainsPublicKeyOnly="False" CertFilePath="" TimeStampURL="" Rfc3161TimestampURL="False" SHA256SigningAlgorithm="False" Embed="True" AddExceptionReporting="False" PfxPassword="" PfxPasswordCert="" IsWinRTAssembly="False">
+    <ObfuscationSettings EncryptStrings="False" EncryptMethods="False" EncryptConstants="False" SuppressReflector="False" ReduceMetaData="False" ObfuscationDisposition="1" FlowObfuscation="3" CodeMasking="3" SuppressILDASM="True" SuppressReflection="False" CombineResources="False" EncryptResources="False" CompressResources="False" MarkAsSealed="False" EnableTamperDetection="False" EnableAntiDebugging="False" SymbolRenaming="True" HideExternalCalls="True" HideInternalCalls="True" GeneratePdbFile="True" ObfuscatePdbFileNames="True" IncludeLocalVariablesInPdbFile="False" Encrypt="False" Compress="False" MSBuild="False" ObfuscatedNamespace="A" RetainNamespace="False" ModuleInitializationMethod="" LicensingMerge="False" RemoveConstants="False" ProcessSatelliteAssemblies="True" />
+  </Assembly>
+</Project>

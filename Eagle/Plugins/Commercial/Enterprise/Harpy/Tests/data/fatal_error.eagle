@@ -1,0 +1,35 @@
+###############################################################################
+#
+# fatal_error.eagle --
+#
+# Extensible Adaptable Generalized Logic Engine (Eagle)
+# Signed Script Test
+#
+# Copyright (c) 2007-2012 by Joe Mistachkin.  All rights reserved.
+#
+# See the file "license.terms" for information on usage and redistribution of
+# this file, and for a DISCLAIMER OF ALL WARRANTIES.
+#
+# RCS: @(#) $Id: $
+#
+###############################################################################
+
+#
+# NOTE: This is now required prior to any commands that may mutate state;
+#       however, in this case, the minimum version simply allows anything
+#       to be used.
+#
+failOnError true
+requireVersion 0.0.0.1
+
+#
+# NOTE: If "fatal_error" variable exists, use it with the [fatalError]
+#       command.
+#
+maybeEvaluate {[info exists ::fatal_error]} {
+  fatalError $::fatal_error 123
+} else {
+  maybeEvaluate {![isRestrictedInterpreter]} {
+    requireIdentifier getKnownBuildTypes Eagle.Test.Constraints
+  }
+}

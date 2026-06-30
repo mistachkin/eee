@@ -1,0 +1,14 @@
+demo active
+demo basereadline
+demo beep
+demo cancel
+demo closed
+demo debuglevel
+demo endofstream
+demo playmilliseconds
+demo options
+demo pause
+demo stopmilliseconds
+demo timeoutmilliseconds
+demo reset
+exit

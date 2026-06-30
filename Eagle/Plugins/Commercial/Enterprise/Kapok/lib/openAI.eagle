@@ -1,0 +1,720 @@
+###############################################################################
+#
+# openAI.eagle --
+#
+# Extensible Adaptable Generalized Logic Engine (Eagle)
+# Kapok OpenAI Package File
+#
+# Copyright (c) 2007-2012 by Joe Mistachkin.  All rights reserved.
+#
+# See the file "license.terms" for information on usage and redistribution of
+# this file, and for a DISCLAIMER OF ALL WARRANTIES.
+#
+# RCS: @(#) $Id: $
+#
+###############################################################################
+
+#
+# NOTE: Use our own namespace here because even though we do not directly
+#       support namespaces ourselves, we do not want to pollute the global
+#       namespace if this script actually ends up being evaluated in Tcl.
+#
+namespace eval ::Eagle {
+  #
+  # NOTE: This procedure attempts to load the configuration script file for
+  #       the OpenAI proxy server subsystem.  If no candidate configuration
+  #       script file can be found, none will be loaded.  This procedure may
+  #       raise script errors.
+  #
+  proc openAI_server_maybe_load_configuration {
+          directory fileNameOnly errorOnNotFound } {
+    # <help>
+    # This procedure searches a small, fixed set of well-known locations
+    # for a configuration script associated with the Kapok OpenAI proxy
+    # server, and sources the first one it finds in the caller's scope.
+    # It exists so the server (and the CIDR loader that piggybacks on it)
+    # can locate per-deployment configuration without hard-coding a path.
+    #
+    # How it works: it derives the parent directory of the supplied
+    # directory and then assembles four candidate file names in priority
+    # order: a Configurations subdirectory of directory, directory itself,
+    # a Configurations subdirectory of the parent, and finally the parent
+    # itself.  It iterates the candidates, and for each candidate that
+    # exists and is a regular file it invokes the optional tester hooks
+    # before and after, sources the file via uplevel 1 (so the configuration
+    # runs in the caller's scope), emits a trace at highest priority
+    # showing which file was loaded, and returns the source result.  When
+    # no candidate exists and errorOnNotFound is true, a descriptive error
+    # is raised (also traced, listing all candidates tried); otherwise the
+    # empty string is returned.
+    #
+    # Tricky details: sourcing at uplevel 1 is intentional -- a
+    # configuration that, for example, writes into a caller's cidrs array
+    # via upvar depends on running in the caller's scope.  The trace
+    # priority includes ForceFlush so the load (or failure) is visible
+    # immediately even if the buffer would otherwise hold the message.
+    #
+    # Arguments:
+    #   directory       -- The base directory of the server installation;
+    #                      its Configurations subdirectory and the
+    #                      directory itself are tried first.
+    #   fileNameOnly    -- The tail file name of the configuration script
+    #                      to seek.
+    #   errorOnNotFound -- When true, a missing configuration file raises
+    #                      a script error; when false, a missing file is
+    #                      silent and the empty string is returned.
+    #
+    # Results:
+    #   Returns the result of sourcing the configuration file when one is
+    #   found, or the empty string when none is found and errorOnNotFound
+    #   is false; otherwise raises a script error.
+    # </help>
+
+    set parentDirectory [file dirname $directory]
+
+    set fileNames [list \
+        [file join $directory Configurations $fileNameOnly] \
+        [file join $directory $fileNameOnly] \
+        [file join $parentDirectory Configurations $fileNameOnly] \
+        [file join $parentDirectory $fileNameOnly]]
+
+    foreach fileName $fileNames {
+      if {[file exists $fileName] && [file isfile $fileName]} then {
+        maybeInvokeForTester ::beforeOpenAI_server_configuration; # HOOK
+        set result [uplevel 1 [list source $fileName]]
+        maybeInvokeForTester ::afterOpenAI_server_configuration; # HOOK
+
+        debug trace -category openAI_server_maybe_load_configuration \
+            -priority {+Highest ForceFlush} -- [appendArgs "loaded \"" \
+            $fileName \"]
+
+        return $result
+      }
+    }
+
+    if {$errorOnNotFound} then {
+      set message [appendArgs \
+          "configuration file \"" $fileNameOnly \
+          "\" for OpenAI proxy server not found"]
+
+      if {[llength $fileNames] > 0} then {
+        set tried [join $fileNames \n]
+      } else {
+        set tried <none>
+      }
+
+      debug trace -category openAI_server_maybe_load_configuration \
+          -priority {+Highest ForceFlush} -- [string trim [appendArgs \
+          $message ", tried:" \n $tried]]
+
+      error $message
+    } else {
+      return ""
+    }
+  }
+
+  #
+  # NOTE: This procedure is used to check if an IPv4 or IPv6 address is able
+  #       to make use of this server.  This procedure may raise script errors.
+  #
+  proc openAI_check_address { address } {
+    # <help>
+    # This procedure enforces the OpenAI proxy server's IP-level access
+    # policy on an incoming address.  It is the first network-side gate
+    # called by the server entry point and exists to fail-closed on both
+    # explicitly denied addresses and addresses that are not on the allow
+    # list.
+    #
+    # How it works: it ensures the Eagle.CIDR package is loaded, then
+    # consults the two global CIDR arrays openAI_deny_cidrs and
+    # openAI_allow_cidrs.  Deny is checked FIRST -- if the address matches
+    # any deny entry (via matchViaCidr), a script error is raised that the
+    # address is denied.  Otherwise the allow list is checked, and if the
+    # address does NOT match any allow entry, a script error is raised
+    # that the address is not allowed.  Only an address that is not denied
+    # AND is explicitly allowed reaches the implicit success return.
+    #
+    # Tricky and security details: this is a deny-by-default check.  An
+    # empty or unconfigured allow list rejects every address; deny always
+    # takes precedence over allow.  The procedure does not return any
+    # success token -- the meaningful outcome is the absence of an error.
+    #
+    # Arguments:
+    #   address -- The IPv4 or IPv6 address (or hostname) of the client to
+    #              be checked.
+    #
+    # Results:
+    #   Returns the empty string when access is permitted; otherwise raises
+    #   a script error describing why access was denied.
+    # </help>
+
+    global openAI_allow_cidrs
+    global openAI_deny_cidrs
+
+    package require Eagle.CIDR
+
+    if {[matchViaCidr $address openAI_deny_cidrs]} then {
+      error [appendArgs \
+          "access via address \"" $address "\" is denied"]
+    }
+
+    if {![matchViaCidr $address openAI_allow_cidrs]} then {
+      error [appendArgs \
+          "access via address \"" $address "\" not allowed"]
+    }
+  }
+
+  #
+  # NOTE: This procedure is used to check if an API key is able to make use
+  #       of this server.  This procedure may raise script errors.
+  #
+  proc openAI_check_access { access {apiKey ""} } {
+    # <help>
+    # This procedure enforces the API-key-level access policy on a Kapok
+    # access record before the OpenAI proxy server forwards a request.  It
+    # is the second gate -- run after openAI_check_address has cleared the
+    # network address -- and is the final say on whether a particular
+    # client identity may proceed.
+    #
+    # How it works: it consults two flags on the access dictionary
+    # returned by Kapok.  First, if isDenied is strictly true, it raises
+    # an error that access via the supplied API key is denied; this is the
+    # outright revoked-key path.  Second, if noAnonymous is strictly true
+    # AND isAllowed is NOT strictly true, it raises an error that access
+    # is not allowed; this rejects anonymous use where the deployment
+    # requires an authorized key.  Both checks use strict boolean parsing
+    # so missing or non-boolean values do not silently grant access.
+    #
+    # Tricky and security details: the apiKey argument is used only in
+    # error messages for diagnostics; the real decision data comes from
+    # the access dictionary.  Like openAI_check_address, the procedure is
+    # fail-closed: a denied or non-allowed key raises an error rather than
+    # returning a status.
+    #
+    # Arguments:
+    #   access -- The Kapok access dictionary returned for the API key,
+    #             which carries isDenied, noAnonymous, and isAllowed
+    #             entries among others.
+    #   apiKey -- The API key string, used only to label error messages;
+    #             optional and defaults to empty.
+    #
+    # Results:
+    #   Returns the empty string when access is permitted; otherwise raises
+    #   a script error.
+    # </help>
+
+    if {[string is true -strict \
+        [getDictionaryValue $access isDenied]]} then {
+      error [appendArgs \
+          "access via API key \"" $apiKey "\" is denied"]
+    }
+
+    if {[string is true -strict \
+        [getDictionaryValue $access noAnonymous]] && \
+        [string is not true -strict \
+        [getDictionaryValue $access isAllowed]]} then {
+      error [appendArgs \
+          "access via API key \"" $apiKey "\" not allowed"]
+    }
+  }
+
+  #
+  # NOTE: This procedure is used to obtain the fake response data, possibly
+  #       specific to the current client request.  This procedure may raise
+  #       script errors.
+  #
+  proc openAI_get_fake_response_data { directory dataId } {
+    # <help>
+    # This procedure locates and reads a canned "fake" OpenAI response
+    # payload, either one tied to a specific data identifier or a generic
+    # fallback.  It exists so the proxy server can produce 100 percent
+    # deterministic responses during testing and for clients flagged for
+    # simulated-only access, without contacting the real OpenAI API.
+    #
+    # How it works: it computes the parent of the supplied directory and
+    # builds a search of four directories in priority order: a Tests/data
+    # subdirectory of directory, directory itself, a Tests/data
+    # subdirectory of the parent, and the parent itself.  For each
+    # directory that exists, it tries four candidate file names in
+    # decreasing specificity -- the per-dataId "raw" JSON, the generic
+    # "raw" JSON, the per-dataId JSON, and the generic JSON.  The first
+    # existing regular file is read via readSharedFile and its contents
+    # returned.  When nothing matches, the empty string is returned.
+    #
+    # Tricky details: file search is greedy on directories but ordered on
+    # file names -- a per-dataId match wins over a generic match within
+    # the same directory before moving on.  The "raw" variants come first
+    # so test fixtures can keep an unprocessed payload distinct from a
+    # post-processed one.  Returning the empty string on miss lets the
+    # caller raise a more descriptive error in context.
+    #
+    # Arguments:
+    #   directory -- The base directory whose Tests/data and parent are
+    #                searched for the fake response.
+    #   dataId    -- A short identifier used to disambiguate per-request
+    #                fake responses; empty selects only the generic files.
+    #
+    # Results:
+    #   Returns the contents of the first matching file as a string, or
+    #   the empty string when no candidate exists.
+    # </help>
+
+    set parentDirectory [file dirname $directory]
+
+    set directories [list \
+        [file join $directory Tests data] \
+        $directory \
+        [file join $parentDirectory Tests data] \
+        $parentDirectory]
+
+    set fileNamesOnly [list \
+        [appendArgs fake-openAI-response- $dataId -raw.json] \
+        fake-openAI-response-raw.json \
+        [appendArgs fake-openAI-response- $dataId .json] \
+        fake-openAI-response.json]
+
+    foreach directory $directories {
+      if {[file exists $directory] && \
+          [file isdirectory $directory]} then {
+        foreach fileNameOnly $fileNamesOnly {
+          set fileName [file join $directory $fileNameOnly]
+
+          if {[file exists $fileName] && \
+              [file isfile $fileName]} then {
+            return [readSharedFile $fileName]
+          }
+        }
+      }
+    }
+
+    return ""
+  }
+
+  #
+  # NOTE: This procedure attempts to sign the specified script using a key
+  #       pair, optionally using "fake" metadata when a 100% deterministic
+  #       result is required.
+  #
+  proc openAI_sign_script {
+          script publicKeyFileName privateKeyFileName fake } {
+    # <help>
+    # This procedure signs a script body, returning the signed script ready
+    # to be embedded in an OpenAI proxy server response.  It exists as the
+    # OpenAI server's thin facade over the underlying Eagle.Signing entry
+    # point, so the server module does not itself need to know about the
+    # Harpy signing tool.
+    #
+    # How it works: it ensures the Eagle.Signing package is loaded, then
+    # delegates verbatim to eagle_sign_script with the same arguments.  The
+    # heavy lifting -- spinning up a child interpreter, invoking the Harpy
+    # sign.eagle tool with the supplied keys, optionally substituting
+    # deterministic fake metadata -- happens there.
+    #
+    # Tricky details: when fake is true, the deterministic identity and
+    # timestamp baked in by eagle_sign_script must remain in lockstep with
+    # the fake-*-response-signed.json test data fixtures or test
+    # comparisons will diverge.
+    #
+    # Arguments:
+    #   script             -- The script text to be signed.
+    #   publicKeyFileName  -- Path to the public strong-name key file used
+    #                         to verify the signature after signing.
+    #   privateKeyFileName -- Path to the private strong-name key file used
+    #                         to produce the signature.
+    #   fake               -- When true, deterministic identity and
+    #                         timestamp metadata are used so the signed
+    #                         output is byte-identical across runs; when
+    #                         false, normal generated metadata is used.
+    #
+    # Results:
+    #   Returns the signed script body, or raises a script error when the
+    #   underlying signing tool fails.
+    # </help>
+
+    package require Eagle.Signing
+
+    return [eagle_sign_script \
+        $script $publicKeyFileName $privateKeyFileName $fake]
+  }
+
+  #
+  # NOTE: This procedure is used as part of a server script that proxies an
+  #       OpenAI API request, with special handling before and after the API
+  #       request itself.  Before the request, various access checks will be
+  #       performed, both on the client IP address and the client API key.
+  #       After the request, the response will be checked to make sure it is
+  #       relatively "safe" and then it will be signed by the server.  By
+  #       default, the only allowed model will be "gpt-3.5-turbo" for normal
+  #       users.  Administrators can use any model, which will be provided in
+  #       the request.
+  #
+  nproc openAI_server_chatCompletion {
+          address prompt {apiKey ""} {model ""} {type ""} {options ""}
+          {proxy false} {whatIf true} {fake true} {channel stdout}
+          {quiet false} } {
+    # <help>
+    # This procedure is the main entry point of the Kapok OpenAI proxy
+    # server.  It validates the incoming request, enforces network- and
+    # API-key-level access policy, picks an appropriate model for the
+    # caller's class, dispatches either a real OpenAI chat completion or
+    # a deterministic fake one, runs the response payload through a Kapok
+    # sandbox, and -- if the sandbox succeeds -- signs the returned script
+    # so that downstream Eagle interpreters can trust it.
+    #
+    # How it works: it first validates type (must be in the configured
+    # openAI_getTypes list), options (must be a dict), and the proxy,
+    # whatIf, fake, and quiet flags (must be strict booleans).  It then
+    # resolves the working directory from the global openAI_directory or
+    # the binary directory, loads openAI_configuration.eagle (REQUIRED),
+    # calls openAI_check_address, brings in Kapok, throttles and checks
+    # access for apiKey via Kapok, and calls openAI_check_access.  A
+    # per-client IRuleSet is fetched from the access dictionary and
+    # validated.  Default and standard models for the given type are
+    # resolved; non-administrators are coerced to one of those (or to the
+    # standard model when noAnonymous is set).  The remote-script public
+    # and private key files are taken from EagleEnterpriseRemoteScriptPublicKey
+    # and EagleEnterpriseRemoteScriptPrivateKey and must exist.  Script
+    # security is enabled and the secondary key ring keyRing.two.eagle is
+    # merged in.  Then the response is produced: in fake mode, a canned
+    # response is read via openAI_get_fake_response_data using a data id
+    # built from the prompt; otherwise (and only if the key is not flagged
+    # isFake) openAI_chatCompletion is called with the real OpenAI API key
+    # obtained from openAI_getAnyApiKey.  The response is required to be
+    # valid JSON and to contain a script under the JSON paths returned by
+    # openAI_getJsonPaths; that script body is unwrapped from an optional
+    # eagle/tcl code fence.  The script is then evaluated inside a Kapok
+    # sandbox via kapok evaluate -unsafe true with the rule set applied;
+    # a thrown error is caught (to prevent information disclosure) but
+    # logged at highest priority, and only a successful sandbox run causes
+    # shouldSignScript to become true.  If scriptOnly is set or the
+    # runtime option kapokResponseMustHaveScriptOnly is in effect, a
+    # sandbox failure raises an error.  When signing applies, the script
+    # is signed via openAI_sign_script and written back into the response
+    # JSON in place.  Throughout the procedure tester hooks
+    # (maybeInvokeForTester) fire at well-defined points so tests can
+    # observe state without modifying the server.
+    #
+    # Tricky and security details: this is the most security-sensitive
+    # procedure in the file.  Two distinct access checks (IP address and
+    # API key) and a sandbox evaluation must all succeed before signing.
+    # Sandbox errors are deliberately caught to avoid leaking server
+    # internals to the client, while still being logged via Kapok at
+    # highest priority.  The signing keys are explicit, environment-bound
+    # paths -- if either env var is missing or its file does not exist
+    # the call aborts.  When the access flag isFake is set, a real call
+    # is refused; fake mode is also the default.
+    #
+    # Arguments:
+    #   address -- Client IP address (or hostname) used for CIDR access.
+    #   prompt  -- The chat completion prompt text.
+    #   apiKey  -- Client API key for Kapok access lookup; default empty.
+    #   model   -- Requested model name; coerced for non-administrators.
+    #   type    -- The chat completion type, validated against
+    #              openAI_getTypes.
+    #   options -- Dictionary of additional options; scriptOnly forces an
+    #              error on sandbox failure.
+    #   proxy   -- Boolean; reserved future use, must be strictly boolean.
+    #   whatIf  -- Boolean; passed through to openAI_chatCompletion.
+    #   fake    -- Boolean; when true, a canned response is used instead
+    #              of calling the real OpenAI API.
+    #   channel -- Output channel used by helper queries; defaults stdout.
+    #   quiet   -- Boolean; suppresses diagnostic output when true.
+    #
+    # Results:
+    #   Returns the proxied (and possibly signed) response payload as a
+    #   string, or raises a script error on any validation, access,
+    #   payload, or signing failure.
+    # </help>
+
+    set types [openAI_getTypes $channel $quiet]
+
+    if {$type ni $types} then {
+      error [appendArgs "invalid type, must be one of: " $types]
+    }
+
+    if {[string is not dict $options]} then {
+      error "invalid options, must be dictionary"
+    }
+
+    if {[string is not boolean -strict $proxy]} then {
+      error "invalid proxy flag, must be boolean"
+    }
+
+    if {[string is not boolean -strict $whatIf]} then {
+      error "invalid what-if flag, must be boolean"
+    }
+
+    if {[string is not boolean -strict $fake]} then {
+      error "invalid fake flag, must be boolean"
+    }
+
+    if {[string is not boolean -strict $quiet]} then {
+      error "invalid quiet flag, must be boolean"
+    }
+
+    package require Eagle.Test; # NOTE: For [openAI_chatCompletion], et al.
+    maybeInvokeForTester ::beforeOpenAI_server; # HOOK
+
+    global openAI_directory
+
+    if {[info exists openAI_directory]} then {
+      set directory [file normalize $openAI_directory]
+    } else {
+      set directory [file normalize [info binary]]
+    }
+
+    if {![file exists $directory] || \
+        ![file isdirectory $directory]} then {
+      error [appendArgs \
+          "bad directory \"" $directory "\" for OpenAI proxy server"]
+    }
+
+    openAI_server_maybe_load_configuration \
+        $directory openAI_configuration.eagle true; # REQUIRED
+
+    openAI_check_address $address
+
+    package require Harpy.Test; # NOTE: For [tryToLoadKapok].
+
+    maybeInvokeForTester ::beforeOpenAI_kapok; # HOOK
+    tryToLoadKapok; # NOTE: For [kapok].
+    maybeInvokeForTester ::afterOpenAI_kapok; # HOOK
+
+    kapok access throttle $apiKey $address; # check quota
+    set access [kapok access $apiKey]; # check access
+    maybeInvokeForTester ::afterOpenAI_server_access; # HOOK
+
+    openAI_check_access $access $apiKey
+
+    #
+    # HACK: Attempt to grab the IRuleSet, if any, that should be
+    #       used for the requesting client.  If present, this is
+    #       used to further restrict the subset of commands that
+    #       are allowed in the sandbox.
+    #
+    set ruleSet [getDictionaryValue $access ruleSet]
+    maybeInvokeForTester ::beforeOpenAI_server_ruleSet; # HOOK
+
+    if {[string is not ruleset $ruleSet]} then {
+      set message [appendArgs \
+          "bad ruleset for API key \"" $apiKey \"]
+
+      set fullMessage [appendArgs $message ": " $ruleSet]
+
+      host result Error [appendArgs $fullMessage \n]
+      maybeInvokeForTester ::errorOpenAI_server_ruleSet; # HOOK
+
+      kapok log [appendArgs \
+          "openAI_server_chatCompletion: " $fullMessage] \
+          {+Highest ForceFlush}
+
+      error $message
+    }
+
+    set defaultModel [openAI_getDefaultModel $type $channel $quiet]
+    maybeInvokeForTester ::beforeOpenAI_server_defaultModel; # HOOK
+
+    #
+    # TODO: Is this a good default model for "standard", i.e. for
+    #       non-anonymous users?
+    #
+    set standardModel [openAI_getStandardModel $type $channel $quiet]
+    maybeInvokeForTester ::beforeOpenAI_server_standardModel; # HOOK
+
+    if {[string is not true -strict \
+        [getDictionaryValue $access isAdministrator]]} then {
+      if {[string is true -strict \
+          [getDictionaryValue $access noAnonymous]]} then {
+        if {$model ni [list $defaultModel $standardModel]} then {
+          set model $standardModel
+        }
+      } else {
+        set model $defaultModel
+      }
+    }
+
+    maybeInvokeForTester ::afterOpenAI_server_model; # HOOK
+
+    if {$model ni [list "" $defaultModel]} then {
+      kapok log [appendArgs \
+          "openAI_server_chatCompletion: Using special model \"" \
+          $model "\" for API key \"" $apiKey \"...] {+Highest ForceFlush}
+    }
+
+    maybeInvokeForTester ::beforeOpenAI_server_keypair; # HOOK
+
+    if {![info exists ::env(EagleEnterpriseRemoteScriptPublicKey)]} then {
+      error "no public key set"
+    }
+
+    set publicKeyFileName $::env(EagleEnterpriseRemoteScriptPublicKey)
+
+    if {![file exists $publicKeyFileName] || \
+        ![file isfile $publicKeyFileName]} then {
+      error "missing public key file"
+    }
+
+    if {![info exists ::env(EagleEnterpriseRemoteScriptPrivateKey)]} then {
+      error "no private key set"
+    }
+
+    set privateKeyFileName $::env(EagleEnterpriseRemoteScriptPrivateKey)
+
+    if {![file exists $privateKeyFileName] || \
+        ![file isfile $privateKeyFileName]} then {
+      error "missing private key file"
+    }
+
+    maybeInvokeForTester ::afterOpenAI_server_keypair; # HOOK
+
+    set useProxy false
+    set openAI_apiKey [openAI_getAnyApiKey false useProxy]
+
+    if {$useProxy || [string length $openAI_apiKey] == 0} then {
+      error "missing API key for OpenAI"
+    }
+
+    package require Security.Core; # NOTE: For [keyring], et al.
+
+    source enableSecurity
+    keyring merge [file join [keyring directory] keyRing.two.eagle]
+
+    if {$fake} then {
+      set dataId [eagle_buildDataId $prompt]
+      set response [openAI_get_fake_response_data $directory $dataId]
+
+      if {[string length $response] == 0} then {
+        maybeInvokeForTester ::missingOpenAI_server_fake; # HOOK
+
+        if {[string length $response] == 0} then {
+          error [appendArgs \
+              "simulated OpenAI response \"" $dataId "\" data is missing"]
+        }
+      }
+
+      maybeInvokeForTester ::afterOpenAI_server_fake; # HOOK
+    } else {
+      if {[string is true -strict \
+          [getDictionaryValue $access isFake]]} then {
+        error [appendArgs \
+            "access via API key \"" $apiKey "\" is simulated-only"]
+      }
+
+      set response [openAI_chatCompletion \
+          prompt $prompt apiKey $openAI_apiKey model $model \
+          type $type options $options proxy false whatIf $whatIf \
+          fake false channel $channel quiet $quiet]
+
+      set dataId [eagle_buildDataId $response]
+
+      set message [appendArgs \
+          "OpenAI response \"" $dataId "\" data is: " $response]
+
+      host result Continue [appendArgs $message \n]
+      maybeInvokeForTester ::afterOpenAI_server_real; # HOOK
+    }
+
+    if {![isValidJson $response]} then {
+      set dataId [eagle_buildDataId $response]
+
+      set message [appendArgs \
+          "invalid JSON in response \"" $dataId "\" data"]
+
+      set fullMessage [appendArgs $message ": " $response]
+
+      host result Error [appendArgs $fullMessage \n]
+      error $message
+    }
+
+    set content [getOrSetViaJsonPaths \
+        $response [openAI_getJsonPaths $response $channel $quiet]]
+
+    if {[string length $content] == 0} then {
+      set dataId [eagle_buildDataId $response]
+
+      set message [appendArgs \
+          "missing script in response \"" $dataId "\" data"]
+
+      set fullMessage [appendArgs $message ": " $response]
+
+      host result Error [appendArgs $fullMessage \n]
+      error $message
+    }
+
+    set languagePattern {^```(?:eagle|tcl)\s+(.*)\s+```$}
+
+    if {![regexp -skip 1 -- $languagePattern $content script]} then {
+      set script $content; # NOTE: Just use the entire thing.
+    }
+
+    #
+    # HACK: This [catch] block is being used to prevent unwanted
+    #       information disclosure to the requesting client, for
+    #       security reasons.
+    #
+    set shouldSignScript false; # NOTE: By default, do not sign.
+    maybeInvokeForTester ::beforeOpenAI_server_sandbox; # HOOK
+
+    if {[catch {
+      set evaluateCommand [list \
+          kapok evaluate -unsafe true -apikeyid $apiKey]
+
+      if {[string length $ruleSet] > 0} then {
+        lappend evaluateCommand -ruleset $ruleSet
+      }
+
+      lappend evaluateCommand -- $script; eval $evaluateCommand
+    } error] == 0} then {
+      set shouldSignScript true; # TODO: More checks here?
+      maybeInvokeForTester ::successOpenAI_server_sandbox; # HOOK
+    } else {
+      set dataId [eagle_buildDataId $script]
+      set message [appendArgs "bad response \"" $dataId "\" script"]
+      set fullMessage [appendArgs $message ": " $error]
+
+      host result Error [appendArgs $fullMessage \n]
+      maybeInvokeForTester ::failureOpenAI_server_sandbox; # HOOK
+
+      kapok log [appendArgs \
+          "openAI_server_chatCompletion: Sandbox script error: " \
+          $fullMessage] {+Highest ForceFlush}
+
+      if {[string is true -strict \
+          [getDictionaryValue $options scriptOnly]] || \
+          [hasRuntimeOption kapokResponseMustHaveScriptOnly]} then {
+        error $message
+      }
+    }
+
+    maybeInvokeForTester ::afterOpenAI_server_sandbox; # HOOK
+
+    if {$shouldSignScript} then {
+      set script [openAI_sign_script \
+          $script $publicKeyFileName $privateKeyFileName $fake]
+
+      set response [getOrSetViaJsonPaths \
+          $response [openAI_getJsonPaths $response $channel $quiet] \
+          $script true]
+    }
+
+    maybeInvokeForTester ::afterOpenAI_server_response; # HOOK
+
+    return $response
+  }
+
+  #
+  # NOTE: Save the directory that this script is running from for
+  #       later use.
+  #
+  if {![info exists ::openAI_directory]} then {
+    set ::openAI_directory \
+        [file normalize [file dirname [info script]]]
+  }
+
+  #
+  # NOTE: Provide the Eagle "openAI" package to the interpreter.
+  #
+  package provide Eagle.OpenAI \
+    [expr {[isEagle] ? [info engine PatchLevel] : "1.0"}]
+}
+

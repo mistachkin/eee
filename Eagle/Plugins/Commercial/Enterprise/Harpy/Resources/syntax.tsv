@@ -1,0 +1,269 @@
+certificate about	certificate about
+certificate certificate	certificate certificate
+certificate cleanup	certificate cleanup ?token?
+certificate current	certificate current
+certificate decrypt	certificate decrypt ?options? fileName
+certificate defaultpolicy	certificate defaultpolicy
+certificate discard	certificate discard fileName text
+certificate downloadlist	certificate downloadlist ?options? uri
+certificate evaluate	certificate evaluate ?options? script
+certificate expired	certificate expired ?options? certificate ?keyPair?
+certificate export	certificate export ?options? certificate fileName
+certificate extract	certificate extract ?options? fileName
+certificate flags	certificate flags ?options? certificate
+certificate formattimestamp	certificate formattimestamp dateTime ?never?
+certificate hash	certificate hash ?options? certificate
+certificate hashfile	certificate hashfile ?options? certificate fileName
+certificate hashstring	certificate hashstring ?options? certificate string
+certificate import	certificate import ?options? fileName
+certificate isolated	certificate isolated
+certificate keyname	certificate keyname ?options?
+certificate keyringname	certificate keyringname ?options?
+certificate loadandverify	certificate loadandverify ?options? ?keyPair?
+certificate manager	certificate manager
+certificate metadata	certificate metadata -OR- certificate metadata certificate propertyName -OR- certificate metadata certificate propertyName propertyValue
+certificate networkflags	certificate networkflags ?options?
+certificate networktime	certificate networktime ?enable?
+certificate options	certificate options
+certificate pathflags	certificate pathflags ?options?
+certificate policy	certificate policy ?options?
+certificate policytrace	certificate policytrace ?flags?
+certificate renewcallback	certificate renewcallback ?options?
+certificate reset	certificate reset ?flags?
+certificate revoked	certificate revoked ?options? certificate
+certificate scriptflags	certificate scriptflags ?options?
+certificate shell	certificate shell ?flags?
+certificate sign	certificate sign ?options? certificate keyPair
+certificate signfile	certificate signfile ?options? certificate keyPair fileNameOrString
+certificate signhash	certificate signhash ?options? keyPair data
+certificate signstring	certificate signstring ?options? certificate keyPair fileNameOrString
+certificate simplepolicy	certificate simplepolicy
+certificate softwareupdates	certificate softwareupdates ?trusted?
+certificate source	certificate source ?options? keyPair fileName
+certificate subject	certificate subject assembly certificate ?policy?
+certificate time	certificate time ?options? ?keyPair?
+certificate trace	certificate trace ?options? message
+certificate unsetpolicy	certificate unsetpolicy
+certificate verify	certificate verify ?options? certificate keyPair
+certificate verifyfile	certificate verifyfile ?options? certificate keyPair fileNameOrString
+certificate verifyhash	certificate verifyhash ?options? keyPair data signature
+certificate verifystream	certificate verifystream ?options? certificate keyPair stream
+certificate verifystring	certificate verifystring ?options? certificate keyPair fileNameOrString
+certificate warning	certificate warning ?options? ?fileName?
+cryptography about	cryptography about
+cryptography decrypt	cryptography decrypt ?options? data rfc2898
+cryptography decrypt3	cryptography decrypt3 ?options? data password salt
+cryptography encrypt	cryptography encrypt ?options? data rfc2898
+cryptography encrypt3	cryptography encrypt3 ?options? data password salt
+cryptography encryptandsign	cryptography encryptandsign ?options? data provider keyPair
+cryptography encryptandsign3	cryptography encryptandsign3 ?options? data password salt keyPair
+cryptography isolated	cryptography isolated
+cryptography options	cryptography options
+cryptography rc4	cryptography rc4 ?options? key data
+cryptography sign	cryptography sign ?options? data keyPair
+cryptography signfile	cryptography signfile ?options? fileName keyPair
+cryptography verify	cryptography verify ?options? data keyPair signature
+cryptography verifyanddecrypt	cryptography verifyanddecrypt ?options? data keyPair signature rfc2898
+cryptography verifyanddecrypt3	cryptography verifyanddecrypt3 ?options? data keyPair signature password salt
+cryptography verifyfile	cryptography verifyfile ?options? fileName keyPair
+flags about	flags about
+flags change	flags change ?options? flags changeFlags
+flags check	flags check ?options? flags
+flags have	flags have ?options? flags haveFlags
+flags isolated	flags isolated
+flags options	flags options
+flags show	flags show ?options? flags
+flags verify	flags verify ?options? flags
+harpy about	harpy about
+harpy changecount	harpy changecount
+harpy changed	harpy changed ?ignore? ?local? ?default?
+harpy configurations	harpy configurations ?flags?
+harpy demomode	harpy demomode
+harpy failsafemode	harpy failsafemode
+harpy failsafetrip	harpy failsafetrip ?count?
+harpy features	harpy features
+harpy isolated	harpy isolated
+harpy keyname	harpy keyname
+harpy keyringname	harpy keyringname
+harpy machine	harpy machine ?flags?
+harpy networkflags	harpy networkflags
+harpy options	harpy options
+harpy pathflags	harpy pathflags
+harpy policy	harpy policy
+harpy reconfigure	harpy reconfigure
+harpy renewcallback	harpy renewcallback
+harpy sandboxes	harpy sandboxes
+harpy scriptflags	harpy scriptflags
+harpy sdkmode	harpy sdkmode
+harpy security	harpy security ?exact?
+harpy source	harpy source
+harpy testmode	harpy testmode
+harpy timeout	harpy timeout
+harpy uri	harpy uri ?type?
+harpy verify	harpy verify ?options? fileName
+keval	keval ?options? script
+keypair about	keypair about
+keypair assembly	keypair assembly ?options? assembly
+keypair dump	keypair dump ?options? keyPair
+keypair expired	keypair expired ?options? keyPair
+keypair generate	keypair generate ?options? fileName
+keypair isolated	keypair isolated
+keypair metadata	keypair metadata ?options? -OR- keypair metadata ?options? keyPair propertyName -OR- keypair metadata ?options? keyPair propertyName propertyValue
+keypair open	keypair open ?options? fileName
+keypair options	keypair options
+keypair resources	keypair resources ?pattern?
+keypair revoked	keypair revoked ?options? keyPair
+keypair root	keypair root
+keypair save	keypair save ?options? fileName keyPair
+keypair script	keypair script
+keypair token	keypair token ?options? ?fileName?
+keyring about	keyring about
+keyring assembly	keyring assembly
+keyring bootstrap	keyring bootstrap ?policyType?
+keyring clear	keyring clear ?policyType?
+keyring directory	keyring directory
+keyring embedded	keyring embedded
+keyring fetch	keyring fetch ?name?
+keyring isolated	keyring isolated
+keyring license	keyring license
+keyring loaded	keyring loaded hashValue
+keyring merge	keyring merge ?path? ?policyType?
+keyring metadata	keyring metadata pattern ?policyType?
+keyring options	keyring options
+keyring policytype	keyring policytype ?policyType?
+keyring remove	keyring remove name
+keyring restore	keyring restore name ?policyType?
+keyring save	keyring save ?policyType?
+keyring script	keyring script
+keyring share	keyring share interp ?policyType?
+keyring usage	keyring usage pattern ?policyType?
+ksource	ksource ?options? fileName
+secret about	secret about
+secret cache	secret cache fileName ?overwrite?
+secret delete	secret delete ?options? id
+secret generate	secret generate ?options?
+secret isolated	secret isolated
+secret options	secret options
+secret request	secret request ?options? id
+security	security ?force? enabled
+storage about	storage about
+storage delete	storage delete ?options? name
+storage isolated	storage isolated
+storage list	storage list ?options?
+storage options	storage options
+storage protect	storage protect ?options? data entropy
+storage read	storage read ?options? name
+storage type	storage type ?type?
+storage unprotect	storage unprotect ?options? data entropy
+storage write	storage write ?options? name value
+support	support
+support about	support about
+support diagnostic	support diagnostic ?list?
+support isolated	support isolated
+support options	support options
+addCertificates	addCertificates path ?snippetFlags? ?lookupFlags?
+addPublicKey	addPublicKey metadata data ?varName?
+addRingPublicKey	addRingPublicKey metadata data ?varName? ?policyType?
+applyContextVariables	applyContextVariables ?contextName?
+breakOutNow	breakOutNow ?result?
+changeDuration	changeDuration policyType ?duration?
+changeFeatures	changeFeatures ?features?
+changeLicensePolicy	changeLicensePolicy ?policy?
+changeLicenseProperty	changeLicenseProperty certificateId ?propertyName? ?propertyValue?
+changeNetworkFlags	changeNetworkFlags policyType ?flags?
+changePathFlags	changePathFlags policyType ?flags?
+changePolicyProperty	changePolicyProperty policyType propertyName ?propertyValue?
+changeTimeServers	changeTimeServers ?servers?
+changeVersionRange	changeVersionRange policyType ?versionRange?
+cleanupForSandbox	cleanupForSandbox id
+configurePackages	configurePackages ?flags?
+configureRuleSet	configureRuleSet type ruleSets
+continueWithNow	continueWithNow ?result?
+demoMode	demoMode ?enable?
+disableInterpreterCreation	disableInterpreterCreation persistent
+downloadAndInstall	downloadAndInstall uri ?flags? ?targetDirectory? ?plugin?
+enableExtractAndApply	enableExtractAndApply enable
+enableInterpreterCreation	enableInterpreterCreation persistent
+enableLocalPolicy	enableLocalPolicy enable
+enableSecurity	enableSecurity ?flags?
+evaluateFile	evaluateFile fileName ?flags? ?password?
+evaluateInSandbox	evaluateInSandbox fileName ?varName?
+evaluateStream	evaluateStream fileName ?assembly? ?flags?
+evaluateWithCleanup	evaluateWithCleanup body1 finally body2
+evaluateWithScope	evaluateWithScope script
+evaluateWithoutError	evaluateWithoutError body1 ?else? ?body2?
+extractZipFile	extractZipFile fileName directory
+failOnError	failOnError enable
+failSafeMode	failSafeMode ?enable?
+fatalError	fatalError ?message? ?errorLine?
+forEachFile	forEachFile pattern ?directory? ?script? ?varName?
+forEachPolicyType	forEachPolicyType varName script
+haveComponent	haveComponent name
+haveConfiguration	haveConfiguration name
+haveEnvironment	haveEnvironment name
+haveFeatures	haveFeatures features ?all?
+haveIdentifier	haveIdentifier name ?kind?
+havePublicKey	havePublicKey keyPair
+haveRingPublicKey	haveRingPublicKey keyPair ?policyType?
+haveVariable	haveVariable name
+interactiveLoop	interactiveLoop
+isDebuggerPresentOrAttached	isDebuggerPresentOrAttached
+isRestrictedInterpreter	isRestrictedInterpreter ?flags?
+issueTicket	issueTicket scope policyType key ?id?
+joinSubPaths	joinSubPaths name ?name ...?
+joinUriParts	joinUriParts baseUri relativeUri ?varName?
+keyUsage	keyUsage change entityType ?flags? ?all? ?root? -OR- keyUsage clear ?entityType? -OR- keyUsage default entityType -OR- keyUsage forbid entityType -OR- keyUsage get entityType -OR- keyUsage list -OR- keyUsage modify entityType ?flags? ?all? ?root? -OR- keyUsage resolve entityType
+listComponents	listComponents
+listContextVariables	listContextVariables
+makeUriRequest	makeUriRequest uri ?data? ?method? ?raw? ?fileName?
+matchPlatform	matchPlatform patterns
+maybeEvaluate	maybeEvaluate expr1 body1 ?else? ?body2?
+maybeIterateUsingExpression	maybeIterateUsingExpression ?list? body
+maybeRecordResult	maybeRecordResult flags tag arg ?arg ...?
+notAfter	notAfter dateTime ?flags?
+notBefore	notBefore dateTime ?flags?
+offlineMode	offlineMode ?enable?
+peekOnFlags	peekOnFlags fileName flagType ?hasFlags?
+queryStatus	queryStatus name
+queueScript	queueScript script signature ?name?
+readScript	readScript verify name
+redeemTicket	redeemTicket scope policyType ticket key
+refreshContextVariables	refreshContextVariables ?readOnly?
+removeLicense	removeLicense id
+removePublicKey	removePublicKey varName
+removeRingPublicKey	removeRingPublicKey varName ?policyType?
+requestLicense	requestLicense id ?baseUri? ?assemblyName?
+requireAdministrator	requireAdministrator
+requireComponent	requireComponent name
+requireData	requireData name
+requireEnvironment	requireEnvironment name
+requireFeatures	requireFeatures ?features?
+requireIdentifier	requireIdentifier name ?package? ?version? ?kind?
+requireLicense	requireLicense ?fileName? ?publicKeyToken? ?features? ?restrictions? ?addObject? ?plugin?
+requireMachine	requireMachine list ?flags?
+requireNetwork	requireNetwork policyType ?enable?
+requireProcess	requireProcess list ?flags?
+requirePublicKey	requirePublicKey publicKeyToken ?policyType?
+requireShell	requireShell ?flags?
+requireTracing	requireTracing ?enable?
+requireTrusted	requireTrusted ?fileName?
+requireVariable	requireVariable name
+requireVerified	requireVerified ?fileName?
+requireVersion	requireVersion ?minimumVersion? ?maximumVersion?
+restoreContextVariables	restoreContextVariables contextName
+returnBackNow	returnBackNow ?result?
+saveContextVariables	saveContextVariables contextName
+setConfiguration	setConfiguration name ?value?
+setData	setData name ?value?
+setEnvironment	setEnvironment name ?value?
+setPassword	setPassword id password
+setVariable	setVariable name ?value?
+skipLicense	skipLicense ?enable? ?types?
+snippet	snippet add text ?snippetFlags? ?lookupFlags? ?name? -OR- snippet clear ?snippetFlags? ?lookupFlags? -OR- snippet dump name ?snippetFlags? ?lookupFlags? -OR- snippet evaluate name ?snippetFlags? ?lookupFlags?
+storageType	storageType ?type?
+swapCommands	swapCommands ?flags?
+testMode	testMode ?enable?
+unsetVariable	unsetVariable name
+waitForSandbox	waitForSandbox id ?timeout?
+writeStatus	writeStatus ?flags? ?tag?
+writeWithoutFail	writeWithoutFail arg ?arg ...?

@@ -1,0 +1,502 @@
+###############################################################################
+#
+# eagle.eagle --
+#
+# Extensible Adaptable Generalized Logic Engine (Eagle)
+# Eagle Scintilla.NET Syntax Highlighting Setup Script
+#
+# Copyright (c) 2007-2012 by Joe Mistachkin.  All rights reserved.
+#
+# See the file "license.terms" for information on usage and redistribution of
+# this file, and for a DISCLAIMER OF ALL WARRANTIES.
+#
+# RCS: @(#) $Id: $
+#
+###############################################################################
+
+#
+# NOTE: Use our own namespace here because even though we do not directly
+#       support namespaces ourselves, we do not want to pollute the global
+#       namespace if this script actually ends up being evaluated in Tcl.
+#
+namespace eval ::Eagle {
+  proc getScintillaNetXmlData {} {
+    # <help>
+    # This procedure returns the legacy Scintilla.NET 2.x XML data that
+    # describes the Eagle script syntax highlighting style.  It is the entry
+    # point used by [setupScintillaNet] to obtain the configuration data that
+    # drives every styling, indentation, and keyword decision applied to the
+    # hosted Scintilla control.
+    #
+    # How it works: it loads the embedded "eagle.xml" resource via
+    # [getScintillaResourceData] and then passes that text through
+    # [fixScintillaNetXmlData], which substitutes the light or dark style
+    # palette into the document depending on the user's system theme
+    # preference.
+    #
+    # Arguments:
+    #   None.
+    #
+    # Results:
+    #   Returns the Eagle Scintilla.NET XML configuration data as a string,
+    #   with the active light or dark style palette already substituted in.
+    # </help>
+
+    return [fixScintillaNetXmlData [getScintillaResourceData eagle.xml]]
+  }
+
+  proc extractPropertyValue { id data objectName propertyName } {
+    # <help>
+    # This procedure extracts a single named attribute value from the legacy
+    # Scintilla.NET 2.x XML configuration data.  It is the workhorse used by
+    # [setupScintillaNet] to read each per-style property (font name, size,
+    # foreground color, background color) as well as the indentation and
+    # lexer-level settings (tab width, use-tabs flag, lexer name) directly
+    # out of the XML text.
+    #
+    # How it works: when the id, data, objectName, and propertyName all pass
+    # whitelist validation, it builds a regular expression that searches for
+    # the requested object element whose Name attribute equals the id (or,
+    # when the id is empty, for any instance of that object element), and
+    # captures the value of the requested attribute.  If the regular
+    # expression matches, the captured value is returned; otherwise an empty
+    # string is returned.
+    #
+    # Tricky details: parsing XML with a regular expression is normally a bad
+    # idea, but the configuration data here is fully under our control and
+    # its format does not change, so the simple pattern is sufficient.  The
+    # objectName must be one of Indentation, Lexer, or Style, and the
+    # propertyName must be one of TabWidth, UseTabs, LexerName, FontName,
+    # Size, ForeColor, or BackColor; any other inputs short-circuit and
+    # return an empty string.  The id must be a valid identifier.
+    #
+    # Arguments:
+    #   id           -- The style or element identifier (e.g. DEFAULT,
+    #                   COMMENT, LINENUMBER).  May be empty to match any.
+    #   data         -- The Scintilla.NET XML configuration string to
+    #                   search.
+    #   objectName   -- The XML element name to look for: one of
+    #                   Indentation, Lexer, or Style.
+    #   propertyName -- The XML attribute name to capture: one of TabWidth,
+    #                   UseTabs, LexerName, FontName, Size, ForeColor, or
+    #                   BackColor.
+    #
+    # Results:
+    #   Returns the captured attribute value as a string, or an empty string
+    #   if validation fails or the pattern does not match.
+    # </help>
+
+    if {[string is identifier $id] && [string length $data] > 0 && \
+        $objectName in [list Indentation Lexer Style] && \
+        $propertyName in [list TabWidth UseTabs LexerName FontName \
+        Size ForeColor BackColor]} then {
+      #
+      # HACK: Construct a regular expression capable of extracting a value
+      #       associated with a specific syntax highlighting property from
+      #       the (now legacy) Scintilla.NET 2.x XML data used to configure
+      #       syntax highlighting for the control.  This (using a regular
+      #       expression to extract data from XML data) would normally be
+      #       an exceptionally bad idea; however, we completely control the
+      #       data and its format will not change.
+      #
+      if {[string length $id] > 0} then {
+        set pattern [subst -nocommands -nobackslashes \
+            {<${objectName} Name="${id}"[^>]*${propertyName}="([^"]*)"}]
+      } else {
+        set pattern [subst -nocommands -nobackslashes \
+            {<${objectName}[^>]*${propertyName}="([^"]*)"}]
+      }
+
+      if {[regexp -- $pattern $data dummy propertyValue]} then {
+        return $propertyValue
+      }
+    }
+
+    return ""
+  }
+
+  proc extractKeywordsList { id data } {
+    # <help>
+    # This procedure extracts the keyword list associated with a numeric
+    # keyword set id from the legacy Scintilla.NET 2.x XML configuration
+    # data.  It is used by [setupScintillaNet] to populate the Scintilla
+    # lexer's nine keyword sets (ids 0 through 8) with the words to be
+    # highlighted, e.g. Eagle commands, Tcl commands, control words, and the
+    # other syntactic categories.
+    #
+    # How it works: when the id is a strict integer and the data is
+    # non-empty, it builds a regular expression that captures the textual
+    # contents of the Keywords element whose List attribute equals the id,
+    # and returns the captured text on a match.  Otherwise it returns an
+    # empty list.
+    #
+    # Tricky details: parsing XML with a regular expression is normally
+    # inadvisable, but the configuration data here is fully under our
+    # control and its format does not change.  The id must pass a strict
+    # integer check, so non-numeric input cannot leak into the pattern.
+    #
+    # Arguments:
+    #   id   -- The numeric keyword set identifier (0 through 8).
+    #   data -- The Scintilla.NET XML configuration string to search.
+    #
+    # Results:
+    #   Returns the keyword text for the matching keyword set, or an empty
+    #   list when the inputs fail validation or no matching set is found.
+    # </help>
+
+    if {[string is integer -strict $id] && [string length $data] > 0} then {
+      #
+      # HACK: Construct a regular expression capable of extracting a list
+      #       of keywords from the (now legacy) Scintilla.NET 2.x XML data
+      #       used to configure syntax highlighting for the control.  This
+      #       (using a regular expression to extract data from XML data)
+      #       would normally be an exceptionally bad idea; however, we
+      #       completely control the data and its format will not change.
+      #
+      set pattern [subst -nocommands -nobackslashes \
+          {<Keywords List="${id}">([^<]*)</Keywords>}]
+
+      if {[regexp -- $pattern $data dummy keywords]} then {
+        return $keywords
+      }
+    }
+
+    return [list]
+  }
+
+  proc getColorFromValue { value } {
+    # <help>
+    # This procedure converts a textual color specification taken from the
+    # Scintilla.NET XML configuration data into a System.Drawing.Color
+    # object suitable for assignment to a Scintilla style property or to
+    # the editor caret.  It is the bridge between the string color values
+    # carried in the XML and the .NET color values expected by the control.
+    #
+    # How it works: an empty value yields the null object handle.  A value
+    # whose first character is the hash sign is treated as a hexadecimal
+    # ARGB integer (the hash is replaced with the 0x prefix) and, when it
+    # parses as a strict integer, is passed to Color.FromArgb.  Any other
+    # non-empty value is treated as a named color and passed to
+    # Color.FromName.
+    #
+    # Tricky details: the hash-prefixed form expects a hexadecimal ARGB
+    # value so that the alpha channel is preserved -- a plain six-digit RGB
+    # hex string will be interpreted as ARGB with a zero alpha channel,
+    # which renders as fully transparent.  Color.FromName accepts the
+    # standard System.Drawing.KnownColor names; an unrecognized name yields
+    # a Color object whose IsKnownColor is false rather than raising.
+    #
+    # Arguments:
+    #   value -- The color specification: an empty string, a hash-prefixed
+    #            hexadecimal ARGB number, or a named color.
+    #
+    # Results:
+    #   Returns a System.Drawing.Color object handle, or the null object
+    #   handle when the value is empty.
+    # </help>
+
+    if {[string length $value] > 0} then {
+      if {[string index $value 0] eq "#"} then {
+        set value [appendArgs 0x [string range $value 1 end]]
+      }
+
+      if {[string is integer -strict $value]} then {
+        set color [object invoke -create \
+            System.Drawing.Color FromArgb $value]
+      } else {
+        set color [object invoke -create \
+            System.Drawing.Color FromName $value]
+      }
+
+      return $color
+    } else {
+      return null
+    }
+  }
+
+  proc applyColorToCaret { color } {
+    # <help>
+    # This procedure sets the editor caret foreground color on the hosted
+    # Scintilla control.  It exists so that the caret remains visible
+    # against the active theme by tracking the default style's foreground
+    # color, which [setupScintillaNet] resolves and passes here after the
+    # default styles have been applied.
+    #
+    # How it works: when both the scintilla command represents a non-null
+    # object handle and the supplied color is itself a non-null object
+    # handle, the control's CaretForeColor property is set to the color.
+    # Either prerequisite being absent causes the procedure to silently do
+    # nothing.
+    #
+    # Arguments:
+    #   color -- A System.Drawing.Color object handle, typically produced
+    #            by [getColorFromValue].  A null handle is treated as a
+    #            no-op.
+    #
+    # Results:
+    #   Returns the empty string; its effect is the side effect of setting
+    #   the Scintilla caret foreground color.
+    # </help>
+
+    if {[isNonNullObjectHandle scintilla] && \
+        [isNonNullObjectHandle $color]} then {
+      scintilla CaretForeColor $color
+    }
+  }
+
+  proc applyScintillaNetStyles { varName } {
+    # <help>
+    # This procedure applies a table of style property settings to the
+    # hosted Scintilla control's Style collection.  It is invoked three
+    # times by [setupScintillaNet]: once for the Default style baseline,
+    # once for the LineNumber margin style, and once for the full set of
+    # per-token Tcl lexer styles.
+    #
+    # How it works: it accepts the name of an array in the caller's frame
+    # and links to it via [upvar].  Each array key is interpreted as a
+    # style index lookup.  When the key has two elements, the first element
+    # names a nested ScintillaNET.Style+ enumeration (such as Tcl) and the
+    # second element names the constant within it.  When the key has a
+    # single element, the constant is looked up on the bare
+    # ScintillaNET.Style enumeration directly.  The resolved style index is
+    # used to obtain a Style entry from the control.  Each property
+    # name/value pair in the array element is then assigned: ForeColor and
+    # BackColor are first converted to a System.Drawing.Color via
+    # [getColorFromValue] and only assigned when the conversion yields a
+    # non-null color; all other properties are assigned verbatim.  Every
+    # successful assignment is recorded via [logForScintilla] under the
+    # SET_COLOR or SET_OTHER tag.
+    #
+    # Tricky details: a key that is neither a one- nor two-element list
+    # raises an error, since there is no defined style enumeration for it.
+    # The procedure does nothing when no scintilla control is present.
+    # Unrecognized style enumeration values produce a non-strict-integer
+    # index, which is silently skipped.
+    #
+    # Arguments:
+    #   varName -- The name (in the caller's frame) of an array whose keys
+    #              identify Scintilla styles and whose values are even-
+    #              length lists of property name and property value pairs.
+    #
+    # Results:
+    #   Returns the empty string; its effect is the side effect of
+    #   updating the Scintilla control's styles and emitting diagnostic
+    #   log entries.
+    # </help>
+
+    if {[isNonNullObjectHandle scintilla]} then {
+      upvar 1 $varName styles
+
+      foreach names [array names styles] {
+        if {[llength $names] == 2} then {
+          set objectName [appendArgs \
+              ScintillaNET.Style+ [lindex $names 0]]
+
+          set memberName [lindex $names 1]
+        } elseif {[llength $names] == 1} then {
+          set objectName ScintillaNET.Style
+          set memberName [lindex $names 0]
+        } else {
+          error [appendArgs "unsupported style names: " $names]
+        }
+
+        set styleIndex [object invoke $objectName $memberName]
+
+        if {[string is integer -strict $styleIndex]} then {
+          set style [scintilla -alias Styles.get_Item $styleIndex]
+
+          if {[isNonNullObjectHandle $style]} then {
+            foreach {propertyName propertyValue} $styles($names) {
+              if {$propertyName in [list ForeColor BackColor]} then {
+                set propertyColor [getColorFromValue $propertyValue]
+
+                if {[isNonNullObjectHandle $propertyColor]} then {
+                  $style $propertyName $propertyColor
+
+                  logForScintilla [list SET_COLOR INDEX \
+                      $styleIndex NAME $propertyName VALUE \
+                      $propertyValue COLOR [object invoke \
+                      $propertyColor ToString]]
+                }
+              } else {
+                $style $propertyName $propertyValue
+
+                logForScintilla [list SET_OTHER INDEX \
+                    $styleIndex NAME $propertyName VALUE \
+                    $propertyValue]
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  proc setupScintillaNet {} {
+    # <help>
+    # This procedure configures the hosted Scintilla.NET 3.x control for
+    # Eagle script syntax highlighting in one pass.  It is the top-level
+    # entry point that the HotKey plugin's Scintilla configure script
+    # invokes against the live control after the editor is created.
+    #
+    # How it works: when a scintilla control is currently bound, it loads
+    # the configuration via [getScintillaNetXmlData] and, when that yields
+    # data, constructs three styling tables.  The first is a single-entry
+    # Default style with Font, Size, ForeColor, and BackColor pulled from
+    # the DEFAULT style in the XML.  The second is a single-entry
+    # LineNumber style with ForeColor and BackColor pulled from LINENUMBER.
+    # The third is a long table that maps each Tcl lexer token (Comment,
+    # CommentLine, Number, WordInQuote, InQuote, Operator, Identifier,
+    # Substitution, SubBrace, Modifier, Expand, Word, Word2 through Word8,
+    # CommentBox, and BlockComment) to its ForeColor.  It then assigns the
+    # Lexer property, the TabWidth, and the UseTabs flag from the
+    # corresponding XML attributes.  After calling StyleResetDefault, it
+    # applies the Default styles, derives the caret color from the
+    # Default style's ForeColor and applies it via [applyColorToCaret].
+    # It then calls StyleClearAll, applies the LineNumber styles, applies
+    # the Tcl token styles, and finally walks the keyword set ids 0 through
+    # 8 -- pushing each list returned by [extractKeywordsList] into the
+    # control via SetKeywords.
+    #
+    # Tricky details: the call order matters.  StyleResetDefault precedes
+    # the Default style assignment; StyleClearAll, which propagates the
+    # Default style to all other styles, precedes the LineNumber and Tcl
+    # token assignments so that those overrides survive.  Failure to load
+    # the XML data leaves the control unchanged; an explicit error log
+    # entry for that case is noted as a TODO in the source.
+    #
+    # Arguments:
+    #   None.
+    #
+    # Results:
+    #   Returns the empty string; its effect is the side effect of
+    #   configuring the Scintilla control's lexer, indentation, styles,
+    #   caret color, and keyword sets.
+    # </help>
+
+    if {[isNonNullObjectHandle scintilla]} then {
+      #
+      # TODO: Maybe log an error message if the data cannot be loaded?
+      #
+      set data [getScintillaNetXmlData]
+
+      if {[string length $data] > 0} then {
+        array set defaultStyles [list Default [list \
+            Font [extractPropertyValue DEFAULT $data Style FontName] \
+            Size [extractPropertyValue DEFAULT $data Style Size] \
+            ForeColor [extractPropertyValue DEFAULT $data Style ForeColor] \
+            BackColor [extractPropertyValue DEFAULT $data Style BackColor]]]
+
+        array set lineNumberStyles [list LineNumber [list \
+            ForeColor [extractPropertyValue LINENUMBER $data Style ForeColor] \
+            BackColor [extractPropertyValue LINENUMBER $data Style BackColor]]]
+
+        array set styles [list \
+            [list Tcl Comment] [list ForeColor \
+                [extractPropertyValue COMMENT $data Style ForeColor]] \
+            [list Tcl CommentLine] [list ForeColor \
+                [extractPropertyValue COMMENTLINE $data Style ForeColor]] \
+            [list Tcl Number] [list ForeColor \
+                [extractPropertyValue NUMBER $data Style ForeColor]] \
+            [list Tcl WordInQuote] [list ForeColor \
+                [extractPropertyValue WORD_IN_QUOTE $data Style ForeColor]] \
+            [list Tcl InQuote] [list ForeColor \
+                [extractPropertyValue IN_QUOTE $data Style ForeColor]] \
+            [list Tcl Operator] [list ForeColor \
+                [extractPropertyValue OPERATOR $data Style ForeColor]] \
+            [list Tcl Identifier] [list ForeColor \
+                [extractPropertyValue IDENTIFIER $data Style ForeColor]] \
+            [list Tcl Substitution] [list ForeColor \
+                [extractPropertyValue SUBSTITUTION $data Style ForeColor]] \
+            [list Tcl SubBrace] [list ForeColor \
+                [extractPropertyValue SUB_BRACE $data Style ForeColor]] \
+            [list Tcl Modifier] [list ForeColor \
+                [extractPropertyValue MODIFIER $data Style ForeColor]] \
+            [list Tcl Expand] [list ForeColor \
+                [extractPropertyValue EXPAND $data Style ForeColor]] \
+            [list Tcl Word] [list ForeColor \
+                [extractPropertyValue WORD $data Style ForeColor]] \
+            [list Tcl Word2] [list ForeColor \
+                [extractPropertyValue WORD2 $data Style ForeColor]] \
+            [list Tcl Word3] [list ForeColor \
+                [extractPropertyValue WORD3 $data Style ForeColor]] \
+            [list Tcl Word4] [list ForeColor \
+                [extractPropertyValue WORD4 $data Style ForeColor]] \
+            [list Tcl Word5] [list ForeColor \
+                [extractPropertyValue WORD5 $data Style ForeColor]] \
+            [list Tcl Word6] [list ForeColor \
+                [extractPropertyValue WORD6 $data Style ForeColor]] \
+            [list Tcl Word7] [list ForeColor \
+                [extractPropertyValue WORD7 $data Style ForeColor]] \
+            [list Tcl Word8] [list ForeColor \
+                [extractPropertyValue WORD8 $data Style ForeColor]] \
+            [list Tcl CommentBox] [list ForeColor \
+                [extractPropertyValue COMMENT_BOX $data Style ForeColor]] \
+            [list Tcl BlockComment] [list ForeColor \
+                [extractPropertyValue BLOCK_COMMENT $data Style ForeColor]]]
+
+        scintilla Lexer \
+            [extractPropertyValue "" $data Lexer LexerName]
+
+        scintilla TabWidth \
+            [extractPropertyValue "" $data Indentation TabWidth]
+
+        scintilla UseTabs \
+            [extractPropertyValue "" $data Indentation UseTabs]
+
+        scintilla StyleResetDefault
+        applyScintillaNetStyles defaultStyles
+
+        if {[info exists defaultStyles(Default)]} then {
+          applyColorToCaret [getColorFromValue \
+              [getDictionaryValue $defaultStyles(Default) ForeColor]]
+        }
+
+        scintilla StyleClearAll
+        applyScintillaNetStyles lineNumberStyles
+        applyScintillaNetStyles styles
+
+        for {set keywordsId 0} {$keywordsId <= 8} {incr keywordsId} {
+          scintilla SetKeywords $keywordsId [extractKeywordsList \
+              $keywordsId $data]
+        }
+      }
+    }
+  }
+
+  #
+  # HACK: If the configuration script for Scintilla.NET 3.x does not exist,
+  #       set it now.  It will make use of the procedures defined in this
+  #       script file in order to configure syntax highlighting for Eagle
+  #       scripts.
+  #
+  if {![info exists ::HotKey.Enterprise_ScintillaConfigureScript(3.x)]} then {
+    #
+    # NOTE: By default, setup Scintilla.NET 3.x control for Eagle script
+    #       syntax highlighting and then remove all the helper procedures
+    #       defined in this script file.
+    #
+    set ::HotKey.Enterprise_ScintillaConfigureScript(3.x) {
+      try {
+        setupScintillaNet
+      } finally {
+        rename setupScintillaNet ""
+        rename applyScintillaNetStyles ""
+        rename applyColorToCaret ""
+        rename getColorFromValue ""
+        rename extractKeywordsList ""
+        rename extractPropertyValue ""
+        rename getScintillaNetXmlData ""
+      }
+    }
+
+    #
+    # NOTE: When running in isolated mode, evaluate the script from above
+    #       immediately because it cannot easily be copied to the outermost
+    #       interpreter and then evaluated from there.
+    #
+    if {[shouldTreatAsIsolated]} then {
+      uplevel #0 ${::HotKey.Enterprise_ScintillaConfigureScript(3.x)}
+    }
+  }
+}

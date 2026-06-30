@@ -1,0 +1,832 @@
+###############################################################################
+#
+# verify.lst --
+#
+# Extensible Adaptable Generalized Logic Engine (Eagle)
+# Official Release Archive Manifest
+#
+# Copyright (c) 2007-2012 by Joe Mistachkin.  All rights reserved.
+#
+# See the file "license.terms" for information on usage and redistribution of
+# this file, and for a DISCLAIMER OF ALL WARRANTIES.
+#
+# RCS: @(#) $Id: $
+#
+###############################################################################
+#
+# NOTE: This file contains official lists of all files that must be present in
+#       the various archives generated during the Eagle release process.
+#
+# NOTE: This file MUST be updated whenever a file needs to be added, renamed,
+#       or removed from a source, binary, or setup release archive; otherwise,
+#       the entire release process will probably fail.  This file will be read
+#       and evaluated by the Release Archive Verification Tool via the [source]
+#       command during the final phases of the release process.  Please see the
+#       "verify.eagle" file for details.
+#
+###############################################################################
+#
+# NOTE: If it exists, attempt to include the official release archive manifest
+#       for Eagle.
+#
+if {[info exists ::env(EAGLE)] && [file exists \
+    [file join $::env(EAGLE) Library Tools data verify.lst]]} then {
+  source [file join $::env(EAGLE) Library Tools data verify.lst]
+}
+
+###############################################################################
+#
+# NOTE: This is the list of all NuGet metadata files that should be present in
+#       all Eagle NuGet packages.
+#
+set harpy_manifests(nuGetMetadata) {
+  _rels/.rels
+  [Content_Types].xml
+  package/services/metadata/core-properties/${md5}.psmdcp
+}
+
+###############################################################################
+#
+# NOTE: This is the list of all NuGet metadata files that should be present in
+#       all signed Eagle NuGet packages.
+#
+set harpy_manifests(nuGetSignedMetadata) {
+  .signature.p7s
+}
+
+###############################################################################
+#
+# NOTE: This is the list of all NuSpec files that should be present in the
+#       Harpy primary NuGet package.
+#
+set harpy_manifests(nuGetPrimary) {
+  Harpy.nuspec
+}
+
+###############################################################################
+#
+# NOTE: This is the list of all core library files that should be present in
+#       the Harpy NuGet packages for the .NET Framework 2.0.
+#
+set harpy_manifests(nuGetNetFx20) {
+  Harpy.CLRv2.nuspec
+  build/net20/lib/Harpy1.0/Harpy.dll
+  build/net20/lib/Harpy1.0/keyRing.General.demo.eagle
+  build/net20/lib/Harpy1.0/keyRing.General.demo.eagle.harpy
+  build/net20/lib/Harpy1.0/keyRing.one.eagle
+  build/net20/lib/Harpy1.0/keyRing.one.eagle.harpy
+  build/net20/lib/Harpy1.0/keyRing.zero.eagle
+  build/net20/lib/Harpy1.0/keyRing.zero.eagle.harpy
+  build/net20/lib/Harpy1.0/pkgIndex_8bf43b4749e46a0b.eagle
+  build/net20/lib/Harpy1.0/pkgIndex_8bf43b4749e46a0b.eagle.harpy
+  build/net20/lib/Harpy1.0/test.eagle
+  build/net20/lib/Harpy1.0/test.eagle.harpy
+  build/net20/lib/Harpy1.0/Certificates/trial-certificate.xml
+  build/net20/lib/Harpy1.0/Configurations/Harpy.Debugger.v1.eeagle
+  build/net20/lib/Harpy1.0/Configurations/Harpy.Debugger.v1.eeagle.b64sig
+  build/net20/lib/Badge1.0/Badge.dll
+  build/net20/lib/Badge1.0/pkgIndex_8bf43b4749e46a0b.eagle
+  build/net20/lib/Badge1.0/pkgIndex_8bf43b4749e46a0b.eagle.harpy
+  build/net20/lib/Badge1.0/Certificates/trial-certificate.xml
+  build/net20/Harpy.CLRv2.targets
+}
+
+###############################################################################
+#
+# NOTE: This is the list of all core library files that should be present in
+#       the Harpy NuGet packages for the .NET Framework 4.0.
+#
+set harpy_manifests(nuGetNetFx40) {
+  Harpy.CLRv4.nuspec
+  build/net40/lib/Harpy1.0/Harpy.dll
+  build/net40/lib/Harpy1.0/keyRing.General.demo.eagle
+  build/net40/lib/Harpy1.0/keyRing.General.demo.eagle.harpy
+  build/net40/lib/Harpy1.0/keyRing.one.eagle
+  build/net40/lib/Harpy1.0/keyRing.one.eagle.harpy
+  build/net40/lib/Harpy1.0/keyRing.zero.eagle
+  build/net40/lib/Harpy1.0/keyRing.zero.eagle.harpy
+  build/net40/lib/Harpy1.0/pkgIndex_8bf43b4749e46a0b.eagle
+  build/net40/lib/Harpy1.0/pkgIndex_8bf43b4749e46a0b.eagle.harpy
+  build/net40/lib/Harpy1.0/test.eagle
+  build/net40/lib/Harpy1.0/test.eagle.harpy
+  build/net40/lib/Harpy1.0/Certificates/trial-certificate.xml
+  build/net40/lib/Harpy1.0/Configurations/Harpy.Debugger.v1.eeagle
+  build/net40/lib/Harpy1.0/Configurations/Harpy.Debugger.v1.eeagle.b64sig
+  build/net40/lib/Badge1.0/Badge.dll
+  build/net40/lib/Badge1.0/pkgIndex_8bf43b4749e46a0b.eagle
+  build/net40/lib/Badge1.0/pkgIndex_8bf43b4749e46a0b.eagle.harpy
+  build/net40/lib/Badge1.0/Certificates/trial-certificate.xml
+  build/net40/Harpy.CLRv4.targets
+}
+
+###############################################################################
+#
+# NOTE: This is the list of all core library files that should be present in
+#       the Harpy NuGet packages for .NET Core 2.0.
+#
+set harpy_manifests(nuGetNetStandard20) {
+  Harpy.DotNet.Standard.2.0.nuspec
+  build/netstandard2.0/lib/Harpy1.0/Harpy.dll
+  build/netstandard2.0/lib/Harpy1.0/keyRing.General.demo.eagle
+  build/netstandard2.0/lib/Harpy1.0/keyRing.General.demo.eagle.harpy
+  build/netstandard2.0/lib/Harpy1.0/keyRing.one.eagle
+  build/netstandard2.0/lib/Harpy1.0/keyRing.one.eagle.harpy
+  build/netstandard2.0/lib/Harpy1.0/keyRing.zero.eagle
+  build/netstandard2.0/lib/Harpy1.0/keyRing.zero.eagle.harpy
+  build/netstandard2.0/lib/Harpy1.0/pkgIndex_8bf43b4749e46a0b.eagle
+  build/netstandard2.0/lib/Harpy1.0/pkgIndex_8bf43b4749e46a0b.eagle.harpy
+  build/netstandard2.0/lib/Harpy1.0/test.eagle
+  build/netstandard2.0/lib/Harpy1.0/test.eagle.harpy
+  build/netstandard2.0/lib/Harpy1.0/Certificates/trial-certificate.xml
+  build/netstandard2.0/lib/Harpy1.0/Configurations/Harpy.Debugger.v1.eeagle
+  build/netstandard2.0/lib/Harpy1.0/Configurations/Harpy.Debugger.v1.eeagle.b64sig
+  build/netstandard2.0/lib/Badge1.0/Badge.dll
+  build/netstandard2.0/lib/Badge1.0/pkgIndex_8bf43b4749e46a0b.eagle
+  build/netstandard2.0/lib/Badge1.0/pkgIndex_8bf43b4749e46a0b.eagle.harpy
+  build/netstandard2.0/lib/Badge1.0/Certificates/trial-certificate.xml
+  build/netstandard2.0/Harpy.DotNet.Standard.2.0.targets
+}
+
+###############################################################################
+#
+# NOTE: This is the list of all core library files that should be present in
+#       the Harpy NuGet packages for .NET Core 3.0.
+#
+set harpy_manifests(nuGetNetStandard21) {
+  Harpy.DotNet.Standard.2.1.nuspec
+  build/netstandard2.1/lib/Harpy1.0/Harpy.dll
+  build/netstandard2.1/lib/Harpy1.0/keyRing.General.demo.eagle
+  build/netstandard2.1/lib/Harpy1.0/keyRing.General.demo.eagle.harpy
+  build/netstandard2.1/lib/Harpy1.0/keyRing.one.eagle
+  build/netstandard2.1/lib/Harpy1.0/keyRing.one.eagle.harpy
+  build/netstandard2.1/lib/Harpy1.0/keyRing.zero.eagle
+  build/netstandard2.1/lib/Harpy1.0/keyRing.zero.eagle.harpy
+  build/netstandard2.1/lib/Harpy1.0/pkgIndex_8bf43b4749e46a0b.eagle
+  build/netstandard2.1/lib/Harpy1.0/pkgIndex_8bf43b4749e46a0b.eagle.harpy
+  build/netstandard2.1/lib/Harpy1.0/test.eagle
+  build/netstandard2.1/lib/Harpy1.0/test.eagle.harpy
+  build/netstandard2.1/lib/Harpy1.0/Certificates/trial-certificate.xml
+  build/netstandard2.1/lib/Harpy1.0/Configurations/Harpy.Debugger.v1.eeagle
+  build/netstandard2.1/lib/Harpy1.0/Configurations/Harpy.Debugger.v1.eeagle.b64sig
+  build/netstandard2.1/lib/Badge1.0/Badge.dll
+  build/netstandard2.1/lib/Badge1.0/pkgIndex_8bf43b4749e46a0b.eagle
+  build/netstandard2.1/lib/Badge1.0/pkgIndex_8bf43b4749e46a0b.eagle.harpy
+  build/netstandard2.1/lib/Badge1.0/Certificates/trial-certificate.xml
+  build/netstandard2.1/Harpy.DotNet.Standard.2.1.targets
+}
+
+###############################################################################
+#
+# NOTE: This is the list of all NuGet metadata files that should be present in
+#       all Demo NuGet packages.
+#
+set demo_manifests(nuGetMetadata) {
+  _rels/.rels
+  [Content_Types].xml
+  package/services/metadata/core-properties/${md5}.psmdcp
+}
+
+###############################################################################
+#
+# NOTE: This is the list of all NuGet metadata files that should be present in
+#       all signed Demo NuGet packages.
+#
+set demo_manifests(nuGetSignedMetadata) {
+  .signature.p7s
+}
+
+###############################################################################
+#
+# NOTE: This is the list of all NuSpec files that should be present in the
+#       the Demo NuGet packages for the .NET Framework 4.0.
+#
+set demo_manifests(nuGetNetFx40) {
+  Demo.nuspec
+  build/net40/lib/Demo1.0/Demo.dll
+  build/net40/lib/Demo1.0/pkgIndex_c339cf39bcc248dd.eagle
+  build/net40/lib/Demo1.0/pkgIndex_c339cf39bcc248dd.eagle.harpy
+  build/net40/lib/Demo1.0/Certificates/trial-certificate.xml
+  build/net40/Demo.targets
+}
+
+###############################################################################
+#
+# NOTE: This is the list of all NuGet metadata files that should be present in
+#       all Featherlight NuGet packages.
+#
+set featherlight_manifests(nuGetMetadata) {
+  _rels/.rels
+  [Content_Types].xml
+  package/services/metadata/core-properties/${md5}.psmdcp
+}
+
+###############################################################################
+#
+# NOTE: This is the list of all NuGet metadata files that should be present in
+#       all signed Featherlight NuGet packages.
+#
+set featherlight_manifests(nuGetSignedMetadata) {
+  .signature.p7s
+}
+
+###############################################################################
+#
+# NOTE: This is the list of all NuSpec files that should be present in the
+#       the Featherlight NuGet packages for the .NET Framework 4.0.
+#
+set featherlight_manifests(nuGetNetFx40) {
+  Featherlight.nuspec
+  build/net40/lib/Featherlight1.0/Featherlight.exe
+  build/net40/lib/Featherlight1.0/pkgIndex_5b11bfd370fb0412.eagle
+  build/net40/lib/Featherlight1.0/pkgIndex_5b11bfd370fb0412.eagle.harpy
+  build/net40/lib/Featherlight1.0/Certificates/trial-certificate.xml
+  build/net40/Featherlight.targets
+}
+
+###############################################################################
+#
+# NOTE: This is the list of all NuGet metadata files that should be present in
+#       all HotKey NuGet packages.
+#
+set hotkey_manifests(nuGetMetadata) {
+  _rels/.rels
+  [Content_Types].xml
+  package/services/metadata/core-properties/${md5}.psmdcp
+}
+
+###############################################################################
+#
+# NOTE: This is the list of all NuGet metadata files that should be present in
+#       all signed HotKey NuGet packages.
+#
+set hotkey_manifests(nuGetSignedMetadata) {
+  .signature.p7s
+}
+
+###############################################################################
+#
+# NOTE: This is the list of all NuSpec files that should be present in the
+#       the HotKey NuGet packages for the .NET Framework 4.0.
+#
+set hotkey_manifests(nuGetNetFx40) {
+  HotKey.nuspec
+  build/net40/lib/HotKey1.0/HotKey.dll
+  build/net40/lib/HotKey1.0/Interop.wshom.dll
+  build/net40/lib/HotKey1.0/SciLexer.dll
+  build/net40/lib/HotKey1.0/SciLexer64.dll
+  build/net40/lib/HotKey1.0/SciLexerARM.dll
+  build/net40/lib/HotKey1.0/ScintillaNET.dll
+  build/net40/lib/HotKey1.0/pkgIndex_1265135207d01249.eagle
+  build/net40/lib/HotKey1.0/pkgIndex_1265135207d01249.eagle.harpy
+  build/net40/lib/HotKey1.0/Certificates/trial-certificate.xml
+  build/net40/lib/HotKey1.0/Templates/hotkey-template-application.eagle
+  build/net40/lib/HotKey1.0/Templates/hotkey-template-application.eagle.harpy
+  build/net40/lib/HotKey1.0/Templates/hotkey-template-bookmark.eagle
+  build/net40/lib/HotKey1.0/Templates/hotkey-template-bookmark.eagle.harpy
+  build/net40/lib/HotKey1.0/Templates/hotkey-template-common.eagle
+  build/net40/lib/HotKey1.0/Templates/hotkey-template-common.eagle.harpy
+  build/net40/lib/HotKey1.0/Templates/hotkey-template-executable.eagle
+  build/net40/lib/HotKey1.0/Templates/hotkey-template-executable.eagle.harpy
+  build/net40/lib/HotKey1.0/Templates/hotkey-template-file.eagle
+  build/net40/lib/HotKey1.0/Templates/hotkey-template-file.eagle.harpy
+  build/net40/lib/HotKey1.0/Templates/hotkey-template-folder.eagle
+  build/net40/lib/HotKey1.0/Templates/hotkey-template-folder.eagle.harpy
+  build/net40/lib/HotKey1.0/Templates/hotkey-template-metadata.eagle
+  build/net40/lib/HotKey1.0/Templates/hotkey-template-metadata.eagle.harpy
+  build/net40/lib/HotKey1.0/Templates/hotkey-template-program.eagle
+  build/net40/lib/HotKey1.0/Templates/hotkey-template-program.eagle.harpy
+  build/net40/lib/HotKey1.0/Templates/hotkey-template-script.eagle
+  build/net40/lib/HotKey1.0/Templates/hotkey-template-script.eagle.harpy
+  build/net40/lib/HotKey1.0/Templates/hotkey-template-scriptfile.eagle
+  build/net40/lib/HotKey1.0/Templates/hotkey-template-scriptfile.eagle.harpy
+  build/net40/lib/HotKey1.0/Templates/hotkey-template-standard.eagle
+  build/net40/lib/HotKey1.0/Templates/hotkey-template-standard.eagle.harpy
+  build/net40/lib/HotKey1.0/Templates/hotkey-template-unknown.eagle
+  build/net40/lib/HotKey1.0/Templates/hotkey-template-unknown.eagle.harpy
+  build/net40/lib/HotKey1.0/Templates/hotkey-template-uri.eagle
+  build/net40/lib/HotKey1.0/Templates/hotkey-template-uri.eagle.harpy
+  build/net40/lib/HotKey1.0/Templates/pkgIndex.eagle
+  build/net40/lib/HotKey1.0/Templates/pkgIndex.eagle.harpy
+  build/net40/HotKey.targets
+}
+
+###############################################################################
+#
+# NOTE: This is the list of all NuGet metadata files that should be present in
+#       all Zeus NuGet packages.
+#
+set zeus_manifests(nuGetMetadata) {
+  _rels/.rels
+  [Content_Types].xml
+  package/services/metadata/core-properties/${md5}.psmdcp
+}
+
+###############################################################################
+#
+# NOTE: This is the list of all NuGet metadata files that should be present in
+#       all signed Zeus NuGet packages.
+#
+set zeus_manifests(nuGetSignedMetadata) {
+  .signature.p7s
+}
+
+###############################################################################
+#
+# NOTE: This is the list of all NuSpec files that should be present in the
+#       the Zeus NuGet packages for the .NET Framework 4.0.
+#
+set zeus_manifests(nuGetNetFx40) {
+  Zeus.nuspec
+  build/net40/lib/Zeus1.0/Zeus.dll
+  build/net40/lib/Zeus1.0/pkgIndex_000c2706b38b0eae.eagle
+  build/net40/lib/Zeus1.0/pkgIndex_000c2706b38b0eae.eagle.harpy
+  build/net40/lib/Zeus1.0/Certificates/trial-certificate.xml
+  build/net40/Zeus.targets
+}
+
+###############################################################################
+#
+# NOTE: This is the list of all NuGet metadata files that should be present in
+#       all Kapok NuGet packages.
+#
+set kapok_manifests(nuGetMetadata) {
+  _rels/.rels
+  [Content_Types].xml
+  package/services/metadata/core-properties/${md5}.psmdcp
+}
+
+###############################################################################
+#
+# NOTE: This is the list of all NuGet metadata files that should be present in
+#       all signed Kapok NuGet packages.
+#
+set kapok_manifests(nuGetSignedMetadata) {
+  .signature.p7s
+}
+
+###############################################################################
+#
+# NOTE: This is the list of all NuSpec files that should be present in the
+#       Kapok primary NuGet package.
+#
+set kapok_manifests(nuGetPrimary) {
+  Kapok.nuspec
+}
+
+###############################################################################
+#
+# NOTE: This is the list of all core library files that should be present in
+#       the Kapok NuGet packages for the .NET Framework 2.0.
+#
+set kapok_manifests(nuGetNetFx20) {
+  Kapok.CLRv2.nuspec
+  build/net20/lib/Kapok1.0/bin/Kapok.dll
+  build/net20/lib/Kapok1.0/bin/pkgIndex_a98da1538d38809e.eagle
+  build/net20/lib/Kapok1.0/bin/pkgIndex_a98da1538d38809e.eagle.harpy
+  build/net20/lib/Kapok1.0/certificate/renew.cgi
+  build/net20/lib/Kapok1.0/certificate/request.cgi
+  build/net20/lib/Kapok1.0/certificate/revoked.cgi
+  build/net20/lib/Kapok1.0/service/provision.cgi
+  build/net20/lib/Kapok1.0/support/check.cgi
+  build/net20/lib/Kapok1.0/test/page.cgi
+  build/net20/lib/Kapok1.0/var/storage.cgi
+  build/net20/lib/Kapok1.0/wrapper/script.cgi
+  build/net20/lib/Kapok1.0/Web.config
+  build/net20/lib/Kapok1.0/Data/kapok.db
+  build/net20/lib/Kapok1.0/Data/var.db
+  build/net20/lib/Kapok1.0/Data/revokedIds.txt
+  build/net20/lib/Kapok1.0/Data/revokedTokens.txt
+  build/net20/lib/Kapok1.0/Keys/keyRing.db
+  build/net20/lib/Kapok1.0/Keys/KapokTestPrivate.snk
+  build/net20/lib/Kapok1.0/Keys/KapokTestPublic.snk
+  build/net20/lib/Kapok1.0/harpy-trial-certificate.xml
+  build/net20/lib/Kapok1.0/kapok-trial-certificate.xml
+  build/net20/lib/Kapok1.0/Tools/wrapped.eagle
+  build/net20/lib/Kapok1.0/Tools/wrapped.eagle.harpy
+  build/net20/lib/Kapok1.0/Tools/encrypt.eagle
+  build/net20/lib/Kapok1.0/Tools/encrypt.eagle.harpy
+  build/net20/lib/Kapok1.0/Tools/fixupWebConfig.eagle
+  build/net20/lib/Kapok1.0/Tools/fixupWebConfig.eagle.harpy
+  build/net20/lib/Kapok1.0/Tools/install.eagle
+  build/net20/lib/Kapok1.0/Tools/install.eagle.harpy
+  build/net20/lib/Kapok1.0/Tools/license.eagle
+  build/net20/lib/Kapok1.0/Tools/license.eagle.harpy
+  build/net20/lib/Kapok1.0/Tools/provision.eagle
+  build/net20/lib/Kapok1.0/Tools/provision.eagle.harpy
+  build/net20/lib/Kapok1.0/Tools/request.eagle
+  build/net20/lib/Kapok1.0/Tools/request.eagle.harpy
+  build/net20/lib/Kapok1.0/Tools/run.bat
+  build/net20/lib/Kapok1.0/Tools/renew.eagle
+  build/net20/lib/Kapok1.0/Tools/renew.eagle.harpy
+  build/net20/lib/Kapok1.0/Tools/support.eagle
+  build/net20/lib/Kapok1.0/Tools/support.eagle.harpy
+  build/net20/lib/Kapok1.0/Tools/data/manifest.eagle
+  build/net20/lib/Kapok1.0/Tools/data/manifest.eagle.harpy
+}
+
+###############################################################################
+#
+# NOTE: This is the list of all core library files that should be present in
+#       the Kapok NuGet packages for the .NET Framework 4.0.
+#
+set kapok_manifests(nuGetNetFx40) {
+  Kapok.CLRv4.nuspec
+  build/net40/lib/Kapok1.0/bin/Kapok.dll
+  build/net40/lib/Kapok1.0/bin/pkgIndex_a98da1538d38809e.eagle
+  build/net40/lib/Kapok1.0/bin/pkgIndex_a98da1538d38809e.eagle.harpy
+  build/net40/lib/Kapok1.0/certificate/renew.cgi
+  build/net40/lib/Kapok1.0/certificate/request.cgi
+  build/net40/lib/Kapok1.0/certificate/revoked.cgi
+  build/net40/lib/Kapok1.0/service/provision.cgi
+  build/net40/lib/Kapok1.0/support/check.cgi
+  build/net40/lib/Kapok1.0/test/page.cgi
+  build/net40/lib/Kapok1.0/var/storage.cgi
+  build/net40/lib/Kapok1.0/wrapper/script.cgi
+  build/net40/lib/Kapok1.0/Web.config
+  build/net40/lib/Kapok1.0/Data/kapok.db
+  build/net40/lib/Kapok1.0/Data/var.db
+  build/net40/lib/Kapok1.0/Data/revokedIds.txt
+  build/net40/lib/Kapok1.0/Data/revokedTokens.txt
+  build/net40/lib/Kapok1.0/Keys/keyRing.db
+  build/net40/lib/Kapok1.0/Keys/KapokTestPrivate.snk
+  build/net40/lib/Kapok1.0/Keys/KapokTestPublic.snk
+  build/net40/lib/Kapok1.0/harpy-trial-certificate.xml
+  build/net40/lib/Kapok1.0/kapok-trial-certificate.xml
+  build/net40/lib/Kapok1.0/Tools/wrapped.eagle
+  build/net40/lib/Kapok1.0/Tools/wrapped.eagle.harpy
+  build/net40/lib/Kapok1.0/Tools/encrypt.eagle
+  build/net40/lib/Kapok1.0/Tools/encrypt.eagle.harpy
+  build/net40/lib/Kapok1.0/Tools/fixupWebConfig.eagle
+  build/net40/lib/Kapok1.0/Tools/fixupWebConfig.eagle.harpy
+  build/net40/lib/Kapok1.0/Tools/install.eagle
+  build/net40/lib/Kapok1.0/Tools/install.eagle.harpy
+  build/net40/lib/Kapok1.0/Tools/license.eagle
+  build/net40/lib/Kapok1.0/Tools/license.eagle.harpy
+  build/net40/lib/Kapok1.0/Tools/provision.eagle
+  build/net40/lib/Kapok1.0/Tools/provision.eagle.harpy
+  build/net40/lib/Kapok1.0/Tools/request.eagle
+  build/net40/lib/Kapok1.0/Tools/request.eagle.harpy
+  build/net40/lib/Kapok1.0/Tools/run.bat
+  build/net40/lib/Kapok1.0/Tools/renew.eagle
+  build/net40/lib/Kapok1.0/Tools/renew.eagle.harpy
+  build/net40/lib/Kapok1.0/Tools/support.eagle
+  build/net40/lib/Kapok1.0/Tools/support.eagle.harpy
+  build/net40/lib/Kapok1.0/Tools/data/manifest.eagle
+  build/net40/lib/Kapok1.0/Tools/data/manifest.eagle.harpy
+}
+
+###############################################################################
+#
+# NOTE: This is the list of all core library files that should be present in
+#       the Kapok NuGet packages for .NET Core 2.0.
+#
+set kapok_manifests(nuGetNetStandard20) {
+  Kapok.DotNet.Standard.2.0.nuspec
+  build/netstandard2.0/lib/Kapok1.0/bin/Kapok.dll
+  build/netstandard2.0/lib/Kapok1.0/bin/pkgIndex_a98da1538d38809e.eagle
+  build/netstandard2.0/lib/Kapok1.0/bin/pkgIndex_a98da1538d38809e.eagle.harpy
+  build/netstandard2.0/lib/Kapok1.0/certificate/renew.cgi
+  build/netstandard2.0/lib/Kapok1.0/certificate/request.cgi
+  build/netstandard2.0/lib/Kapok1.0/certificate/revoked.cgi
+  build/netstandard2.0/lib/Kapok1.0/service/provision.cgi
+  build/netstandard2.0/lib/Kapok1.0/support/check.cgi
+  build/netstandard2.0/lib/Kapok1.0/test/page.cgi
+  build/netstandard2.0/lib/Kapok1.0/var/storage.cgi
+  build/netstandard2.0/lib/Kapok1.0/wrapper/script.cgi
+  build/netstandard2.0/lib/Kapok1.0/Web.config
+  build/netstandard2.0/lib/Kapok1.0/Data/kapok.db
+  build/netstandard2.0/lib/Kapok1.0/Data/var.db
+  build/netstandard2.0/lib/Kapok1.0/Data/revokedIds.txt
+  build/netstandard2.0/lib/Kapok1.0/Data/revokedTokens.txt
+  build/netstandard2.0/lib/Kapok1.0/Keys/keyRing.db
+  build/netstandard2.0/lib/Kapok1.0/Keys/KapokTestPrivate.snk
+  build/netstandard2.0/lib/Kapok1.0/Keys/KapokTestPublic.snk
+  build/netstandard2.0/lib/Kapok1.0/harpy-trial-certificate.xml
+  build/netstandard2.0/lib/Kapok1.0/kapok-trial-certificate.xml
+  build/netstandard2.0/lib/Kapok1.0/Tools/wrapped.eagle
+  build/netstandard2.0/lib/Kapok1.0/Tools/wrapped.eagle.harpy
+  build/netstandard2.0/lib/Kapok1.0/Tools/encrypt.eagle
+  build/netstandard2.0/lib/Kapok1.0/Tools/encrypt.eagle.harpy
+  build/netstandard2.0/lib/Kapok1.0/Tools/fixupWebConfig.eagle
+  build/netstandard2.0/lib/Kapok1.0/Tools/fixupWebConfig.eagle.harpy
+  build/netstandard2.0/lib/Kapok1.0/Tools/install.eagle
+  build/netstandard2.0/lib/Kapok1.0/Tools/install.eagle.harpy
+  build/netstandard2.0/lib/Kapok1.0/Tools/license.eagle
+  build/netstandard2.0/lib/Kapok1.0/Tools/license.eagle.harpy
+  build/netstandard2.0/lib/Kapok1.0/Tools/provision.eagle
+  build/netstandard2.0/lib/Kapok1.0/Tools/provision.eagle.harpy
+  build/netstandard2.0/lib/Kapok1.0/Tools/request.eagle
+  build/netstandard2.0/lib/Kapok1.0/Tools/request.eagle.harpy
+  build/netstandard2.0/lib/Kapok1.0/Tools/run.bat
+  build/netstandard2.0/lib/Kapok1.0/Tools/renew.eagle
+  build/netstandard2.0/lib/Kapok1.0/Tools/renew.eagle.harpy
+  build/netstandard2.0/lib/Kapok1.0/Tools/support.eagle
+  build/netstandard2.0/lib/Kapok1.0/Tools/support.eagle.harpy
+  build/netstandard2.0/lib/Kapok1.0/Tools/data/manifest.eagle
+  build/netstandard2.0/lib/Kapok1.0/Tools/data/manifest.eagle.harpy
+}
+
+###############################################################################
+#
+# NOTE: This is the list of all core library files that should be present in
+#       the Kapok NuGet packages for .NET Core 3.0.
+#
+set kapok_manifests(nuGetNetStandard21) {
+  Kapok.DotNet.Standard.2.1.nuspec
+  build/netstandard2.1/lib/Kapok1.0/bin/Kapok.dll
+  build/netstandard2.1/lib/Kapok1.0/bin/pkgIndex_a98da1538d38809e.eagle
+  build/netstandard2.1/lib/Kapok1.0/bin/pkgIndex_a98da1538d38809e.eagle.harpy
+  build/netstandard2.1/lib/Kapok1.0/certificate/renew.cgi
+  build/netstandard2.1/lib/Kapok1.0/certificate/request.cgi
+  build/netstandard2.1/lib/Kapok1.0/certificate/revoked.cgi
+  build/netstandard2.1/lib/Kapok1.0/service/provision.cgi
+  build/netstandard2.1/lib/Kapok1.0/support/check.cgi
+  build/netstandard2.1/lib/Kapok1.0/test/page.cgi
+  build/netstandard2.1/lib/Kapok1.0/var/storage.cgi
+  build/netstandard2.1/lib/Kapok1.0/wrapper/script.cgi
+  build/netstandard2.1/lib/Kapok1.0/Web.config
+  build/netstandard2.1/lib/Kapok1.0/Data/kapok.db
+  build/netstandard2.1/lib/Kapok1.0/Data/var.db
+  build/netstandard2.1/lib/Kapok1.0/Data/revokedIds.txt
+  build/netstandard2.1/lib/Kapok1.0/Data/revokedTokens.txt
+  build/netstandard2.1/lib/Kapok1.0/Keys/keyRing.db
+  build/netstandard2.1/lib/Kapok1.0/Keys/KapokTestPrivate.snk
+  build/netstandard2.1/lib/Kapok1.0/Keys/KapokTestPublic.snk
+  build/netstandard2.1/lib/Kapok1.0/harpy-trial-certificate.xml
+  build/netstandard2.1/lib/Kapok1.0/kapok-trial-certificate.xml
+  build/netstandard2.1/lib/Kapok1.0/Tools/wrapped.eagle
+  build/netstandard2.1/lib/Kapok1.0/Tools/wrapped.eagle.harpy
+  build/netstandard2.1/lib/Kapok1.0/Tools/encrypt.eagle
+  build/netstandard2.1/lib/Kapok1.0/Tools/encrypt.eagle.harpy
+  build/netstandard2.1/lib/Kapok1.0/Tools/fixupWebConfig.eagle
+  build/netstandard2.1/lib/Kapok1.0/Tools/fixupWebConfig.eagle.harpy
+  build/netstandard2.1/lib/Kapok1.0/Tools/install.eagle
+  build/netstandard2.1/lib/Kapok1.0/Tools/install.eagle.harpy
+  build/netstandard2.1/lib/Kapok1.0/Tools/license.eagle
+  build/netstandard2.1/lib/Kapok1.0/Tools/license.eagle.harpy
+  build/netstandard2.1/lib/Kapok1.0/Tools/provision.eagle
+  build/netstandard2.1/lib/Kapok1.0/Tools/provision.eagle.harpy
+  build/netstandard2.1/lib/Kapok1.0/Tools/request.eagle
+  build/netstandard2.1/lib/Kapok1.0/Tools/request.eagle.harpy
+  build/netstandard2.1/lib/Kapok1.0/Tools/run.bat
+  build/netstandard2.1/lib/Kapok1.0/Tools/renew.eagle
+  build/netstandard2.1/lib/Kapok1.0/Tools/renew.eagle.harpy
+  build/netstandard2.1/lib/Kapok1.0/Tools/support.eagle
+  build/netstandard2.1/lib/Kapok1.0/Tools/support.eagle.harpy
+  build/netstandard2.1/lib/Kapok1.0/Tools/data/manifest.eagle
+  build/netstandard2.1/lib/Kapok1.0/Tools/data/manifest.eagle.harpy
+}
+
+###############################################################################
+#
+# NOTE: This is the list of all NuGet metadata files that should be present in
+#       all Eagle NuGet packages.
+#
+set alphacipher_manifests(nuGetMetadata) {
+  _rels/.rels
+  [Content_Types].xml
+  package/services/metadata/core-properties/${md5}.psmdcp
+}
+
+###############################################################################
+#
+# NOTE: This is the list of all NuGet metadata files that should be present in
+#       all signed Eagle NuGet packages.
+#
+set alphacipher_manifests(nuGetSignedMetadata) {
+  .signature.p7s
+}
+
+###############################################################################
+#
+# NOTE: This is the list of all core library files that should be present in
+#       the AlphaCipher NuGet packages for the .NET Framework 4.0.
+#
+set alphacipher_manifests(nuGetNetFx40) {
+  AlphaCipher.nuspec
+  build/net40/lib/AlphaCipher1.0/AlphaCipher.dll
+  build/net40/lib/AlphaCipher1.0/helper.eagle
+  build/net40/lib/AlphaCipher1.0/helper.eagle.harpy
+  build/net40/lib/AlphaCipher1.0/helper4.eagle
+  build/net40/lib/AlphaCipher1.0/helper4.eagle.harpy
+  build/net40/lib/AlphaCipher1.0/Interop.QWPCQNG.dll
+  build/net40/lib/AlphaCipher1.0/Interop.QWQNG.dll
+  build/net40/lib/AlphaCipher1.0/pkgIndex_9ca6d7c646f437e6.eagle
+  build/net40/lib/AlphaCipher1.0/pkgIndex_9ca6d7c646f437e6.eagle.harpy
+  build/net40/lib/AlphaCipher1.0/test.eagle
+  build/net40/lib/AlphaCipher1.0/test.eagle.harpy
+  build/net40/lib/AlphaCipher1.0/x86/ACKernel4Sdk.dll
+  build/net40/lib/AlphaCipher1.0/x64/ACKernel4Sdk.dll
+  build/net40/lib/AlphaCipher1.0/x86/sqlite3.dll
+  build/net40/lib/AlphaCipher1.0/x64/sqlite3.dll
+  build/net40/lib/AlphaCipher1.0/Certificates/trial-certificate.xml
+  build/net40/AlphaCipher.targets
+}
+
+###############################################################################
+#
+# NOTE: This is the list of all core library files that should be present in
+#       the AlphaCipher NuGet test keys package.
+#
+set alphacipher_manifests(testKeys) {
+  AlphaCipher.TestKeys.nuspec
+  build/net40/lib/AlphaCipher1.0/dec_83919e62bd924c489be9bfac6f53bcc3
+  build/net40/lib/AlphaCipher1.0/dec_de6feaae422d479a9a42f8544dc16805
+  build/net40/lib/AlphaCipher1.0/enc_e5c3fa332c5f427dbd1e1703d36a1cef
+  build/net40/lib/AlphaCipher1.0/layout.pef
+}
+
+###############################################################################
+#
+# NOTE: These are the archive manifest groups, based on file name.  The first
+#       element in each list is the array variable name prefix used to locate
+#       the array containing the named elements that are referenced by the
+#       remaining elements in each list.  Here is an example:
+#
+#       1. First, the archive file name has the patch level removed from it.
+#          Next, it is mapped to the name of the array containing the file
+#          lists via the first element of the corresponding list.
+#
+#       [lindex $manifests(EagleCore.exe) 0] ==> eagle ==> eee_manifests
+#
+#       2. Next, the remaining elements are used to query the named file lists
+#          from the array discovered in the previous step.
+#
+#       [lrange $manifests(EagleCore.exe) 1 end] ==> core library
+#
+#       3. Finally, the final list of files for this archive file name is built
+#          by combining all the file names in the file lists discovered in the
+#          previous step.  Duplicate file names, if any, should be harmless.
+#
+#       $result == $eee_manifests(core) UNION $eee_manifests(library)
+#
+###############################################################################
+############################ Harpy NuGet Packages #############################
+###############################################################################
+
+set manifests(Harpy..nupkg) [list harpy \
+    nuGetMetadata nuGetPrimary]
+
+###############################################################################
+
+set manifests(Harpy..signed.nupkg) [list harpy \
+    nuGetMetadata nuGetSignedMetadata nuGetPrimary]
+
+###############################################################################
+
+set manifests(Harpy.CLRv2..nupkg) [list harpy \
+    nuGetMetadata nuGetNetFx20]
+
+###############################################################################
+
+set manifests(Harpy.CLRv2..signed.nupkg) [list harpy \
+    nuGetMetadata nuGetSignedMetadata nuGetNetFx20]
+
+###############################################################################
+
+set manifests(Harpy.CLRv4..nupkg) [list harpy \
+    nuGetMetadata nuGetNetFx40]
+
+###############################################################################
+
+set manifests(Harpy.CLRv4..signed.nupkg) [list harpy \
+    nuGetMetadata nuGetSignedMetadata nuGetNetFx40]
+
+###############################################################################
+
+set manifests(Harpy.DotNet.Standard.2.0..nupkg) [list harpy \
+    nuGetMetadata nuGetNetStandard20]
+
+###############################################################################
+
+set manifests(Harpy.DotNet.Standard.2.0..signed.nupkg) [list harpy \
+    nuGetMetadata nuGetSignedMetadata nuGetNetStandard20]
+
+###############################################################################
+
+set manifests(Harpy.DotNet.Standard.2.1..nupkg) [list harpy \
+    nuGetMetadata nuGetNetStandard21]
+
+###############################################################################
+
+set manifests(Harpy.DotNet.Standard.2.1..signed.nupkg) [list harpy \
+    nuGetMetadata nuGetSignedMetadata nuGetNetStandard21]
+
+###############################################################################
+############################ Demo NuGet Packages ##############################
+###############################################################################
+
+set manifests(Demo..nupkg) [list demo \
+    nuGetMetadata nuGetNetFx40]
+
+###############################################################################
+
+set manifests(Demo..signed.nupkg) [list demo \
+    nuGetMetadata nuGetSignedMetadata nuGetNetFx40]
+
+###############################################################################
+######################## Featherlight NuGet Packages ##########################
+###############################################################################
+
+set manifests(Featherlight..nupkg) [list featherlight \
+    nuGetMetadata nuGetNetFx40]
+
+###############################################################################
+
+set manifests(Featherlight..signed.nupkg) [list featherlight \
+    nuGetMetadata nuGetSignedMetadata nuGetNetFx40]
+
+###############################################################################
+########################### HotKey NuGet Packages #############################
+###############################################################################
+
+set manifests(HotKey..nupkg) [list hotkey \
+    nuGetMetadata nuGetNetFx40]
+
+###############################################################################
+
+set manifests(HotKey..signed.nupkg) [list hotkey \
+    nuGetMetadata nuGetSignedMetadata nuGetNetFx40]
+
+###############################################################################
+############################ Zeus NuGet Packages ##############################
+###############################################################################
+
+set manifests(Zeus..nupkg) [list zeus \
+    nuGetMetadata nuGetNetFx40]
+
+###############################################################################
+
+set manifests(Zeus..signed.nupkg) [list zeus \
+    nuGetMetadata nuGetSignedMetadata nuGetNetFx40]
+
+###############################################################################
+############################ Kapok NuGet Packages #############################
+###############################################################################
+
+set manifests(Kapok..nupkg) [list kapok \
+    nuGetMetadata nuGetPrimary]
+
+###############################################################################
+
+set manifests(Kapok..signed.nupkg) [list kapok \
+    nuGetMetadata nuGetSignedMetadata nuGetPrimary]
+
+###############################################################################
+
+set manifests(Kapok.CLRv2..nupkg) [list kapok \
+    nuGetMetadata nuGetNetFx20]
+
+###############################################################################
+
+set manifests(Kapok.CLRv2..signed.nupkg) [list kapok \
+    nuGetMetadata nuGetSignedMetadata nuGetNetFx20]
+
+###############################################################################
+
+set manifests(Kapok.CLRv4..nupkg) [list kapok \
+    nuGetMetadata nuGetNetFx40]
+
+###############################################################################
+
+set manifests(Kapok.CLRv4..signed.nupkg) [list kapok \
+    nuGetMetadata nuGetSignedMetadata nuGetNetFx40]
+
+###############################################################################
+
+set manifests(Kapok.DotNet.Standard.2.0..nupkg) [list kapok \
+    nuGetMetadata nuGetNetStandard20]
+
+###############################################################################
+
+set manifests(Kapok.DotNet.Standard.2.0..signed.nupkg) [list kapok \
+    nuGetMetadata nuGetSignedMetadata nuGetNetStandard20]
+
+###############################################################################
+
+set manifests(Kapok.DotNet.Standard.2.1..nupkg) [list kapok \
+    nuGetMetadata nuGetNetStandard21]
+
+###############################################################################
+
+set manifests(Kapok.DotNet.Standard.2.1..signed.nupkg) [list kapok \
+    nuGetMetadata nuGetSignedMetadata nuGetNetStandard21]
+
+###############################################################################
+######################### AlphaCipher NuGet Packages ##########################
+###############################################################################
+
+set manifests(AlphaCipher..nupkg) [list alphacipher \
+    nuGetMetadata nuGetNetFx40]
+
+set manifests(AlphaCipher..signed.nupkg) [list alphacipher \
+    nuGetMetadata nuGetSignedMetadata nuGetNetFx40]
+
+set manifests(AlphaCipher.TestKeys.1.0.0.nupkg) [list alphacipher \
+    nuGetMetadata testKeys]
+
+set manifests(AlphaCipher.TestKeys.1.0.0.signed.nupkg) [list alphacipher \
+    nuGetMetadata nuGetSignedMetadata testKeys]
+
+###############################################################################
+# end of file

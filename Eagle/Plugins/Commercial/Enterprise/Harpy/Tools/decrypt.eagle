@@ -1,0 +1,88 @@
+###############################################################################
+#
+# decrypt.eagle --
+#
+# Extensible Adaptable Generalized Logic Engine (Eagle)
+# Enterprise Edition License Decryption Tool
+#
+# Copyright (c) 2007-2012 by Joe Mistachkin.  All rights reserved.
+#
+# See the file "license.terms" for information on usage and redistribution of
+# this file, and for a DISCLAIMER OF ALL WARRANTIES.
+#
+# RCS: @(#) $Id: $
+#
+###############################################################################
+
+proc usage { {error ""} } {
+  # <help>
+  # This procedure prints the command-line usage summary for the license
+  # decryption tool and then terminates the process, signaling failure to
+  # whatever invoked it.  It exists as the single entry point for the "you
+  # called me incorrectly" path, and is invoked when the tool is run with the
+  # wrong number of positional arguments.
+  #
+  # How it works: when the error argument is a non-empty string it is written
+  # to standard output first; the usage line is then printed, naming the host
+  # shell executable and this script followed by the required positional
+  # arguments (fileName, salt, and password).  Finally it calls [exit 1].
+  #
+  # Tricky details: this procedure never returns to its caller -- it always
+  # exits the process with a non-zero (failure) status, so it must only be
+  # used on terminal error paths.  The error argument is optional and defaults
+  # to the empty string for callers that just want the bare usage text.
+  #
+  # Arguments:
+  #   error -- An optional leading error message.  When non-empty it is shown
+  #            before the usage text; defaults to the empty string.
+  #
+  # Results:
+  #   Does not return; the process exits with status code 1.
+  # </help>
+
+  if {[string length $error] > 0} then {puts stdout $error}
+
+  puts stdout "usage:\
+[file tail [getShellExecutableName]]\
+[file tail [info script]] <fileName> <salt> <password>"
+
+  exit 1
+}
+
+if {[llength $argv] == 3} then {
+  package require Eagle
+  package require Licensing.Enterprise
+
+  if {![info exists isCertificate]} then {
+    set isCertificate true; # TODO: Good default?
+  }
+
+  set fileName [lindex $argv 0]
+
+  if {$isCertificate} then {
+    set decryptedFileName [appendArgs [file rootname $fileName] .xml]
+  } else {
+    set decryptedFileName [appendArgs [file rootname $fileName] .eagle]
+  }
+
+  set salt [lindex $argv 1]
+
+  if {![string is guid -strict $salt]} then {
+    error "malformed decryption salt: must be in GUID format"
+  }
+
+  set password [lindex $argv 2]
+  set guid [object create -alias Guid $salt]
+
+  object invoke AppDomain.CurrentDomain SetData \
+      [appendArgs [$guid ToString] _ [pid]] $password
+
+  writeFile $decryptedFileName [certificate decrypt -- $fileName]
+
+  host result Ok [appendArgs \
+      "DECRYPTED: " [file tail $decryptedFileName] \n]
+
+  host result Continue [appendArgs "GUID: " [$guid ToString] \n]
+} else {
+  usage
+}

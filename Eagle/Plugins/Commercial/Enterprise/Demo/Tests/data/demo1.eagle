@@ -1,0 +1,6 @@
+#
+# NOTE: This is a comment block followed by a blank line.
+#
+
+set x 1; set y 2; incr x; list $x $y
+exit

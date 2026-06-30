@@ -1,0 +1,1275 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="14.0">
+  <PropertyGroup>
+    <EagleDir>$(MSBuildProjectDirectory)\..\..\..\..</EagleDir>
+  </PropertyGroup>
+  <Import Project="$(EagleDir)\Targets\Eagle.Presets.targets" />
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{D463311A-8A80-4A00-AC66-1D17DCAE8975}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Harpy</RootNamespace>
+    <AssemblyName>Harpy</AssemblyName>
+    <BaseAddress>1632632832</BaseAddress>
+    <EaglePackageVersion>1.0</EaglePackageVersion>
+    <HarpyDir>$(MSBuildProjectDirectory)</HarpyDir>
+    <EagleProjectName>Eagle (Harpy)</EagleProjectName>
+  </PropertyGroup>
+  <Import Project="$(HarpyDir)\Targets\Harpy.StrongName.Settings.targets" />
+  <Import Project="$(EagleDir)\Targets\Eagle.Builds.targets" />
+  <Import Project="$(HarpyDir)\Targets\Harpy.Builds.targets" />
+  <Import Project="$(EagleDir)\Targets\Eagle.Settings.targets" />
+  <Import Project="$(HarpyDir)\Targets\Harpy.Settings.targets" />
+  <PropertyGroup Condition="'$(EagleOnlyNetFx20)' != 'false'">
+    <TargetFrameworkVersion>v2.0</TargetFrameworkVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(EaglePackageOutputPath)' != ''">
+    <OutputPath>$(EaglePackageOutputPath)</OutputPath>
+    <DocumentationFile Condition="'$(EagleDocumentationFile)' != 'false'">$(EaglePackageOutputPath)$(AssemblyName).xml</DocumentationFile>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Security" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(TargetFrameworkVersion)' == 'v4.0' Or
+                        '$(TargetFrameworkVersion)' == 'v4.5' Or
+                        '$(TargetFrameworkVersion)' == 'v4.5.1' Or
+                        '$(TargetFrameworkVersion)' == 'v4.5.2' Or
+                        '$(TargetFrameworkVersion)' == 'v4.6' Or
+                        '$(TargetFrameworkVersion)' == 'v4.6.1' Or
+                        '$(TargetFrameworkVersion)' == 'v4.6.2' Or
+                        '$(TargetFrameworkVersion)' == 'v4.7' Or
+                        '$(TargetFrameworkVersion)' == 'v4.7.1' Or
+                        '$(TargetFrameworkVersion)' == 'v4.7.2' Or
+                        '$(TargetFrameworkVersion)' == 'v4.8' Or
+                        '$(TargetFrameworkVersion)' == 'v4.8.1'">
+    <Reference Include="System.Numerics" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(EagleXml)' != 'false'">
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(CertificatePlugin)' != 'false' And
+                       ('$(CertificatePolicy)' != 'false' Or
+                        '$(PluginCommands)' != 'false')">
+    <Compile Include="Commands\Default.cs" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(CertificatePlugin)' != 'false' And
+                        '$(PluginCommands)' != 'false'">
+    <Compile Include="Commands\Certificate.cs" />
+    <Compile Include="Commands\Cryptography.cs" />
+    <Compile Include="Commands\Flags.cs" />
+    <Compile Include="Commands\KeyPair.cs" />
+    <Compile Include="Commands\Secret.cs" />
+    <Compile Include="Commands\Storage.cs" />
+    <Compile Include="Commands\Support.cs" />
+    <Compile Include="Components\Private\CommandOps.cs" />
+    <Compile Include="Components\Private\CryptographyData.cs" />
+    <Compile Include="Components\Private\CryptographyOps.cs" />
+    <Compile Include="Components\Private\SecretData.cs" />
+    <Compile Include="Components\Private\SecretDataOps.cs" />
+    <Compile Include="Components\Private\SecretOps.cs" />
+    <Compile Include="Components\Public\Utility.cs" />
+    <Compile Include="Plugins\Enterprise.cs" />
+    <Compile Include="Plugins\Standard.cs" />
+    <Compile Include="Policies\Certificate.cs" />
+    <Compile Include="Policies\Cryptography.cs" />
+    <Compile Include="Policies\Flags.cs" />
+    <Compile Include="Policies\Secret.cs" />
+    <Compile Include="Policies\Storage.cs" />
+    <Compile Include="Policies\Support.cs" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(EagleShell)' != 'false' And
+                        '$(CertificatePlugin)' != 'false' And
+                        '$(CertificatePolicy)' != 'false' And
+                        '$(PluginCommands)' != 'false'">
+    <Compile Include="Commands\Keval.cs" />
+    <Compile Include="Components\Private\CertificateShellOps.cs" />
+    <Compile Include="Components\Private\CertificateShellState.cs" />
+  </ItemGroup>
+  <ItemGroup Condition="('$(EagleIsolatedInterpreters)' != 'false' Or
+                         '$(EagleIsolatedPlugins)' != 'false') And
+                        '$(EagleShell)' != 'false' And
+                        '$(CertificatePlugin)' != 'false' And
+                        '$(CertificatePolicy)' != 'false' And
+                        '$(PluginCommands)' != 'false'">
+    <Compile Include="Components\Private\CertificateShellCallback.cs" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(EagleNative)' != 'false'">
+    <Compile Include="Components\Private\ProtectOps.cs" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(EagleNetwork)' != 'false'">
+    <Compile Include="Components\Private\CertificateTimeOps.cs" />
+    <Compile Include="Components\Private\NtpOps.cs" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(Configuration)' == 'Debug' Or
+                        '$(EagleForceTrace)' != 'false'">
+    <Compile Include="Components\Private\DebugOnlyOps.cs" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(CertificatePlugin)' != 'false' And
+                        '$(CertificatePolicy)' != 'false'">
+    <Compile Include="Commands\Harpy.cs" />
+    <Compile Include="Commands\KeyRing.cs" />
+    <Compile Include="Commands\Ksource.cs" />
+    <Compile Include="Commands\Security.cs" />
+    <Compile Include="Comparers\Object.cs" />
+    <Compile Include="Components\Private\CertificateKeyPairState.cs" />
+    <Compile Include="Components\Private\CertificateKeyRingOps.cs" />
+    <Compile Include="Components\Private\CertificateKeyRingState.cs" />
+    <Compile Include="Components\Private\CertificatePolicyOps.cs" />
+    <Compile Include="Components\Private\CertificatePolicyState.cs" />
+    <Compile Include="Components\Private\KeyRing.cs" />
+    <Compile Include="Components\Private\PolicyConfiguration.cs" />
+    <Compile Include="Interfaces\Private\KeyRing.cs" />
+    <Compile Include="Policies\File.cs" />
+    <Compile Include="Policies\Harpy.cs" />
+    <Compile Include="Policies\KeyRing.cs" />
+    <Compile Include="Policies\License.cs" />
+    <Compile Include="Policies\Other.cs" />
+    <Compile Include="Policies\Script.cs" />
+    <Compile Include="Policies\Stream.cs" />
+    <Compile Include="Policies\Trace.cs" />
+  </ItemGroup>
+  <ItemGroup Condition="('$(CertificatePlugin)' != 'false' And
+                         '$(CertificatePolicy)' != 'false') Or
+                        ('$(CertificatePlugin)' != 'false' And
+                         '$(PluginCommands)' != 'false')">
+    <Compile Include="Policies\KeyPair.cs" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(CertificatePlugin)' != 'false' And
+                        '$(CertificatePolicy)' != 'false' And
+                        '$(LimitedEdition)' == 'false'">
+    <Compile Include="Components\Public\PolicyManager.cs" />
+    <Compile Include="Interfaces\Public\PolicyManager.cs" />
+    <Compile Include="Interfaces\Public\PolicyManagerData.cs" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(EagleNetwork)' != 'false'">
+    <Compile Include="Components\Private\CertificateNetworkOps.cs" />
+    <Compile Include="Components\Private\CertificateNetworkState.cs" />
+    <Compile Include="Components\Private\CertificateRevocationState.cs" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(EagleNetwork)' != 'false' And
+                        '$(CertificateRenewal)' != 'false'">
+    <Compile Include="Components\Private\CertificateRenewalOps.cs" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(EagleXml)' != 'false' And
+                        '$(EagleSerialization)' != 'false'">
+    <Compile Include="Components\Private\CertificateXmlOps.cs" />
+    <Compile Include="Interfaces\Public\CertificateXml.cs" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(LicenseManager)' != 'false' Or
+                        '$(CertificatePlugin)' != 'false'">
+    <Compile Include="Components\Public\LicenseManager.cs" />
+    <Compile Include="Interfaces\Public\LicenseCertificateData.cs" />
+    <Compile Include="Interfaces\Public\LicenseFlagsData.cs" />
+    <Compile Include="Interfaces\Public\LicenseManager.cs" />
+    <Compile Include="Interfaces\Public\LicenseManagerData.cs" />
+    <Compile Include="Interfaces\Public\LicensePluginData.cs" />
+    <Compile Include="Interfaces\Public\LicensePluginManagerData.cs" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(LicenseManager)' != 'false' Or
+                       ('$(CertificatePlugin)' != 'false' And
+                        ('$(CertificatePolicy)' != 'false' Or
+                         '$(PluginCommands)' != 'false'))">
+    <Compile Include="Interfaces\Public\LicenseCommand.cs" />
+    <Compile Include="Interfaces\Public\LicenseCommandData.cs" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(CertificatePlugin)' != 'false'">
+    <Compile Include="Components\Private\CertificateIsolatedOps.cs" />
+    <Compile Include="Components\Private\CertificateIsolatedState.cs" />
+    <Compile Include="Components\Private\CertificatePluginOps.cs" />
+    <Compile Include="Components\Private\DefineConstants.cs" />
+    <Compile Include="Plugins\Core.cs" />
+    <Compile Include="Plugins\Default.cs" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(EagleNetStandard20)' == 'false'">
+    <Compile Include="Components\Private\RegistryOps.cs" />
+    <Compile Include="Components\Public\RegistryManager.cs" />
+    <Compile Include="Interfaces\Public\RegistryManager.cs" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(CertificatePlugin)' != 'false' And
+                        '$(CertificatePolicy)' != 'false'">
+    <Compile Include="Components\Private\CertificatePluginState.cs" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(EagleXml)' != 'false' And
+                        '$(CertificatePlugin)' != 'false' And
+                        '$(PluginCommands)' != 'false' And
+                        '$(EagleNetwork)' != 'false' And
+                        '$(EagleWeb)' != 'false'">
+    <Compile Include="Providers\Remote.cs" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(DemoKeyPairs)' != 'false' Or
+                        '$(DemoEdition)' != 'false'">
+    <Compile Include="Components\Private\CertificateDemoMode.cs" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(CertificatePlugin)' != 'false' And
+                        '$(CertificatePolicy)' != 'false' And
+                       ('$(DemoKeyPairs)' != 'false' Or
+                        '$(DemoEdition)' != 'false')">
+    <Compile Include="Components\Private\CertificateDemoState.cs" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(EagleTest)' != 'false'">
+    <Compile Include="Components\Private\CertificateSandboxOps.cs" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(EagleXml)' != 'false' And
+                        '$(EagleNetwork)' != 'false' And
+                        '$(EagleWeb)' != 'false'">
+    <Compile Include="Components\Private\CertificateFileOps.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Components\Private\BigRSACryptoServiceProvider.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Components\Private\CertificateAssemblyCache.cs" />
+    <Compile Include="Components\Private\CertificateAssemblyOps.cs" />
+    <Compile Include="Components\Private\CertificateDataOps.cs" />
+    <Compile Include="Components\Private\CertificateFailSafeMode.cs" />
+    <Compile Include="Components\Private\CertificateFlagOps.cs" />
+    <Compile Include="Components\Private\CertificateGlobalState.cs" />
+    <Compile Include="Components\Private\CertificateKeyPairOps.cs" />
+    <Compile Include="Components\Private\CertificateLicenseState.cs" />
+    <Compile Include="Components\Private\CertificatePathOps.cs" />
+    <Compile Include="Components\Private\CertificateProcessOps.cs" />
+    <Compile Include="Components\Private\CertificateRevocationOps.cs" />
+    <Compile Include="Components\Private\CertificateSandboxState.cs" />
+    <Compile Include="Components\Private\CertificateScriptOps.cs" />
+    <Compile Include="Components\Private\CertificateSdkMode.cs" />
+    <Compile Include="Components\Private\CertificateSharedOps.cs" />
+    <Compile Include="Components\Private\CertificateTestMode.cs" />
+    <Compile Include="Components\Private\CertificateTimeState.cs" />
+    <Compile Include="Components\Private\CertificateTraceOps.cs" />
+    <Compile Include="Components\Private\CertificateVerifyOps.cs" />
+    <Compile Include="Components\Private\CertificateVersionState.cs" />
+    <Compile Include="Components\Private\Commands.cs" />
+    <Compile Include="Components\Private\Configuration.cs" />
+    <Compile Include="Components\Private\Constants.cs" />
+    <Compile Include="Components\Private\Delegates.cs" />
+    <Compile Include="Components\Private\DsaKeyFile.cs" />
+    <Compile Include="Components\Private\DsaKeyPair.cs" />
+    <Compile Include="Components\Private\Enumerations.cs" />
+    <Compile Include="Components\Private\Features.cs" />
+    <Compile Include="Components\Private\FileAndOrStreamData.cs" />
+    <Compile Include="Components\Private\Identifier.cs" />
+    <Compile Include="Components\Private\KeyFile.cs" />
+    <Compile Include="Components\Private\KeyPair.cs" />
+    <Compile Include="Components\Private\KeyPairMetadata.cs" />
+    <Compile Include="Components\Private\KeyPairMetadataBase.cs" />
+    <Compile Include="Components\Private\KeyUsage.cs" />
+    <Compile Include="Components\Private\PatchLevel.cs" />
+    <Compile Include="Components\Private\Restrictions.cs" />
+    <Compile Include="Components\Private\RsaKeyFile.cs" />
+    <Compile Include="Components\Private\RsaKeyPair.cs" />
+    <Compile Include="Components\Private\ScriptContext.cs" />
+    <Compile Include="Components\Private\StorageOps.cs" />
+    <Compile Include="Components\Private\TraceStreamWriter.cs" />
+    <Compile Include="Components\Private\VerifyClientData.cs" />
+    <Compile Include="Components\Private\WellKnownOps.cs" />
+    <Compile Include="Components\Public\Certificate.cs" />
+    <Compile Include="Components\Public\Delegates.cs" />
+    <Compile Include="Components\Public\Enumerations.cs" />
+    <Compile Include="Components\Public\StorageManager.cs" />
+    <Compile Include="Interfaces\Private\Configuration.cs" />
+    <Compile Include="Interfaces\Private\KeyPair.cs" />
+    <Compile Include="Interfaces\Private\KeyPairMetadata.cs" />
+    <Compile Include="Interfaces\Private\KeyPairMetadataBase.cs" />
+    <Compile Include="Interfaces\Private\LogClientData.cs" />
+    <Compile Include="Interfaces\Public\Certificate.cs" />
+    <Compile Include="Interfaces\Public\CertificateData.cs" />
+    <Compile Include="Interfaces\Public\StorageManager.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Providers\Default.cs" />
+    <Compile Include="Sdk\Managed\LicenseOps.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Condition="'$(Configuration)' == 'Debug'"
+          Include="Configurations\Harpy.v1.Debug.eagle">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Condition="'$(Configuration)' == 'Debug'"
+          Include="Configurations\Harpy.v1.Debug.eagle.b64sig">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Configurations\Harpy.v1.eagle">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Configurations\Harpy.v1.eagle.b64sig">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Condition="Exists('Configurations\Harpy.v1.LACHRYMOSE.eagle')"
+          Include="Configurations\Harpy.v1.LACHRYMOSE.eagle">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Condition="Exists('Configurations\Harpy.v1.LACHRYMOSE.eagle.b64sig')"
+          Include="Configurations\Harpy.v1.LACHRYMOSE.eagle.b64sig">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Condition="'$(Configuration)' == 'Debug'"
+          Include="Configurations\Harpy.v1.Debug.eeagle">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Condition="'$(Configuration)' == 'Debug'"
+          Include="Configurations\Harpy.v1.Debug.eeagle.b64sig">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Configurations\Harpy.v1.eeagle">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Configurations\Harpy.v1.eeagle.b64sig">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Condition="Exists('Configurations\Harpy.v1.LACHRYMOSE.eeagle')"
+          Include="Configurations\Harpy.v1.LACHRYMOSE.eeagle">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Condition="Exists('Configurations\Harpy.v1.LACHRYMOSE.eeagle.b64sig')"
+          Include="Configurations\Harpy.v1.LACHRYMOSE.eeagle.b64sig">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Configurations\Debug\restricted.eagle">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Configurations\Debug\restricted.eagle.b64sig">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Configurations\Debug\unrestricted.eagle">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Configurations\Debug\unrestricted.eagle.b64sig">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Configurations\NuGet\encrypted.txt" />
+    <None Include="Configurations\NuGet\Harpy.v1.eagle" />
+    <None Include="Configurations\NuGet\Harpy.v1.eagle.b64sig" />
+    <None Include="Configurations\NuGet\Harpy.v1.eeagle" />
+    <None Include="Configurations\NuGet\Harpy.v1.eeagle.b64sig" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Sdk\data\Example1Private.snk" />
+    <None Include="Sdk\data\Example1Public.snk" />
+    <None Include="Sdk\data\Example1.xml" />
+    <None Include="Sdk\data\Example2Private.snk" />
+    <None Include="Sdk\data\Example2Public.snk" />
+    <None Include="Sdk\data\Example2.xml" />
+    <None Include="Sdk\data\Example3Private.snk" />
+    <None Include="Sdk\data\Example3Public.snk" />
+    <None Include="Sdk\data\Example3.exml" />
+    <None Include="Sdk\data\Example3.xml" />
+    <None Include="Sdk\Managed\Examples\Example1.cs" />
+    <None Include="Sdk\Managed\Examples\Example1.cs.harpy" />
+    <None Include="Sdk\Managed\Examples\Example2.cs" />
+    <None Include="Sdk\Managed\Examples\Example2.cs.harpy" />
+    <None Include="Sdk\Managed\Examples\Example3.cs" />
+    <None Include="Sdk\Managed\Examples\Example3.cs.harpy" />
+    <None Include="Sdk\Managed\LicenseOps.cs.harpy" />
+    <None Include="Sdk\Managed\Security.cs" />
+    <None Include="Sdk\Managed\Security.cs.harpy" />
+    <None Include="Sdk\Native\entry-point.c" />
+    <None Include="Sdk\Native\Harpy.c" />
+    <None Include="Sdk\Native\Harpy.h" />
+    <None Include="Sdk\Native\HarpyRes.h" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(XDG_STARTUP_HOME)' != '' And
+                        !HasTrailingSlash('$(XDG_STARTUP_HOME)') And
+                        Exists('$(XDG_STARTUP_HOME)\Data\tls-hosts')">
+    <None Include="$(XDG_STARTUP_HOME)\Data\tls-hosts">
+      <Link>Tests\data\tls-hosts</Link>
+    </None>
+  </ItemGroup>
+  <ItemGroup Condition="'$(XDG_STARTUP_HOME)' != '' And
+                        !HasTrailingSlash('$(XDG_STARTUP_HOME)') And
+                        Exists('$(XDG_STARTUP_HOME)\Data\tls12-hosts')">
+    <None Include="$(XDG_STARTUP_HOME)\Data\tls12-hosts">
+      <Link>Tests\data\tls12-hosts</Link>
+    </None>
+  </ItemGroup>
+  <ItemGroup Condition="'$(XDG_STARTUP_HOME)' != '' And
+                        !HasTrailingSlash('$(XDG_STARTUP_HOME)') And
+                        Exists('$(XDG_STARTUP_HOME)\Data\tls13-hosts')">
+    <None Include="$(XDG_STARTUP_HOME)\Data\tls13-hosts">
+      <Link>Tests\data\tls13-hosts</Link>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Tests\all.eagle" />
+    <None Include="Tests\all.eagle.harpy" />
+    <None Include="Tests\basic.eagle" />
+    <None Include="Tests\basic.eagle.harpy" />
+    <None Include="Tests\data\add_public_key.eagle" />
+    <None Include="Tests\data\add_public_key.eagle.b64sig" />
+    <None Include="Tests\data\add_ring_public_key.eagle" />
+    <None Include="Tests\data\add_ring_public_key.eagle.b64sig" />
+    <None Include="Tests\data\bad.eagle" />
+    <None Include="Tests\data\bad.eagle.harpy" />
+    <None Include="Tests\data\bundle1.db" />
+    <None Include="Tests\data\bundle1.db.harpy" />
+    <None Include="Tests\data\change.txt" />
+    <None Include="Tests\data\disable_demo_mode.eagle" />
+    <None Include="Tests\data\disable_demo_mode.eagle.b64sig" />
+    <None Include="Tests\data\disable_secret_mode.eagle" />
+    <None Include="Tests\data\disable_secret_mode.eagle.b64sig" />
+    <None Include="Tests\data\disable_skip_license.eagle" />
+    <None Include="Tests\data\disable_skip_license.eagle.b64sig" />
+    <None Include="Tests\data\disable_support.eagle" />
+    <None Include="Tests\data\disable_support.eagle.b64sig" />
+    <None Include="Tests\data\disable_test_mode.eagle" />
+    <None Include="Tests\data\disable_test_mode.eagle.b64sig" />
+    <None Include="Tests\data\dump_sandbox.eagle" />
+    <None Include="Tests\data\dump_sandbox.eagle.b64sig" />
+    <None Include="Tests\data\enable_demo_mode.eagle" />
+    <None Include="Tests\data\enable_demo_mode.eagle.b64sig" />
+    <None Include="Tests\data\enable_fail_safe_mode.eagle" />
+    <None Include="Tests\data\enable_fail_safe_mode.eagle.b64sig" />
+    <None Include="Tests\data\enable_keyRing_skip_license.eagle" />
+    <None Include="Tests\data\enable_keyRing_skip_license.eagle.b64sig" />
+    <None Include="Tests\data\enable_secret_mode.eagle" />
+    <None Include="Tests\data\enable_secret_mode.eagle.b64sig" />
+    <None Include="Tests\data\enable_security.eagle" />
+    <None Include="Tests\data\enable_security.eagle.b64sig" />
+    <None Include="Tests\data\enable_skip_license.eagle" />
+    <None Include="Tests\data\enable_skip_license.eagle.b64sig" />
+    <None Include="Tests\data\enable_support.eagle" />
+    <None Include="Tests\data\enable_support.eagle.b64sig" />
+    <None Include="Tests\data\enable_test_mode.eagle" />
+    <None Include="Tests\data\enable_test_mode.eagle.b64sig" />
+    <None Include="Tests\data\eof.eagle" />
+    <None Include="Tests\data\eof.eagle.harpy" />
+    <None Include="Tests\data\extra.eagle" />
+    <None Include="Tests\data\extra.eagle.harpy" />
+    <None Include="Tests\data\fatal_error.eagle" />
+    <None Include="Tests\data\fatal_error.eagle.b64sig" />
+    <None Include="Tests\data\good.eagle" />
+    <None Include="Tests\data\good.eagle.harpy" />
+    <None Include="Tests\data\harpy_config_01.eagle" />
+    <None Include="Tests\data\harpy_config_01.eagle.b64sig" />
+    <None Include="Tests\data\have.txt" />
+    <None Include="Tests\data\info_script.eagle" />
+    <None Include="Tests\data\info_script.eagle.b64sig" />
+    <None Include="Tests\data\install_package.eagle" />
+    <None Include="Tests\data\install_package.eagle.b64sig" />
+    <None Include="Tests\data\is_safe.eagle" />
+    <None Include="Tests\data\license_ticket.eagle" />
+    <None Include="Tests\data\license_ticket.eagle.b64sig" />
+    <None Include="Tests\data\keval.txt" />
+    <None Include="Tests\data\keyRing.eagle" />
+    <None Include="Tests\data\keyRing.eagle.harpy" />
+    <None Include="Tests\data\keyRing2.eagle" />
+    <None Include="Tests\data\keyRing2.eagle.harpy" />
+    <None Include="Tests\data\keyRing3.eagle" />
+    <None Include="Tests\data\keyRing3.eagle.harpy" />
+    <None Include="Tests\data\keyRing4.eagle" />
+    <None Include="Tests\data\keyRing4.eagle.harpy" />
+    <None Include="Tests\data\keyRing5.eagle" />
+    <None Include="Tests\data\keyRing5.eagle.harpy" />
+    <None Include="Tests\data\keyRing6.eagle" />
+    <None Include="Tests\data\keyRing6.eagle.harpy" />
+    <None Include="Tests\data\keyRing7.eagle" />
+    <None Include="Tests\data\keyRing7.eagle.harpy" />
+    <None Include="Tests\data\keyRing8.eagle" />
+    <None Include="Tests\data\keyRing9.eagle" />
+    <None Include="Tests\data\keyRing9.eagle.harpy" />
+    <None Include="Tests\data\keyRing10.eagle" />
+    <None Include="Tests\data\keyRing10.eagle.harpy" />
+    <None Include="Tests\data\keyRing11.eagle" />
+    <None Include="Tests\data\keyRing11.eagle.harpy" />
+    <None Include="Tests\data\keyRing12.eagle" />
+    <None Include="Tests\data\keyRing12.eagle.harpy" />
+    <None Include="Tests\data\keyRing13.eagle" />
+    <None Include="Tests\data\keyRing14.eagle" />
+    <None Include="Tests\data\keyRing14.eagle.harpy" />
+    <None Include="Tests\data\keyRing15.eagle" />
+    <None Include="Tests\data\keyRing15.eagle.harpy" />
+    <None Include="Tests\data\keyRing16.eagle" />
+    <None Include="Tests\data\keyRing16.eagle.harpy" />
+    <None Include="Tests\data\keyRing17.eagle" />
+    <None Include="Tests\data\keyRing17.eagle.harpy" />
+    <None Include="Tests\data\keyRing18.eagle" />
+    <None Include="Tests\data\keyRing18.eagle.harpy" />
+    <None Include="Tests\data\keyRing19.eagle" />
+    <None Include="Tests\data\keyRing19.eagle.harpy" />
+    <None Include="Tests\data\keyRing20.eagle" />
+    <None Include="Tests\data\keyRing20.eagle.harpy" />
+    <None Include="Tests\data\ksource_cleanup.eagle" />
+    <None Include="Tests\data\ksource_cleanup.eagle.b64sig" />
+    <None Include="Tests\data\ksource_commands.eagle" />
+    <None Include="Tests\data\ksource_commands.eagle.b64sig" />
+    <None Include="Tests\data\ksource_dump.eagle" />
+    <None Include="Tests\data\ksource_dump.eagle.b64sig" />
+    <None Include="Tests\data\limited_time.eagle" />
+    <None Include="Tests\data\limited_time.eagle.b64sig" />
+    <None Include="Tests\data\match_platform.eagle" />
+    <None Include="Tests\data\match_platform.eagle.b64sig" />
+    <None Include="Tests\data\nop.eagle" />
+    <None Include="Tests\data\nop.eagle.harpy" />
+    <None Include="Tests\data\queryStatus.eagle" />
+    <None Include="Tests\data\queryStatus.eagle.harpy" />
+    <None Include="Tests\data\remove_ring_public_key.eagle" />
+    <None Include="Tests\data\remove_ring_public_key.eagle.b64sig" />
+    <None Include="Tests\data\request_license.eagle" />
+    <None Include="Tests\data\request_license.eagle.b64sig" />
+    <None Include="Tests\data\secureTest.eagle" />
+    <None Include="Tests\data\secureTest.eagle.harpy" />
+    <None Include="Tests\data\secureTest2.eagle" />
+    <None Include="Tests\data\secureTest2.eagle.harpy" />
+    <None Include="Tests\data\secureTest3.eagle" />
+    <None Include="Tests\data\secureTest3.eagle.harpy" />
+    <None Include="Tests\data\secureTest4.eagle" />
+    <None Include="Tests\data\secureTest5.eagle" />
+    <None Include="Tests\data\secureTest6.eagle" />
+    <None Include="Tests\data\secureTest7.eagle" />
+    <None Include="Tests\data\secureTest8.eagle" />
+    <None Include="Tests\data\secureTest8.eagle.harpy" />
+    <None Include="Tests\data\secureTest9.eagle" />
+    <None Include="Tests\data\secureTest10.eagle" />
+    <None Include="Tests\data\secureTest10.eagle.harpy" />
+    <None Include="Tests\data\secureTest11.eagle" />
+    <None Include="Tests\data\secureTest11.eagle.harpy" />
+    <None Include="Tests\data\secureTest12.eagle" />
+    <None Include="Tests\data\secureTest12.eagle.harpy" />
+    <None Include="Tests\data\secureTest13.eagle" />
+    <None Include="Tests\data\secureTest13.eagle.harpy" />
+    <None Include="Tests\data\secureTest14.eagle" />
+    <None Include="Tests\data\secureTest14.eagle.harpy" />
+    <None Include="Tests\data\secureTest15.eagle" />
+    <None Include="Tests\data\secureTest15.eagle.harpy" />
+    <None Include="Tests\data\secureTest16.eagle" />
+    <None Include="Tests\data\secureTest16.eagle.harpy" />
+    <None Include="Tests\data\secureTest17.eagle" />
+    <None Include="Tests\data\secureTest17.eagle.harpy" />
+    <None Include="Tests\data\secureTest18.eagle" />
+    <None Include="Tests\data\secureTest19.eagle" />
+    <None Include="Tests\data\secureTest19.eagle.harpy" />
+    <None Include="Tests\data\secureTest20.eagle" />
+    <None Include="Tests\data\secureTest20.eagle.harpy" />
+    <None Include="Tests\data\secureTest21.eagle" />
+    <None Include="Tests\data\secureTest21.eagle.harpy" />
+    <None Include="Tests\data\secureTest.xml" />
+    <None Include="Tests\data\secureTest.xml.harpy" />
+    <None Include="Tests\data\set_features.eagle" />
+    <None Include="Tests\data\set_features.eagle.b64sig" />
+    <None Include="Tests\data\settings.xml" />
+    <None Include="Tests\data\settings.xml.b64sig" />
+    <None Include="Tests\data\snippets.eagle" />
+    <None Include="Tests\data\snippets.eagle.b64sig" />
+    <None Include="Tests\data\snippets.txt" />
+    <None Include="Tests\data\template.xml" />
+    <None Include="Tests\data\test1.xml" />
+    <None Include="Tests\data\test2.xml" />
+    <None Include="Tests\data\test3.xml" />
+    <None Include="Tests\data\test4.xml" />
+    <None Include="Tests\data\test5.xml" />
+    <None Include="Tests\data\test6.exml" />
+    <None Include="Tests\data\test7.xml" />
+    <None Include="Tests\data\test8.xml" />
+    <None Include="Tests\data\test9.xml" />
+    <None Include="Tests\data\test10.xml" />
+    <None Include="Tests\data\test11.xml" />
+    <None Include="Tests\data\test12.xml" />
+    <None Include="Tests\data\test13.xml" />
+    <None Include="Tests\data\test14.xml" />
+    <None Include="Tests\data\TestPrivate1.cer" />
+    <None Include="Tests\data\TestPrivate1.dsapvk" />
+    <None Include="Tests\data\TestPrivate1.dsasnk" />
+    <None Include="Tests\data\TestPrivate1.pvk" />
+    <None Include="Tests\data\TestPrivate1.snk" />
+    <None Include="Tests\data\TestPrivate2.snk" />
+    <None Include="Tests\data\TestPrivate3.snk" />
+    <None Include="Tests\data\TestPrivate4.snk" />
+    <None Include="Tests\data\TestPrivate5.snk" />
+    <None Include="Tests\data\TestPrivate6.snk" />
+    <None Include="Tests\data\TestPrivate7.snk" />
+    <None Include="Tests\data\TestPrivate8.snk" />
+    <None Include="Tests\data\TestPrivate2.cer" />
+    <None Include="Tests\data\TestPrivate2.dsapvk" />
+    <None Include="Tests\data\TestPrivate2.pvk" />
+    <None Include="Tests\data\TestPublic1.dsasnk" />
+    <None Include="Tests\data\TestPublic1.snk" />
+    <None Include="Tests\data\TestPublic2.snk" />
+    <None Include="Tests\data\TestPublic3.snk" />
+    <None Include="Tests\data\TestPublic4.snk" />
+    <None Include="Tests\data\TestPublic5.snk" />
+    <None Include="Tests\data\TestPublic6.snk" />
+    <None Include="Tests\data\TestPublic7.snk" />
+    <None Include="Tests\data\TestPublic8.snk" />
+    <None Include="Tests\data\unlimited_time.eagle" />
+    <None Include="Tests\data\unlimited_time.eagle.b64sig" />
+    <None Include="Tests\data\unsafe1.eagle" />
+    <None Include="Tests\data\unsafe1.eagle.harpy" />
+    <None Include="Tests\data\unsafe2.eagle" />
+    <None Include="Tests\data\unsafe3.eagle" />
+    <None Include="Tests\data\use_evaluateFile.eagle" />
+    <None Include="Tests\data\use_evaluateFile.eagle.b64sig" />
+    <None Include="Tests\data\use_ksource.eagle" />
+    <None Include="Tests\data\use_ksource.eagle.b64sig" />
+    <None Include="Tests\data\use_public_key.eagle" />
+    <None Include="Tests\data\use_public_key.eagle.b64sig" />
+    <None Include="Tests\data\use_set_commands.eagle" />
+    <None Include="Tests\data\use_set_commands.eagle.b64sig" />
+    <None Include="Tools\b64sign.eagle" />
+    <None Include="Tools\b64sign.eagle.harpy" />
+    <None Include="Tools\data\Badge.dxml" />
+    <None Include="Tools\data\Badge.Basic.obproj" />
+    <None Include="Tools\data\Badge.Basic.NetFx20.obproj" />
+    <None Include="Tools\data\Badge.Basic.NetFx35.obproj" />
+    <None Include="Tools\data\Badge.Basic.NetStandard20.obproj" />
+    <None Include="Tools\data\Badge.Basic.NetStandard21.obproj" />
+    <None Include="Tools\data\Badge.NetFx20.obproj" />
+    <None Include="Tools\data\Badge.NetFx35.obproj" />
+    <None Include="Tools\data\Badge.NetStandard20.obproj" />
+    <None Include="Tools\data\Badge.NetStandard21.obproj" />
+    <None Include="Tools\data\Badge.obproj" />
+    <None Include="Tools\data\chkRefs.lst" />
+    <None Include="Tools\data\Demo.dxml" />
+    <None Include="Tools\data\Demo.obproj" />
+    <None Include="Tools\data\Demo.NetStandard20.obproj" />
+    <None Include="Tools\data\Demo.NetStandard21.obproj" />
+    <None Include="Tools\data\Dockerfile-release" />
+    <None Include="Tools\data\Harpy.Basic.obproj" />
+    <None Include="Tools\data\Harpy.Basic.NetFx20.obproj" />
+    <None Include="Tools\data\Harpy.Basic.NetFx35.obproj" />
+    <None Include="Tools\data\Harpy.Basic.NetStandard20.obproj" />
+    <None Include="Tools\data\Harpy.Basic.NetStandard21.obproj" />
+    <None Include="Tools\data\Harpy.dxml" />
+    <None Include="Tools\data\Harpy.Limited.obproj" />
+    <None Include="Tools\data\Harpy.FxCop" />
+    <None Include="Tools\data\Harpy.NetFx20.obproj" />
+    <None Include="Tools\data\Harpy.NetFx35.obproj" />
+    <None Include="Tools\data\Harpy.NetStandard20.obproj" />
+    <None Include="Tools\data\Harpy.NetStandard21.obproj" />
+    <None Include="Tools\data\Harpy.obproj" />
+    <None Include="Tools\data\Harpy.Sdk.obproj" />
+    <None Include="Tools\data\HotKey.dxml" />
+    <None Include="Tools\data\HotKey.obproj" />
+    <None Include="Tools\data\Kapok.dxml" />
+    <None Include="Tools\data\Kapok.obproj" />
+    <None Include="Tools\data\Kapok.NetStandard20.obproj" />
+    <None Include="Tools\data\Kapok.NetStandard21.obproj" />
+    <None Include="Tools\data\keyRing.sql" />
+    <None Include="Tools\data\schema.sql" />
+    <None Include="Tools\data\strongName.reg" />
+    <None Include="Tools\data\strongName_wow64.reg" />
+    <None Include="Tools\data\test.sql" />
+    <None Include="Tools\data\verify.lst" />
+    <None Include="Tools\data\Zeus.dxml" />
+    <None Include="Tools\data\Zeus.obproj" />
+    <None Include="Tools\data\Zeus.NetStandard20.obproj" />
+    <None Include="Tools\data\Zeus.NetStandard21.obproj" />
+    <None Include="Tools\decrypt.eagle" />
+    <None Include="Tools\decrypt.eagle.harpy" />
+    <None Include="Tools\debug.eagle" />
+    <None Include="Tools\debug.eagle.harpy" />
+    <None Include="Tools\dotfuscator.bat" />
+    <None Include="Tools\dotfuscator.eagle" />
+    <None Include="Tools\dotfuscator.eagle.harpy" />
+    <None Include="Tools\encrypt.eagle" />
+    <None Include="Tools\encrypt.eagle.harpy" />
+    <None Include="Tools\install.eagle" />
+    <None Include="Tools\install.eagle.harpy" />
+    <None Include="Tools\sign.eagle" />
+    <None Include="Tools\sign.eagle.harpy" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="NuGet\Harpy.nuspec" />
+    <None Include="NuGet\Harpy.CLRv2.nuspec" />
+    <None Include="NuGet\Harpy.CLRv4.nuspec" />
+    <None Include="NuGet\Harpy.DotNet.Standard.2.0.nuspec" />
+    <None Include="NuGet\Harpy.DotNet.Standard.2.1.nuspec" />
+    <None Include="NuGet\build\Harpy.NuGet.targets" />
+    <None Include="NuGet\lib\trial-certificate.xml" />
+    <None Include="Setup\trial-certificate.xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="$(HarpyDir)\Targets\Harpy.Builds.targets" />
+    <None Include="$(HarpyDir)\Targets\Harpy.Settings.targets" />
+    <None Include="$(HarpyDir)\Targets\Harpy.StrongName.Settings.targets" />
+    <None Include="$(HarpyDir)\Targets\Harpy.targets" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Condition="Exists('Resources\internal-certificate.xml')"
+                      Include="Resources\internal-certificate.xml">
+      <LogicalName>internal-certificate.xml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Condition="Exists('Resources\dumpState.eagle')"
+                      Include="Resources\dumpState.eagle">
+      <LogicalName>dumpState.eagle</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Condition="Exists('Resources\dumpState.eagle.b64sig')"
+                      Include="Resources\dumpState.eagle.b64sig">
+      <LogicalName>dumpState.eagle.b64sig</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Condition="Exists('lib\Embedded\pkgIndex.eagle')"
+                      Include="lib\Embedded\pkgIndex.eagle">
+      <LogicalName>lib/Embedded/pkgIndex.eagle</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Condition="Exists('lib\Embedded\pkgIndex.eagle.harpy')"
+                      Include="lib\Embedded\pkgIndex.eagle.harpy">
+      <LogicalName>lib/Embedded/pkgIndex.eagle.harpy</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Condition="Exists('Resources\Harpy.v1.eagle')"
+                      Include="Resources\Harpy.v1.eagle">
+      <LogicalName>Harpy.v1.eagle</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Condition="Exists('Resources\Harpy.v1.eagle.b64sig')"
+                      Include="Resources\Harpy.v1.eagle.b64sig">
+      <LogicalName>Harpy.v1.eagle.b64sig</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Condition="Exists('Resources\Harpy.Security.Core.v1.eagle')"
+                      Include="Resources\Harpy.Security.Core.v1.eagle">
+      <LogicalName>Harpy.Security.Core.v1.eagle</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Condition="Exists('Resources\Harpy.Security.Core.v1.eagle.b64sig')"
+                      Include="Resources\Harpy.Security.Core.v1.eagle.b64sig">
+      <LogicalName>Harpy.Security.Core.v1.eagle.b64sig</LogicalName>
+    </EmbeddedResource>
+    <None Condition="'$(HarpyStrongNameEmbed1Prefix)' != '' And
+                     '$(HarpyStrongNameEmbed1Prefix)' != '$(HarpyStrongNamePluginPrefix)' And
+                     '$(HarpyStrongNameEmbed1Prefix)' != '$(HarpyStrongNameEmbed2Prefix)' And
+                     '$(HarpyStrongNameEmbed1Prefix)' != '$(HarpyStrongNameEmbed3Prefix)' And
+                     Exists('$(EagleDir)\Keys\$(HarpyStrongNameEmbed1Prefix)Private.snk')"
+          Include="$(EagleDir)\Keys\$(HarpyStrongNameEmbed1Prefix)Private.snk">
+      <Link>Keys\$(HarpyStrongNameEmbed1Prefix)Private.snk</Link>
+    </None>
+    <None Condition="'$(HarpyStrongNameEmbed2Prefix)' != '' And
+                     '$(HarpyStrongNameEmbed2Prefix)' != '$(HarpyStrongNamePluginPrefix)' And
+                     '$(HarpyStrongNameEmbed2Prefix)' != '$(HarpyStrongNameEmbed1Prefix)' And
+                     '$(HarpyStrongNameEmbed2Prefix)' != '$(HarpyStrongNameEmbed3Prefix)' And
+                     Exists('$(EagleDir)\Keys\$(HarpyStrongNameEmbed2Prefix)Private.snk')"
+          Include="$(EagleDir)\Keys\$(HarpyStrongNameEmbed2Prefix)Private.snk">
+      <Link>Keys\$(HarpyStrongNameEmbed2Prefix)Private.snk</Link>
+    </None>
+    <None Condition="'$(HarpyStrongNameEmbed3Prefix)' != '' And
+                     '$(HarpyStrongNameEmbed3Prefix)' != '$(HarpyStrongNamePluginPrefix)' And
+                     '$(HarpyStrongNameEmbed3Prefix)' != '$(HarpyStrongNameEmbed1Prefix)' And
+                     '$(HarpyStrongNameEmbed3Prefix)' != '$(HarpyStrongNameEmbed2Prefix)' And
+                     Exists('$(EagleDir)\Keys\$(HarpyStrongNameEmbed3Prefix)Private.snk')"
+          Include="$(EagleDir)\Keys\$(HarpyStrongNameEmbed3Prefix)Private.snk">
+      <Link>Keys\$(HarpyStrongNameEmbed3Prefix)Private.snk</Link>
+    </None>
+    <EmbeddedResource Condition="Exists('$(EagleDir)\Keys\AuxiliaryPublic.snk')"
+                      Include="$(EagleDir)\Keys\AuxiliaryPublic.snk">
+      <LogicalName>AuxiliaryPublic.snk</LogicalName>
+      <Link>Resources\AuxiliaryPublic.snk</Link>
+    </EmbeddedResource>
+    <EmbeddedResource Condition="Exists('$(EagleDir)\Keys\AuxiliaryPublic.snk') And
+                                 Exists('Resources\AuxiliaryPublic.txt')"
+                      Include="Resources\AuxiliaryPublic.txt">
+      <LogicalName>AuxiliaryPublic.txt</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Condition="'$(CertificatePlugin)' != 'false' And
+                                 '$(CertificatePolicy)' != 'false' And
+                                 '$(HarpyStrongNameEmbed1Prefix)' != '' And
+                                 '$(HarpyStrongNameEmbed1Prefix)' != '$(HarpyStrongNamePluginPrefix)' And
+                                 '$(HarpyStrongNameEmbed1Prefix)' != '$(HarpyStrongNameEmbed2Prefix)' And
+                                 '$(HarpyStrongNameEmbed1Prefix)' != '$(HarpyStrongNameEmbed3Prefix)' And
+                                 Exists('$(EagleDir)\Keys\$(HarpyStrongNameEmbed1Prefix)Public.snk')"
+                      Include="$(EagleDir)\Keys\$(HarpyStrongNameEmbed1Prefix)Public.snk">
+      <LogicalName>$(HarpyStrongNameEmbed1Prefix)Public.snk</LogicalName>
+      <Link>Resources\$(HarpyStrongNameEmbed1Prefix)Public.snk</Link>
+    </EmbeddedResource>
+    <EmbeddedResource Condition="'$(CertificatePlugin)' != 'false' And
+                                 '$(CertificatePolicy)' != 'false' And
+                                 '$(HarpyStrongNameEmbed2Prefix)' != '' And
+                                 '$(HarpyStrongNameEmbed2Prefix)' != '$(HarpyStrongNamePluginPrefix)' And
+                                 '$(HarpyStrongNameEmbed2Prefix)' != '$(HarpyStrongNameEmbed1Prefix)' And
+                                 '$(HarpyStrongNameEmbed2Prefix)' != '$(HarpyStrongNameEmbed3Prefix)' And
+                                 Exists('$(EagleDir)\Keys\$(HarpyStrongNameEmbed2Prefix)Public.snk')"
+                      Include="$(EagleDir)\Keys\$(HarpyStrongNameEmbed2Prefix)Public.snk">
+      <LogicalName>$(HarpyStrongNameEmbed2Prefix)Public.snk</LogicalName>
+      <Link>Resources\$(HarpyStrongNameEmbed2Prefix)Public.snk</Link>
+    </EmbeddedResource>
+    <EmbeddedResource Condition="'$(CertificatePlugin)' != 'false' And
+                                 '$(CertificatePolicy)' != 'false' And
+                                 '$(HarpyStrongNameEmbed3Prefix)' != '' And
+                                 '$(HarpyStrongNameEmbed3Prefix)' != '$(HarpyStrongNamePluginPrefix)' And
+                                 '$(HarpyStrongNameEmbed3Prefix)' != '$(HarpyStrongNameEmbed1Prefix)' And
+                                 '$(HarpyStrongNameEmbed3Prefix)' != '$(HarpyStrongNameEmbed2Prefix)' And
+                                 Exists('$(EagleDir)\Keys\$(HarpyStrongNameEmbed3Prefix)Public.snk')"
+                      Include="$(EagleDir)\Keys\$(HarpyStrongNameEmbed3Prefix)Public.snk">
+      <LogicalName>$(HarpyStrongNameEmbed3Prefix)Public.snk</LogicalName>
+      <Link>Resources\$(HarpyStrongNameEmbed3Prefix)Public.snk</Link>
+    </EmbeddedResource>
+    <EmbeddedResource Condition="'$(CertificatePlugin)' != 'false' And
+                                 '$(CertificatePolicy)' != 'false' And
+                                 Exists('$(EagleDir)\Keys\TestTrustRootPublic.snk')"
+                      Include="$(EagleDir)\Keys\TestTrustRootPublic.snk">
+      <LogicalName>TestTrustRootPublic.snk</LogicalName>
+      <Link>Resources\TestTrustRootPublic.snk</Link>
+    </EmbeddedResource>
+    <EmbeddedResource Condition="'$(HarpyStrongNamePluginPrefix)' != '' And
+                                 '$(HarpyStrongNamePluginPrefix)' != '$(HarpyStrongNameEmbed1Prefix)' And
+                                 '$(HarpyStrongNamePluginPrefix)' != '$(HarpyStrongNameEmbed2Prefix)' And
+                                 '$(HarpyStrongNamePluginPrefix)' != '$(HarpyStrongNameEmbed3Prefix)' And
+                                 Exists('..\..\..\..\Keys\$(HarpyStrongNamePluginPrefix)Public.snk') And
+                                 Exists('Resources\$(HarpyStrongNamePluginPrefix)Public.txt')"
+                      Include="Resources\$(HarpyStrongNamePluginPrefix)Public.txt">
+      <LogicalName>$(HarpyStrongNamePluginPrefix)Public.txt</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Condition="'$(CertificatePlugin)' != 'false' And
+                                 '$(CertificatePolicy)' != 'false' And
+                                 '$(HarpyStrongNameEmbed1Prefix)' != '' And
+                                 '$(HarpyStrongNameEmbed1Prefix)' != '$(HarpyStrongNamePluginPrefix)' And
+                                 '$(HarpyStrongNameEmbed1Prefix)' != '$(HarpyStrongNameEmbed2Prefix)' And
+                                 '$(HarpyStrongNameEmbed1Prefix)' != '$(HarpyStrongNameEmbed3Prefix)' And
+                                 Exists('$(EagleDir)\Keys\$(HarpyStrongNameEmbed1Prefix)Public.snk') And
+                                 Exists('Resources\$(HarpyStrongNameEmbed1Prefix)Public.txt')"
+                      Include="Resources\$(HarpyStrongNameEmbed1Prefix)Public.txt">
+      <LogicalName>$(HarpyStrongNameEmbed1Prefix)Public.txt</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Condition="'$(CertificatePlugin)' != 'false' And
+                                 '$(CertificatePolicy)' != 'false' And
+                                 '$(HarpyStrongNameEmbed2Prefix)' != '' And
+                                 '$(HarpyStrongNameEmbed2Prefix)' != '$(HarpyStrongNamePluginPrefix)' And
+                                 '$(HarpyStrongNameEmbed2Prefix)' != '$(HarpyStrongNameEmbed1Prefix)' And
+                                 '$(HarpyStrongNameEmbed2Prefix)' != '$(HarpyStrongNameEmbed3Prefix)' And
+                                 Exists('$(EagleDir)\Keys\$(HarpyStrongNameEmbed2Prefix)Public.snk') And
+                                 Exists('Resources\$(HarpyStrongNameEmbed2Prefix)Public.txt')"
+                      Include="Resources\$(HarpyStrongNameEmbed2Prefix)Public.txt">
+      <LogicalName>$(HarpyStrongNameEmbed2Prefix)Public.txt</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Condition="'$(CertificatePlugin)' != 'false' And
+                                 '$(CertificatePolicy)' != 'false' And
+                                 '$(HarpyStrongNameEmbed3Prefix)' != '' And
+                                 '$(HarpyStrongNameEmbed3Prefix)' != '$(HarpyStrongNamePluginPrefix)' And
+                                 '$(HarpyStrongNameEmbed3Prefix)' != '$(HarpyStrongNameEmbed1Prefix)' And
+                                 '$(HarpyStrongNameEmbed3Prefix)' != '$(HarpyStrongNameEmbed2Prefix)' And
+                                 Exists('$(EagleDir)\Keys\$(HarpyStrongNameEmbed3Prefix)Public.snk') And
+                                 Exists('Resources\$(HarpyStrongNameEmbed3Prefix)Public.txt')"
+                      Include="Resources\$(HarpyStrongNameEmbed3Prefix)Public.txt">
+      <LogicalName>$(HarpyStrongNameEmbed3Prefix)Public.txt</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Condition="'$(CertificatePlugin)' != 'false' And
+                                 '$(CertificatePolicy)' != 'false' And
+                                 Exists('$(EagleDir)\Keys\TestTrustRootPublic.snk') And
+                                 Exists('Resources\TestTrustRootPublic.txt')"
+                      Include="Resources\TestTrustRootPublic.txt">
+      <LogicalName>TestTrustRootPublic.txt</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Condition="'$(HarpyStrongNameEmbed1Prefix)' != '' And
+                                 Exists('Resources\$(HarpyStrongNameEmbed1Prefix)RevokedKeys.txt')"
+                      Include="Resources\$(HarpyStrongNameEmbed1Prefix)RevokedKeys.txt">
+      <LogicalName>$(HarpyStrongNameEmbed1Prefix)RevokedKeys.txt</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Condition="'$(HarpyStrongNameEmbed1Prefix)' != '' And
+                                 Exists('Resources\$(HarpyStrongNameEmbed1Prefix)RevokedCertificates.txt')"
+                      Include="Resources\$(HarpyStrongNameEmbed1Prefix)RevokedCertificates.txt">
+      <LogicalName>$(HarpyStrongNameEmbed1Prefix)RevokedCertificates.txt</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Condition="'$(CertificatePlugin)' != 'false' And
+                                 '$(PluginCommands)' != 'false'"
+                      Include="Resources\syntax.tsv">
+      <LogicalName>syntax.tsv</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Resources\Harpy.xsd">
+      <LogicalName>Harpy.xsd</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Condition="'$(CertificatePlugin)' != 'false' And
+                                 '$(PluginCommands)' != 'false'"
+                      Include="Resources\warning.txt">
+      <LogicalName>warning.txt</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Condition="'$(CertificatePlugin)' != 'false' And
+                                 '$(PluginCommands)' != 'false'"
+                      Include="Resources\warning.xml">
+      <LogicalName>warning.xml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Condition="'$(EmbedCertificates)' != 'false'"
+                      Include="Resources\Certificates\**\*.xml">
+      <!--
+          BUGBUG: This does not appear to actually work.
+      <LogicalName>%(FileName)%(Extension)</LogicalName>
+      -->
+    </EmbeddedResource>
+  </ItemGroup>
+  <PropertyGroup Condition="'$(EagleVerbose)' != 'false'">
+    <DefineConstants>$(DefineConstants);VERBOSE</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(EagleDebugTrace)' != 'false'">
+    <DefineConstants>$(DefineConstants);DEBUG_TRACE</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(EagleDebugWrite)' != 'false'">
+    <DefineConstants>$(DefineConstants);DEBUG_WRITE</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(EagleForceTrace)' != 'false'">
+    <DefineConstants>$(DefineConstants);FORCE_TRACE</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(EaglePolicyTrace)' != 'false'">
+    <DefineConstants>$(DefineConstants);POLICY_TRACE</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(EagleDeadCode)' != 'false'">
+    <DefineConstants>$(DefineConstants);DEAD_CODE</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(EagleThrowOnDisposed)' != 'false'">
+    <DefineConstants>$(DefineConstants);THROW_ON_DISPOSED</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(EagleOnlyNetFx20)' != 'false'">
+    <DefineConstants>$(DefineConstants);NET_20_ONLY</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(EagleNetStandard20)' != 'false'">
+    <DefineConstants>$(DefineConstants);NET_STANDARD_20</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(EagleNetStandard21)' != 'false'">
+    <DefineConstants>$(DefineConstants);NET_STANDARD_21</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(EagleOfficial)' != 'false'">
+    <DefineConstants>$(DefineConstants);OFFICIAL</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(EagleStable)' != 'false'">
+    <DefineConstants>$(DefineConstants);STABLE</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(EaglePatchLevel)' != 'false'">
+    <DefineConstants>$(DefineConstants);PATCHLEVEL</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(EagleAssemblyDateTime)' != 'false'">
+    <DefineConstants>$(DefineConstants);ASSEMBLY_DATETIME</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(EagleAssemblyRelease)' != 'false'">
+    <DefineConstants>$(DefineConstants);ASSEMBLY_RELEASE</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(EagleSourceId)' != 'false'">
+    <DefineConstants>$(DefineConstants);SOURCE_ID</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(EagleSourceTimeStamp)' != 'false'">
+    <DefineConstants>$(DefineConstants);SOURCE_TIMESTAMP</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(EagleAssemblyText)' != 'false'">
+    <DefineConstants>$(DefineConstants);ASSEMBLY_TEXT</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(EagleAssemblyStrongNameTag)' != 'false'">
+    <DefineConstants>$(DefineConstants);ASSEMBLY_STRONG_NAME_TAG</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(EagleNetwork)' != 'false'">
+    <DefineConstants>$(DefineConstants);NETWORK</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(EagleData)' != 'false'">
+    <DefineConstants>$(DefineConstants);DATA</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(EagleAppDomains)' != 'false'">
+    <DefineConstants>$(DefineConstants);APPDOMAINS</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(EagleTest)' != 'false'">
+    <DefineConstants>$(DefineConstants);TEST</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(EagleIsolatedInterpreters)' != 'false'">
+    <DefineConstants>$(DefineConstants);ISOLATED_INTERPRETERS</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(EagleIsolatedPlugins)' != 'false'">
+    <DefineConstants>$(DefineConstants);ISOLATED_PLUGINS</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(EagleSerialization)' != 'false'">
+    <DefineConstants>$(DefineConstants);SERIALIZATION</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(EagleWeb)' != 'false'">
+    <DefineConstants>$(DefineConstants);WEB</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(EagleWinForms)' != 'false'">
+    <DefineConstants>$(DefineConstants);WINFORMS</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(EagleShell)' != 'false'">
+    <DefineConstants>$(DefineConstants);SHELL</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(EagleXml)' != 'false'">
+    <DefineConstants>$(DefineConstants);XML</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(EagleNative)' != 'false'">
+    <DefineConstants>$(DefineConstants);NATIVE</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(EagleUnix)' != 'false'">
+    <DefineConstants>$(DefineConstants);UNIX</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(EagleWindows)' != 'false'">
+    <DefineConstants>$(DefineConstants);WINDOWS</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(EagleTcl)' != 'false'">
+    <DefineConstants>$(DefineConstants);TCL</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(EagleMono)' != 'false'">
+    <DefineConstants>$(DefineConstants);MONO</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(EagleMonoBuild)' != 'false'">
+    <DefineConstants>$(DefineConstants);MONO_BUILD</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(EagleMonoHacks)' != 'false'">
+    <DefineConstants>$(DefineConstants);MONO_HACKS</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(EagleMonoLegacy)' != 'false'">
+    <DefineConstants>$(DefineConstants);MONO_LEGACY</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(EagleConsole)' != 'false'">
+    <DefineConstants>$(DefineConstants);CONSOLE</DefineConstants>
+  </PropertyGroup>
+  <!-- BEGIN Eagle Enterprise Edition SECTION -->
+  <PropertyGroup Condition="'$(EagleOpenSsl)' != 'false'">
+    <DefineConstants>$(DefineConstants);OPEN_SSL</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(EagleObfuscation)' != 'false'">
+    <DefineConstants>$(DefineConstants);OBFUSCATION</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(EagleSecurity)' != 'false'">
+    <DefineConstants>$(DefineConstants);SECURITY</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(EagleForTestUseOnly)' != 'false'">
+    <DefineConstants>$(DefineConstants);FOR_TEST_USE_ONLY</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(PluginCommands)' != 'false'">
+    <DefineConstants>$(DefineConstants);PLUGIN_COMMANDS</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(LicenseManager)' != 'false'">
+    <DefineConstants>$(DefineConstants);LICENSE_MANAGER</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(CertificatePlugin)' != 'false'">
+    <DefineConstants>$(DefineConstants);CERTIFICATE_PLUGIN</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(CertificatePolicy)' != 'false'">
+    <DefineConstants>$(DefineConstants);CERTIFICATE_POLICY</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(CertificateRenewal)' != 'false'">
+    <DefineConstants>$(DefineConstants);CERTIFICATE_RENEWAL</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Licensing)' != 'false'">
+    <DefineConstants>$(DefineConstants);LICENSING</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(DemoEdition)' != 'false'">
+    <DefineConstants>$(DefineConstants);DEMO_EDITION</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(DemoKeyPairs)' != 'false'">
+    <DefineConstants>$(DefineConstants);DEMO_KEY_PAIRS</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(LimitedEdition)' != 'false'">
+    <DefineConstants>$(DefineConstants);LIMITED_EDITION</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(EmbedCertificates)' != 'false'">
+    <DefineConstants>$(DefineConstants);EMBED_CERTIFICATES</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(EagleEnterpriseLockdown)' != 'false'">
+    <DefineConstants>$(DefineConstants);ENTERPRISE_LOCKDOWN</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(EagleMaybeEnterpriseLockdown)' != 'false'">
+    <DefineConstants>$(DefineConstants);MAYBE_ENTERPRISE_LOCKDOWN</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(ExtraDiagnostics)' != 'false'">
+    <DefineConstants>$(DefineConstants);EXTRA_DIAGNOSTICS</DefineConstants>
+  </PropertyGroup>
+  <!-- END Eagle Enterprise Edition SECTION -->
+  <ItemGroup Condition="'$(EagleSolution)' != 'false'">
+    <ProjectReference Include="..\..\..\..\Library\Eagle2015.csproj">
+      <Project>{2D4021DA-415C-4FAD-95FF-6ACA0974A677}</Project>
+      <Name>Eagle2015</Name>
+      <Private>False</Private>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup Condition="'$(EagleSolution)' == 'false'">
+    <Reference Include="Eagle">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>$(EagleLkgDir)\bin\Eagle.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="lib\Basic\**" />
+    <None Include="lib\Common\**" />
+    <None Include="lib\Demo\**" />
+    <None Include="lib\Dynamic\**" />
+    <None Include="lib\Full\**" />
+    <None Include="lib\Storage\**" />
+    <None Include="lib\Tandem\**" />
+    <None Include="lib\Test\**" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="..\certificate.exml">
+      <Link>Certificates\certificate.exml</Link>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\keyRing.License.enterprise.eagle">
+      <Link>Certificates\keyRing.License.enterprise.eagle</Link>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\keyRing.License.enterprise.eagle.harpy">
+      <Link>Certificates\keyRing.License.enterprise.eagle.harpy</Link>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <None Include="..\license.terms" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\..\..\Keys\EagleDemoPrivate.snk">
+      <Link>Keys\EagleDemoPrivate.snk</Link>
+    </None>
+    <None Include="..\..\..\..\Keys\EagleDemoPublic.snk">
+      <Link>Keys\EagleDemoPublic.snk</Link>
+    </None>
+    <None Include="..\..\..\..\Keys\EagleEnterpriseClass0RootPrivate.snk">
+      <Link>Keys\EagleEnterpriseClass0RootPrivate.snk</Link>
+    </None>
+    <None Include="..\..\..\..\Keys\EagleEnterpriseClass0RootPublic.snk">
+      <Link>Keys\EagleEnterpriseClass0RootPublic.snk</Link>
+    </None>
+    <None Include="..\..\..\..\Keys\EagleEnterpriseClass1RootPrivate.snk">
+      <Link>Keys\EagleEnterpriseClass1RootPrivate.snk</Link>
+    </None>
+    <None Include="..\..\..\..\Keys\EagleEnterpriseClass1RootPublic.snk">
+      <Link>Keys\EagleEnterpriseClass1RootPublic.snk</Link>
+    </None>
+    <None Include="..\..\..\..\Keys\EagleEnterpriseClass2RootPrivate.snk">
+      <Link>Keys\EagleEnterpriseClass2RootPrivate.snk</Link>
+    </None>
+    <None Include="..\..\..\..\Keys\EagleEnterpriseClass2RootPublic.snk">
+      <Link>Keys\EagleEnterpriseClass2RootPublic.snk</Link>
+    </None>
+    <None Include="..\..\..\..\Keys\EagleEnterpriseClass3RootPrivate.snk">
+      <Link>Keys\EagleEnterpriseClass3RootPrivate.snk</Link>
+    </None>
+    <None Include="..\..\..\..\Keys\EagleEnterpriseClass3RootPublic.snk">
+      <Link>Keys\EagleEnterpriseClass3RootPublic.snk</Link>
+    </None>
+    <None Include="..\..\..\..\Keys\EagleEnterpriseClass4RootPrivate.snk">
+      <Link>Keys\EagleEnterpriseClass4RootPrivate.snk</Link>
+    </None>
+    <None Include="..\..\..\..\Keys\EagleEnterpriseClass4RootPublic.snk">
+      <Link>Keys\EagleEnterpriseClass4RootPublic.snk</Link>
+    </None>
+    <None Include="..\..\..\..\Keys\EagleEnterpriseClass5RootPrivate.snk">
+      <Link>Keys\EagleEnterpriseClass5RootPrivate.snk</Link>
+    </None>
+    <None Include="..\..\..\..\Keys\EagleEnterpriseClass5RootPublic.snk">
+      <Link>Keys\EagleEnterpriseClass5RootPublic.snk</Link>
+    </None>
+    <None Include="..\..\..\..\Keys\EagleEnterprisePlugin1Private.snk">
+      <Link>Keys\EagleEnterprisePlugin1Private.snk</Link>
+    </None>
+    <None Include="..\..\..\..\Keys\EagleEnterprisePlugin1Public.snk">
+      <Link>Keys\EagleEnterprisePlugin1Public.snk</Link>
+    </None>
+    <None Include="..\..\..\..\Keys\EagleEnterprisePlugin2Private.snk">
+      <Link>Keys\EagleEnterprisePlugin2Private.snk</Link>
+    </None>
+    <None Include="..\..\..\..\Keys\EagleEnterprisePlugin2Public.snk">
+      <Link>Keys\EagleEnterprisePlugin2Public.snk</Link>
+    </None>
+    <None Include="..\..\..\..\Keys\EagleEnterprisePlugin3Private.snk">
+      <Link>Keys\EagleEnterprisePlugin3Private.snk</Link>
+    </None>
+    <None Include="..\..\..\..\Keys\EagleEnterprisePlugin3Public.snk">
+      <Link>Keys\EagleEnterprisePlugin3Public.snk</Link>
+    </None>
+    <None Include="..\..\..\..\Keys\EagleEnterprisePlugin4Private.snk">
+      <Link>Keys\EagleEnterprisePlugin4Private.snk</Link>
+    </None>
+    <None Include="..\..\..\..\Keys\EagleEnterprisePlugin4Public.snk">
+      <Link>Keys\EagleEnterprisePlugin4Public.snk</Link>
+    </None>
+    <None Include="..\..\..\..\Keys\EagleEnterprisePlugin5Private.snk">
+      <Link>Keys\EagleEnterprisePlugin5Private.snk</Link>
+    </None>
+    <None Include="..\..\..\..\Keys\EagleEnterprisePlugin5Public.snk">
+      <Link>Keys\EagleEnterprisePlugin5Public.snk</Link>
+    </None>
+    <None Include="..\..\..\..\Keys\TestTrustRootPrivate.snk">
+      <Link>Keys\TestTrustRootPrivate.snk</Link>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Condition="'$(HarpyStrongNamePluginPrefix)' != '' And
+                     '$(HarpyStrongNamePluginPrefix)' != '$(HarpyStrongNameEmbed1Prefix)' And
+                     '$(HarpyStrongNamePluginPrefix)' != '$(HarpyStrongNameEmbed2Prefix)' And
+                     '$(HarpyStrongNamePluginPrefix)' != '$(HarpyStrongNameEmbed3Prefix)' And
+                     Exists('..\..\..\..\Keys\$(HarpyStrongNamePluginPrefix)Private.snk')"
+          Include="..\..\..\..\Keys\$(HarpyStrongNamePluginPrefix)Private.snk">
+      <Link>Keys\$(HarpyStrongNamePluginPrefix)Private.snk</Link>
+    </None>
+    <None Condition="'$(HarpyStrongNamePluginPrefix)' != '' And
+                     '$(HarpyStrongNamePluginPrefix)' != '$(HarpyStrongNameEmbed1Prefix)' And
+                     '$(HarpyStrongNamePluginPrefix)' != '$(HarpyStrongNameEmbed2Prefix)' And
+                     '$(HarpyStrongNamePluginPrefix)' != '$(HarpyStrongNameEmbed3Prefix)' And
+                     Exists('..\..\..\..\Keys\$(HarpyStrongNamePluginPrefix)Public.snk')"
+          Include="..\..\..\..\Keys\$(HarpyStrongNamePluginPrefix)Public.snk">
+      <Link>Keys\$(HarpyStrongNamePluginPrefix)Public.snk</Link>
+    </None>
+  </ItemGroup>
+  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
+  <Import Project="$(EagleDir)\Targets\Eagle.targets" />
+  <Import Project="$(HarpyDir)\Targets\Harpy.targets" />
+  <PropertyGroup>
+    <BuildDependsOn>
+      EagleDetectUserBuilds;
+      EagleDetectUserSettings;
+      EagleDetectBuildTool;
+      EagleDetectOperatingSystem;
+      EagleDetectNetCoreReferences;
+      EagleDetectNetCore20;
+      EagleDetectNetCore30;
+      EagleDetectNetFx20;
+      EagleDetectNetFx20Sp;
+      EagleDetectNetFx30;
+      EagleDetectNetFx35;
+      EagleDetectNetFx40;
+      EagleDetectNetFx45;
+      EagleDetectNetFx451;
+      EagleDetectNetFx452;
+      EagleDetectNetFx46;
+      EagleDetectNetFx461;
+      EagleDetectNetFx462;
+      EagleDetectNetFx47;
+      EagleDetectNetFx471;
+      EagleDetectNetFx472;
+      EagleDetectNetFx48;
+      EagleDetectNetFx481;
+      $(BuildDependsOn);
+      CopyHarpyLibrary;
+      EagleStripPdbPath;
+      Obfuscate3;
+      StrongNameSign;
+      EagleAuthenticodeSign;
+      FixCopyFilesToOutputDirectory;
+      GetDoneFiles;
+      UpdateDoneFiles;
+    </BuildDependsOn>
+    <CleanDependsOn>
+      $(CleanDependsOn);
+      EagleCleanPackage;
+      CleanObfuscateFiles;
+      CleanOriginalFiles;
+      CleanUnobfuscateFiles;
+      CleanDoneFiles;
+    </CleanDependsOn>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(EagleXml)' == 'false' And
+                            '$(MissingXml)' != 'false'">
+    <!--
+        NOTE: We cannot build this project without XML integration enabled;
+              therefore, skip building it altogether.
+    -->
+    <BuildDependsOn>
+      MissingXml
+    </BuildDependsOn>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(EagleSerialization)' == 'false' And
+                            '$(MissingSerialization)' != 'false'">
+    <!--
+        NOTE: We cannot build this project without serialization integration
+              enabled; therefore, skip building it altogether.
+    -->
+    <BuildDependsOn>
+      MissingSerialization
+    </BuildDependsOn>
+  </PropertyGroup>
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it.
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Certificate xmlns="https://eagle.to/2011/harpy"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <Protocol>Local</Protocol>
+  <Vendor>Eagle Development Team</Vendor>
+  <SerialNumber>KAPOK-TEST-</SerialNumber>
+  <HashAlgorithm>SHA512</HashAlgorithm>
+  <Type>Single User</Type>
+  <EntityType>Team</EntityType>
+  <Quantity>1</Quantity>
+  <Product>Kapok</Product>
+  <ProtocolVersion>4.0</ProtocolVersion>
+  <Version>1.0</Version>
+</Certificate>

@@ -1,0 +1,123 @@
+<!--
+ *
+ * Harpy.StrongName.Settings.targets -
+ *
+ * WARNING: Contains more evil MSBuild hacks than your doctor recommended.
+ *
+ * Copyright (c) 2007-2012 by Joe Mistachkin.  All rights reserved.
+ *
+ * See the file "license.terms" for information on usage and redistribution of
+ * this file, and for a DISCLAIMER OF ALL WARRANTIES.
+ *
+ * RCS: @(#) $Id: $
+ *
+-->
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!--
+  ******************************************************************************
+  **                          Load Per-User Settings                          **
+  ******************************************************************************
+  -->
+
+  <!--
+      NOTE: If the per-user settings file exists, import it now.  The contained
+            settings, if any, will override the default ones provided below.
+  -->
+  <Import Condition="'$(HarpyDir)' != '' And
+                     !HasTrailingSlash('$(HarpyDir)') And
+                     Exists('$(HarpyDir)\Targets\Harpy.StrongName.Settings.targets.user')"
+          Project="$(HarpyDir)\Targets\Harpy.StrongName.Settings.targets.user" />
+
+  <!--
+  ******************************************************************************
+  **                   Harpy Strong Name Signing Properties                   **
+  ******************************************************************************
+  -->
+
+  <PropertyGroup Condition="'$(EagleDir)' != ''">
+    <!--
+        NOTE: This is the strong name key path for all builds.  This property
+              can be overridden in the project file and is used to locate the
+              strong name key used to sign the output assembly.
+    -->
+    <HarpyStrongNameDir Condition="'$(HarpyStrongNameDir)' == ''">$(EagleDir)\Keys</HarpyStrongNameDir>
+  </PropertyGroup>
+
+  <!--
+  ******************************************************************************
+  -->
+
+  <PropertyGroup>
+    <!--
+        NOTE: This is the strong name key prefix for all builds.  This property
+              can be overridden in the project file and is used to help control
+              the name of the strong name key used to sign the output assembly.
+    -->
+    <HarpyStrongNamePluginPrefix Condition="'$(HarpyStrongNamePluginPrefix)' == ''">EagleEnterprisePluginRoot</HarpyStrongNamePluginPrefix>
+
+    <!--
+        NOTE: This is the strong name key prefix for the primary resource to
+              be embedded in the built assembly.  This property can be
+              overridden in the project file and is used to help control the
+              name of the strong name key used to embed in the built assembly.
+    -->
+    <HarpyStrongNameEmbed1Prefix Condition="'$(HarpyStrongNameEmbed1Prefix)' == ''">EagleEnterpriseTrustRoot</HarpyStrongNameEmbed1Prefix>
+
+    <!--
+        NOTE: This is the strong name key prefix for the secondary resource to
+              be embedded in the built assembly.  This property can be
+              overridden in the project file and is used to help control the
+              name of the strong name key used to embed in the built assembly.
+    -->
+    <HarpyStrongNameEmbed2Prefix Condition="'$(HarpyStrongNameEmbed2Prefix)' == ''">EagleEnterpriseBackupRoot</HarpyStrongNameEmbed2Prefix>
+
+    <!--
+        NOTE: This is the strong name key prefix for the "fail-safe" resource
+              to be embedded in the built assembly.  This property can be
+              overridden in the project file and is used to help control the
+              name of the strong name key used to embed in the built assembly.
+    -->
+    <HarpyStrongNameEmbed3Prefix Condition="'$(HarpyStrongNameEmbed3Prefix)' == ''">EagleEnterpriseFailSafeRoot</HarpyStrongNameEmbed3Prefix>
+  </PropertyGroup>
+
+  <!--
+  ******************************************************************************
+  -->
+
+  <PropertyGroup Condition="'$(HarpyStrongNameDir)' != ''">
+    <!--
+        NOTE: Sign the assembly?  By default, this is enabled.  For Harpy, this
+              should always be enabled; otherwise, all security will effectively
+              be disabled.  Also, if this is disabled, the plugin built from the
+              official sources will fail to load because it requires a valid
+              license certificate that is signed with the same strong name key
+              as the assembly itself (i.e. implying that the assembly itself
+              must be strong name signed).
+    -->
+    <SignAssembly Condition="'$(SignAssembly)' == ''">true</SignAssembly>
+
+    <!--
+        NOTE: Use delay signing?  We almost always need to do this because we
+              modify the executables with build tasks.
+    -->
+    <DelaySign Condition="'$(DelaySign)' == ''">true</DelaySign>
+
+    <!--
+        NOTE: This is the public strong name key file for all builds.
+
+              For security reasons, the public key file "*Public.snk" should be
+              included in public distribution files.
+    -->
+    <AssemblyOriginatorKeyFile Condition="'$(AssemblyOriginatorKeyFile)' == '' And '$(DelaySign)' == 'true'">$(HarpyStrongNameDir)\$(HarpyStrongNamePluginPrefix)Public.snk</AssemblyOriginatorKeyFile>
+    <AssemblyOriginatorKeyFile Condition="'$(AssemblyOriginatorKeyFile)' == '' And '$(DelaySign)' == 'false'">$(HarpyStrongNameDir)\$(HarpyStrongNamePluginPrefix)Private.snk</AssemblyOriginatorKeyFile>
+
+    <!--
+        NOTE: This is the private strong name key pair file for all builds.
+
+              For security reasons, the private key file "*Private.snk" should
+              be kept secret and never included in the any public distribution
+              files.
+    -->
+    <AssemblyPrivateKeyFile Condition="'$(AssemblyPrivateKeyFile)' == ''">$(HarpyStrongNameDir)\$(HarpyStrongNamePluginPrefix)Private.snk</AssemblyPrivateKeyFile>
+  </PropertyGroup>
+</Project>

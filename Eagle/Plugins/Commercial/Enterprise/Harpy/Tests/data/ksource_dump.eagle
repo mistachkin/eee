@@ -1,0 +1,34 @@
+###############################################################################
+#
+# ksource_dump.eagle --
+#
+# Extensible Adaptable Generalized Logic Engine (Eagle)
+# Signed Script Test
+#
+# Copyright (c) 2007-2012 by Joe Mistachkin.  All rights reserved.
+#
+# See the file "license.terms" for information on usage and redistribution of
+# this file, and for a DISCLAIMER OF ALL WARRANTIES.
+#
+# RCS: @(#) $Id: $
+#
+###############################################################################
+
+list \
+  [info exists settings_xml_was_loaded] \
+  [requireVersion 0.0.0.0] \
+  [debug icommand #done; interactiveLoop] \
+  [storageType] \
+  [testMode ""] \
+  [skipLicense] \
+  [haveComponent ""] \
+  [listComponents] \
+  [listContextVariables] \
+  [changeFeatures] \
+  [changeLicensePolicy] \
+  [changePolicyProperty Script CurrentPolicy] \
+  [enableLocalPolicy ""] \
+  [isRestrictedInterpreter] \
+  [joinSubPaths a b c] \
+  [set id [evaluateInSandbox $dumpSandboxFile sandboxResults]] \
+  [waitForSandbox $id]

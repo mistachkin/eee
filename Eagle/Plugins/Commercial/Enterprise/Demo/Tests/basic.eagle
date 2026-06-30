@@ -1,0 +1,696 @@
+###############################################################################
+#
+# basic.eagle --
+#
+# Extensible Adaptable Generalized Logic Engine (Eagle)
+# Enterprise Edition Package Tests
+#
+# Copyright (c) 2007-2012 by Joe Mistachkin.  All rights reserved.
+#
+# See the file "license.terms" for information on usage and redistribution of
+# this file, and for a DISCLAIMER OF ALL WARRANTIES.
+#
+# RCS: @(#) $Id: $
+#
+###############################################################################
+
+package require Eagle.Library
+package require Eagle.Test
+
+runTestPrologue
+
+package require Harpy.Test
+
+###############################################################################
+
+set package_path [file dirname [file normalize $path]]
+
+###############################################################################
+
+#
+# NOTE: Check test constraints specific to tests in this file.
+#
+for {set index 0} {$index < 10} {incr index} {
+  set fileName [file join $path data [appendArgs demo $index .eagle]]
+
+  if {![haveConstraint [appendArgs file_ [file tail $fileName]]]} then {
+    checkForFile $test_channel $fileName
+  }
+}
+
+unset -nocomplain fileName index
+
+#
+# NOTE: We need to make sure the plugin is actually loaded prior to
+#       querying the compile options.
+#
+if {[catch {package require Demo.Enterprise} error] == 0} then {
+  #
+  # HACK: Pre-check for the demo command now so that we can show the
+  #       plugin compile options.
+  #
+  if {![haveConstraint command.demo]} then {
+    checkForCommand $test_channel demo
+  }
+
+  #
+  # NOTE: Now, check if the demo command is actually available.  If so,
+  #       report the plugin compile options; otherwise, report that we
+  #       cannot.
+  #
+  if {[haveConstraint command.demo]} then {
+    tputs $test_channel [appendArgs \
+        "---- plugin \"Demo.Enterprise\" compile options: " \
+        [formatList [demo options]] \n]
+  } else {
+    tputs $test_channel [appendArgs \
+        "---- demo command not available\n"]
+  }
+} else {
+  tputs $test_channel [appendArgs \
+      "---- failed to load plugin: " $error \n]
+}
+
+unset -nocomplain error
+tputs $test_channel "---- checking for plugin isolation... "
+
+if {[isEagle] && ![haveConstraint demo.isolated]} then {
+  #
+  # NOTE: We need to make sure the plugin is actually loaded prior to
+  #       querying the plugin flags.
+  #
+  if {[catch {package present Demo.Enterprise}] == 0} then {
+    #
+    # NOTE: Query the plugin flags for the plugin and search them for the
+    #       "Isolated" flag.  If this flag is present then the plugin has
+    #       been loaded into an isolated AppDomain and some functionality
+    #       will be unavailable.
+    #
+    if {[lsearch -exact -- \
+        [getPluginFlags {^Demo\.Enterprise, }] Isolated] != -1} then {
+      #
+      # NOTE: This plugin is running in isolated mode.
+      #
+      addConstraint demo.isolated
+
+      tputs $test_channel yes\n
+    } else {
+      tputs $test_channel no\n
+    }
+  } else {
+    tputs $test_channel error\n
+  }
+} else {
+  tputs $test_channel skipped\n
+}
+
+###############################################################################
+
+set prependQuietMode [string map [list \n ""] \
+    [list apply [list [list fileName directory arguments] {
+  if {[string first -security $arguments] != -1} then {
+    return -code return [appendArgs {-quiet true } $arguments]
+  }
+}]]]
+
+###############################################################################
+
+proc disableHarpyConfiguration { channel } {
+  if {![info exists ::saved_no_harpy_configuration]} then {
+    set ::saved_no_harpy_configuration \
+        [info exists ::env(NoConfiguration)]
+  }
+
+  set ::env(NoConfiguration) 1
+
+  tputs $channel [appendArgs \
+      "---- disabled Harpy plugin configuration, previously: " \
+      $::saved_no_harpy_configuration \n]
+}
+
+###############################################################################
+
+proc restoreHarpyConfiguration { channel } {
+  if {[info exists ::saved_no_harpy_configuration]} then {
+    set was_no_harpy_configuration $::saved_no_harpy_configuration
+    unset ::saved_no_harpy_configuration
+  } else {
+    set was_no_harpy_configuration false; # TODO: Good default?
+  }
+
+  if {$was_no_harpy_configuration} then {
+    set ::env(NoConfiguration) 1
+  } else {
+    unset ::env(NoConfiguration)
+  }
+
+  tputs $channel [appendArgs \
+      "---- restored Harpy plugin configuration to: " \
+      $was_no_harpy_configuration \n]
+}
+
+###############################################################################
+
+unset -nocomplain resultSuffix
+
+if {[haveConstraint gnuScreen]} then {
+  set resultSuffix ""
+} else {
+  set resultSuffix \$
+}
+
+###############################################################################
+
+disableHarpyConfiguration $test_channel
+
+###############################################################################
+
+saveEnvironmentVariables [list NoWritePrompt]; set env(NoWritePrompt) 1
+
+###############################################################################
+
+set pids [list]
+
+###############################################################################
+
+runTest {test demo-1.0 {simple demo} -body {
+  set fileName [file join $path data demo0.eagle]
+
+  set result [execTestShell [list -nocarriagereturns \
+      -eventflags Wait -preprocessarguments $prependQuietMode] \
+      -preInitialize [appendArgs \" \
+          [list set env(NoPopulateOsExtra) true] \"] \
+      -preInitialize [appendArgs \" \
+          [list set env(NoAutoRecord) true] \"] \
+      -preInitialize [appendArgs \" \
+          [list set env(NoWorkerThread) true] \"] \
+      -preInitialize [appendArgs \" \
+          [list set env(NoPromptCommandCount) true] \"] \
+      -preInitialize [appendArgs \" \
+          [list set env(NoPromptActiveLoops) true] \"] \
+      -preInitialize [appendArgs \" \
+          [list set env(NoLicensing) true] \"] \
+      -preInitialize [appendArgs \" \
+          [list set env(NoHookGetTestLogForWatchCat) true] \"] \
+      -preInitialize [appendArgs \" \
+          [list debug pluginflags \
+          [expr {[haveConstraint demo.isolated] ? "+Isolated" : "+None"}]] \"] \
+      -initialize -postInitialize [appendArgs \" \
+          [list package require Demo.Enterprise] \"] \
+      -postInitialize [appendArgs \" \
+          [list package require Eagle.Test] \"] \
+      -postInitialize [appendArgs \" \
+          [list enableFailSafeExitAfter true] \"] \
+      -postInitialize [appendArgs \" \
+          [list demo startup -path $fileName] \"]]
+
+  set pid [info previouspid]; lappend pids $pid
+  waitForProcesses [list $pid] 10000
+
+  set result
+} -cleanup {
+  unset -nocomplain result fileName pid
+} -constraints {eagle testExec command.demo file_demo0.eagle} -match regexp \
+-result [appendArgs {^% set x 1; set y 2; incr x; puts \[list \$x \$y\]; exit
+2 2
+} $resultSuffix]}
+
+###############################################################################
+
+#
+# WARNING: The result of this test relies upon trailing whitespace.
+#
+runTest {test demo-1.1 {simple demo with comments} -body {
+  set fileName [file join $path data demo1.eagle]
+
+  set result [execTestShell [list -nocarriagereturns \
+      -eventflags Wait -preprocessarguments $prependQuietMode] \
+      -preInitialize [appendArgs \" \
+          [list set env(NoPopulateOsExtra) true] \"] \
+      -preInitialize [appendArgs \" \
+          [list set env(NoAutoRecord) true] \"] \
+      -preInitialize [appendArgs \" \
+          [list set env(NoWorkerThread) true] \"] \
+      -preInitialize [appendArgs \" \
+          [list set env(NoPromptCommandCount) true] \"] \
+      -preInitialize [appendArgs \" \
+          [list set env(NoPromptActiveLoops) true] \"] \
+      -preInitialize [appendArgs \" \
+          [list set env(NoLicensing) true] \"] \
+      -preInitialize [appendArgs \" \
+          [list set env(NoHookGetTestLogForWatchCat) true] \"] \
+      -preInitialize [appendArgs \" \
+          [list debug pluginflags \
+          [expr {[haveConstraint demo.isolated] ? "+Isolated" : "+None"}]] \"] \
+      -initialize -postInitialize [appendArgs \" \
+          [list package require Demo.Enterprise] \"] \
+      -postInitialize [appendArgs \" \
+          [list package require Eagle.Test] \"] \
+      -postInitialize [appendArgs \" \
+          [list enableFailSafeExitAfter true] \"] \
+      -postInitialize [appendArgs \" \
+          [list demo startup -path $fileName] \"]]
+
+  set pid [info previouspid]; lappend pids $pid
+  waitForProcesses [list $pid] 10000
+
+  set result
+} -cleanup {
+  unset -nocomplain result fileName pid
+} -constraints {eagle testExec command.demo file_demo1.eagle} -match regexp \
+-result [appendArgs {^% #
+% # NOTE: This is a comment block followed by a blank line\.
+% #
+% 
+% set x 1; set y 2; incr x; list \$x \$y
+2 2
+% exit
+} $resultSuffix]}
+
+###############################################################################
+
+runTest {test demo-1.2 {demo with pause} -body {
+  set fileName [file join $path data demo2.eagle]
+
+  tputs $test_channel \
+      "\nwhen you hear the beep, press any key to continue.\n\n"
+
+  set result [execTestShell [list -nocarriagereturns \
+      -eventflags Wait -preprocessarguments $prependQuietMode] \
+      -preInitialize [appendArgs \" \
+          [list set env(NoPopulateOsExtra) true] \"] \
+      -preInitialize [appendArgs \" \
+          [list set env(NoAutoRecord) true] \"] \
+      -preInitialize [appendArgs \" \
+          [list set env(NoWorkerThread) true] \"] \
+      -preInitialize [appendArgs \" \
+          [list set env(NoPromptCommandCount) true] \"] \
+      -preInitialize [appendArgs \" \
+          [list set env(NoPromptActiveLoops) true] \"] \
+      -preInitialize [appendArgs \" \
+          [list set env(NoLicensing) true] \"] \
+      -preInitialize [appendArgs \" \
+          [list set env(NoHookGetTestLogForWatchCat) true] \"] \
+      -preInitialize [appendArgs \" \
+          [list debug pluginflags \
+          [expr {[haveConstraint demo.isolated] ? "+Isolated" : "+None"}]] \"] \
+      -initialize -postInitialize [appendArgs \" \
+          [list package require Demo.Enterprise] \"] \
+      -postInitialize [appendArgs \" \
+          [list package require Eagle.Test] \"] \
+      -postInitialize [appendArgs \" \
+          [list enableFailSafeExitAfter true] \"] \
+      -postInitialize [appendArgs \" \
+          [list demo startup -pause true -beep true -path $fileName] \"]]
+
+  set pid [info previouspid]; lappend pids $pid
+  waitForProcesses [list $pid] 10000
+
+  set result
+} -cleanup {
+  unset -nocomplain result fileName pid
+} -constraints {eagle testExec command.demo interactive userInteraction\
+file_demo2.eagle} -match regexp -result [appendArgs {^% puts stdout DEMO; exit
+DEMO
+} $resultSuffix]}
+
+###############################################################################
+
+runTest {test demo-1.3 {demo with timed stop} -body {
+  set fileName [file join $path data demo3.eagle]
+
+  set result [execTestShell [list -nocarriagereturns \
+      -eventflags Wait -preprocessarguments $prependQuietMode] \
+      -preInitialize [appendArgs \" \
+          [list set env(NoPopulateOsExtra) true] \"] \
+      -preInitialize [appendArgs \" \
+          [list set env(NoAutoRecord) true] \"] \
+      -preInitialize [appendArgs \" \
+          [list set env(NoWorkerThread) true] \"] \
+      -preInitialize [appendArgs \" \
+          [list set env(NoPromptCommandCount) true] \"] \
+      -preInitialize [appendArgs \" \
+          [list set env(NoPromptActiveLoops) true] \"] \
+      -preInitialize [appendArgs \" \
+          [list set env(NoLicensing) true] \"] \
+      -preInitialize [appendArgs \" \
+          [list set env(NoHookGetTestLogForWatchCat) true] \"] \
+      -preInitialize [appendArgs \" \
+          [list debug pluginflags \
+          [expr {[haveConstraint demo.isolated] ? "+Isolated" : "+None"}]] \"] \
+      -initialize -postInitialize [appendArgs \" \
+          [list package require Demo.Enterprise] \"] \
+      -postInitialize [appendArgs \" \
+          [list object invoke Interpreter.GetActive Quiet true] \"] \
+      -postInitialize [appendArgs \" \
+          [list set env(Quiet) true] \"] \
+      -postInitialize [appendArgs \" \
+          [list package require Eagle.Test] \"] \
+      -postInitialize [appendArgs \" \
+          [list enableFailSafeExitAfter true] \"] \
+      -postInitialize [appendArgs \" \
+          [list demo startup -path $fileName] \"]]
+
+  set pid [info previouspid]; lappend pids $pid
+  waitForProcesses [list $pid] 10000
+
+  set result
+} -cleanup {
+  unset -nocomplain result fileName pid
+} -constraints {eagle compile.THREADING testExec command.demo\
+file_demo3.eagle} -match regexp -result \
+[appendArgs {^% proc threadStart \{\} \{ after 0 nop; vwait forever \}
+% set t \[createThread threadStart\]
+System#Threading#Thread#\d+
+% startThread \$t; after 2000 \[list demo stop\]; demo playmilliseconds 1000
+1000
+% (?:p(?:u)?)?
+------------------------------------------------------------------
+% exit -force
+} $resultSuffix]}
+
+###############################################################################
+
+runTest {test demo-1.4 {demo introspection} -body {
+  set fileName [file join $path data demo4.eagle]
+
+  set result [execTestShell [list -nocarriagereturns \
+      -eventflags Wait -preprocessarguments $prependQuietMode] \
+      -preInitialize [appendArgs \" \
+          [list set env(NoPopulateOsExtra) true] \"] \
+      -preInitialize [appendArgs \" \
+          [list set env(NoAutoRecord) true] \"] \
+      -preInitialize [appendArgs \" \
+          [list set env(NoWorkerThread) true] \"] \
+      -preInitialize [appendArgs \" \
+          [list set env(NoPromptCommandCount) true] \"] \
+      -preInitialize [appendArgs \" \
+          [list set env(NoPromptActiveLoops) true] \"] \
+      -preInitialize [appendArgs \" \
+          [list set env(NoLicensing) true] \"] \
+      -preInitialize [appendArgs \" \
+          [list set env(NoHookGetTestLogForWatchCat) true] \"] \
+      -preInitialize [appendArgs \" \
+          [list debug pluginflags \
+          [expr {[haveConstraint demo.isolated] ? "+Isolated" : "+None"}]] \"] \
+      -initialize -postInitialize [appendArgs \" \
+          [list package require Demo.Enterprise] \"] \
+      -postInitialize [appendArgs \" \
+          [list package require Eagle.Test] \"] \
+      -postInitialize [appendArgs \" \
+          [list enableFailSafeExitAfter true] \"] \
+      -postInitialize [appendArgs \" \
+          [list demo startup -path $fileName] \"]]
+
+  set pid [info previouspid]; lappend pids $pid
+  waitForProcesses [list $pid] 10000
+
+  set result
+} -cleanup {
+  unset -nocomplain result fileName pid
+} -constraints {eagle testExec command.demo file_demo4.eagle} -match regexp \
+-result [appendArgs {^% demo active
+True
+% demo basereadline
+False
+% demo beep
+False
+% demo cancel
+False
+% demo closed
+False
+% demo debuglevel
+0
+% demo endofstream
+True
+% demo playmilliseconds
+50
+% demo options
+(?:[0-9A-Z_]+)(?: [0-9A-Z_]+)*
+% demo pause
+False
+% demo stopmilliseconds
+2000
+% demo timeoutmilliseconds
+-1
+% demo reset
+% exit
+} $resultSuffix]}
+
+###############################################################################
+
+#
+# WARNING: The result of this test relies upon trailing whitespace.
+#
+runTest {test demo-1.5 {demo with shutdown} -body {
+  set fileName [file join $path data demo5.eagle]
+
+  set result [execTestShell [list -nocarriagereturns \
+      -eventflags Wait -preprocessarguments $prependQuietMode] \
+      -preInitialize [appendArgs \" \
+          [list set env(NoPopulateOsExtra) true] \"] \
+      -preInitialize [appendArgs \" \
+          [list set env(NoAutoRecord) true] \"] \
+      -preInitialize [appendArgs \" \
+          [list set env(NoWorkerThread) true] \"] \
+      -preInitialize [appendArgs \" \
+          [list set env(NoPromptCommandCount) true] \"] \
+      -preInitialize [appendArgs \" \
+          [list set env(NoPromptActiveLoops) true] \"] \
+      -preInitialize [appendArgs \" \
+          [list set env(NoLicensing) true] \"] \
+      -preInitialize [appendArgs \" \
+          [list set env(NoHookGetTestLogForWatchCat) true] \"] \
+      -preInitialize [appendArgs \" \
+          [list debug pluginflags \
+          [expr {[haveConstraint demo.isolated] ? "+Isolated" : "+None"}]] \"] \
+      -initialize -postInitialize [appendArgs \" \
+          [list package require Demo.Enterprise] \"] \
+      -postInitialize [appendArgs \" \
+          [list package require Eagle.Test] \"] \
+      -postInitialize [appendArgs \" \
+          [list enableFailSafeExitAfter true] \"] \
+      -postInitialize [appendArgs \" \
+          [list demo startup -path $fileName] \"]]
+
+  set pid [info previouspid]; lappend pids $pid
+  waitForProcesses [list $pid] 10000
+
+  set result
+} -cleanup {
+  unset -nocomplain result fileName pid
+} -constraints {eagle compile.THREADING testExec command.demo\
+file_demo5.eagle interactive} -match regexp -result \
+[appendArgs {^% proc stopNow \{\} \{ exit -force -nodispose \}
+% proc threadStart \{\} \{ after 6000 \[list stopNow\]; vwait forever \}
+% set t \[createThread threadStart\]
+System#Threading#Thread#\d+
+% startThread \$t; puts stdout BEFORE
+BEFORE
+% demo shutdown
+% 
+} $resultSuffix]}
+
+###############################################################################
+
+runTest {test demo-1.6 {demo with clean shutdown} -body {
+  set fileName [file join $path data demo6.eagle]
+
+  set result [execTestShell [list -nocarriagereturns \
+      -eventflags Wait -preprocessarguments $prependQuietMode] \
+      -preInitialize [appendArgs \" \
+          [list set env(NoPopulateOsExtra) true] \"] \
+      -preInitialize [appendArgs \" \
+          [list set env(NoAutoRecord) true] \"] \
+      -preInitialize [appendArgs \" \
+          [list set env(NoWorkerThread) true] \"] \
+      -preInitialize [appendArgs \" \
+          [list set env(NoPromptCommandCount) true] \"] \
+      -preInitialize [appendArgs \" \
+          [list set env(NoPromptActiveLoops) true] \"] \
+      -preInitialize [appendArgs \" \
+          [list set env(NoLicensing) true] \"] \
+      -preInitialize [appendArgs \" \
+          [list set env(NoHookGetTestLogForWatchCat) true] \"] \
+      -preInitialize [appendArgs \" \
+          [list debug pluginflags \
+          [expr {[haveConstraint demo.isolated] ? "+Isolated" : "+None"}]] \"] \
+      -initialize -postInitialize [appendArgs \" \
+          [list package require Demo.Enterprise] \"] \
+      -postInitialize [appendArgs \" \
+          [list package require Eagle.Test] \"] \
+      -postInitialize [appendArgs \" \
+          [list enableFailSafeExitAfter true] \"] \
+      -postInitialize [appendArgs \" \
+          [list demo startup -path $fileName] \"]]
+
+  set pid [info previouspid]; lappend pids $pid
+  waitForProcesses [list $pid] 10000
+
+  set result
+} -cleanup {
+  unset -nocomplain result fileName pid
+} -constraints {eagle testExec command.demo file_demo6.eagle interactive} \
+-match regexp -result \
+[appendArgs {^% puts stdout BEFORE
+BEFORE
+% demo closed true
+True
+% demo shutdown
+} $resultSuffix]}
+
+###############################################################################
+
+runTest {test demo-1.7 {native demo with clean shutdown} -body {
+  set fileName [file join $path data demo7.eagle]
+
+  set result [execTestShell [list -nocarriagereturns \
+      -eventflags Wait -preprocessarguments $prependQuietMode] \
+      -preInitialize [appendArgs \" \
+          [list set env(NoPopulateOsExtra) true] \"] \
+      -preInitialize [appendArgs \" \
+          [list set env(NoAutoRecord) true] \"] \
+      -preInitialize [appendArgs \" \
+          [list set env(NoWorkerThread) true] \"] \
+      -preInitialize [appendArgs \" \
+          [list set env(NoPromptCommandCount) true] \"] \
+      -preInitialize [appendArgs \" \
+          [list set env(NoPromptActiveLoops) true] \"] \
+      -preInitialize [appendArgs \" \
+          [list set env(NoLicensing) true] \"] \
+      -preInitialize [appendArgs \" \
+          [list set env(NoHookGetTestLogForWatchCat) true] \"] \
+      -preInitialize [appendArgs \" \
+          [list debug pluginflags \
+          [expr {[haveConstraint demo.isolated] ? "+Isolated" : "+None"}]] \"] \
+      -initialize -postInitialize [appendArgs \" \
+          [list package require Demo.Enterprise] \"] \
+      -postInitialize [appendArgs \" \
+          [list package require Eagle.Test] \"] \
+      -postInitialize [appendArgs \" \
+          [list enableFailSafeExitAfter true] \"] \
+      -postInitialize [appendArgs \" \
+          [list demo startup -native true -path $fileName] \"]]
+
+  set pid [info previouspid]; lappend pids $pid
+  waitForProcesses [list $pid] 10000
+
+  set result
+} -cleanup {
+  unset -nocomplain result fileName pid
+} -constraints {eagle compile.NATIVE compile.WINDOWS native windows testExec\
+command.demo file_demo7.eagle interactive userInteraction interactiveFocus} \
+-match regexp -result [appendArgs {^% BEFORE
+% False
+% 
+} $resultSuffix]}
+
+###############################################################################
+
+runTest {test demo-2.1 {unloading non-isolated plugin} -setup {
+  package require Demo.Enterprise
+} -body {
+  set plugin [lindex [info loaded "" *Demo.Enterprise*] 0]
+
+  list [object invoke -flags +NonPublic Interpreter.GetActive.Host TypeName] \
+      [unload -- [lindex $plugin 0] [lindex $plugin 1]] \
+      [object invoke -flags +NonPublic Interpreter.GetActive.Host TypeName] \
+      [object assemblies "Demo, *"]
+} -cleanup {
+  unset -nocomplain plugin
+} -constraints [fixConstraints {eagle command.object !demo.isolated}] -match \
+regexp -result {^Demo \{\{Demo\.Enterprise, Demo, Version=\d+\.\d+\.\d+\.\d+,\
+Culture=neutral, PublicKeyToken=[0-9a-f]{16}\} \d+\.\d+\.\d+\.\d+\} Console\
+\{\{Demo, Version=\d+\.\d+\.\d+\.\d+, Culture=neutral,\
+PublicKeyToken=[0-9a-f]{16}\}\}$}}
+
+###############################################################################
+
+runTest {test demo-2.2 {unloading isolated plugin} -setup {
+  package require Demo.Enterprise
+} -body {
+  set plugin [lindex [info loaded "" *Demo.Enterprise*] 0]
+
+  list [object invoke -objectvalueflags +ManualProxyGetType -proxytype \
+      Eagle._Hosts.Core -flags +NonPublic Interpreter.GetActive.Host \
+      TypeName] [unload -- [lindex $plugin 0] [lindex $plugin 1]] \
+      [object invoke -objectvalueflags +ManualProxyGetType -proxytype \
+      Eagle._Hosts.Core -flags +NonPublic Interpreter.GetActive.Host \
+      TypeName] [object assemblies "Demo, *"]
+} -cleanup {
+  unset -nocomplain plugin
+} -constraints {eagle command.object demo.isolated} -match regexp -result \
+{^Demo \{\{Demo\.Enterprise, Demo, Version=\d+\.\d+\.\d+\.\d+, Culture=neutral,\
+PublicKeyToken=[0-9a-f]{16}\} \d+\.\d+\.\d+\.\d+\} Console \{\}$}}
+
+###############################################################################
+
+#
+# HACK: Kill any stale child processes now.  This is generally
+#       needed only on non-Windows, e.g. Mono on Linux, et al;
+#       however, we may as well do it everywhere.
+#
+if {[info exists pids]} then {
+  foreach pid $pids {
+    if {[isWindows]} then {
+      #
+      # NOTE: Use built-in [kill] command on Windows.
+      #
+      if {[catch {kill -force -- $pid}] == 0} then {
+        tputs $test_channel [appendArgs \
+            "---- forcibly KILLED child process " \
+            $pid " using \[kill\] on Windows\n"]
+      } else {
+        tputs $test_channel [appendArgs \
+            "---- child process " $pid \
+            " may be dead already on Windows\n"]
+      }
+    } else {
+      #
+      # BUGBUG: Maybe this is more reliable on Linux?
+      #
+      if {[catch {
+        exec -success Success kill -s KILL $pid
+      }] == 0} then {
+        tputs $test_channel [appendArgs \
+            "---- forcibly KILLED child process " \
+            $pid " using \[exec\] on POSIX\n"]
+      } else {
+        tputs $test_channel [appendArgs \
+            "---- child process " $pid \
+            " may be dead already on POSIX\n"]
+      }
+    }
+  }
+}
+
+unset -nocomplain pid pids
+
+###############################################################################
+
+unset -nocomplain resultSuffix
+
+###############################################################################
+
+restoreEnvironmentVariables [list NoWritePrompt]
+
+###############################################################################
+
+restoreHarpyConfiguration $test_channel
+
+###############################################################################
+
+rename restoreHarpyConfiguration ""
+rename disableHarpyConfiguration ""
+
+###############################################################################
+
+unset -nocomplain saved_no_harpy_configuration
+
+###############################################################################
+
+unset -nocomplain prependQuietMode package_path
+
+###############################################################################
+
+runTestEpilogue

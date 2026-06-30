@@ -1,0 +1,265 @@
+###############################################################################
+#
+# manifest.eagle --
+#
+# Extensible Adaptable Generalized Logic Engine (Eagle)
+# Kapok Development Server Installation Manifest
+#
+# Copyright (c) 2007-2012 by Joe Mistachkin.  All rights reserved.
+#
+# See the file "license.terms" for information on usage and redistribution of
+# this file, and for a DISCLAIMER OF ALL WARRANTIES.
+#
+# RCS: @(#) $Id: $
+#
+###############################################################################
+#
+# NOTE: This file contains official lists of all files that must be present in
+#       the target directory after the Kapok install process.
+#
+###############################################################################
+
+if {![info exists targetFrameworks]} then {
+  set targetFrameworks [list \
+      net20 net40 netstandard2.0 netstandard2.1]
+}
+
+if {![info exists targetPlatforms]} then {
+  set targetPlatforms [list \
+      win-x86 win-x64 linux-x64 osx-x64]
+}
+
+if {![info exists eagleVersion]} then {
+  set eagleVersion 1.0.8734.30319; # TODO: Update me.
+}
+
+if {![info exists sdsVersion]} then {
+  set sdsVersion 1.0.119.0; # TODO: Update me.
+}
+
+###############################################################################
+
+set packageNames(net20) [list \
+    Eagle.CLRv2.Core \
+    Harpy.CLRv2 \
+    Kapok.CLRv2 \
+    Mistachkin.Data.Core.NetFramework]
+
+set packageNames(net40) [list \
+    Eagle.CLRv4.Core \
+    Harpy.CLRv4 \
+    Kapok.CLRv4 \
+    Mistachkin.Data.Core.NetFramework]
+
+set packageNames(netstandard2.0) [list \
+    Eagle.DotNet.Standard.2.0 \
+    Harpy.DotNet.Standard.2.0 \
+    Kapok.DotNet.Standard.2.0 \
+    Mistachkin.Data.Core.NetStandard]
+
+set packageNames(netstandard2.1) [list \
+    Eagle.DotNet.Standard.2.1 \
+    Harpy.DotNet.Standard.2.1 \
+    Kapok.DotNet.Standard.2.1 \
+    Mistachkin.Data.Core.NetStandard]
+
+###############################################################################
+
+set packageVersions(Eagle.CLRv2.Core) $eagleVersion
+set packageVersions(Harpy.CLRv2) $eagleVersion
+set packageVersions(Kapok.CLRv2) $eagleVersion
+
+set packageVersions(Eagle.CLRv4.Core) $eagleVersion
+set packageVersions(Harpy.CLRv4) $eagleVersion
+set packageVersions(Kapok.CLRv4) $eagleVersion
+
+set packageVersions(Eagle.DotNet.Standard.2.0) $eagleVersion
+set packageVersions(Harpy.DotNet.Standard.2.0) $eagleVersion
+set packageVersions(Kapok.DotNet.Standard.2.0) $eagleVersion
+
+set packageVersions(Eagle.DotNet.Standard.2.1) $eagleVersion
+set packageVersions(Harpy.DotNet.Standard.2.1) $eagleVersion
+set packageVersions(Kapok.DotNet.Standard.2.1) $eagleVersion
+
+set packageVersions(Mistachkin.Data.Core.NetFramework) $sdsVersion
+set packageVersions(Mistachkin.Data.Core.NetStandard) $sdsVersion
+
+###############################################################################
+
+#
+# NOTE: The Eagle core library and shell assemblies should go into the "bin"
+#       directory, alongside the Kapok assembly.
+#
+set packageSubDirectories([file join * Eagle.dll]) bin
+set packageSubDirectories([file join * EagleShell.exe]) bin
+set packageSubDirectories([file join * EagleShell.dll]) bin
+set packageSubDirectories([file join * EagleShell.runtimeconfig.json]) bin
+
+#
+# NOTE: The Harpy and Badge plugin assemblies should go into their own "lib"
+#       sub-directories, along with all their supplementary data files.
+#
+set packageSubDirectories([file join * lib Badge1.0 *]) [file join lib Badge1.0]
+set packageSubDirectories([file join * lib Harpy1.0 *]) [file join lib Harpy1.0]
+
+#
+# NOTE: All Kapok (ASP.NET web application) files, including the managed
+#       plugin assembly, should go into appropriate sub-directories of the
+#       target, based on the original path specified in the NuGet package.
+#       The asterisk is used to indicate that the original relative paths
+#       within the NuGet package should be extracted and used.
+#
+set packageSubDirectories([file join * lib Kapok1.0 *]) *Kapok1.0
+
+#
+# NOTE: The System.Data.SQLite managed assembly should go into the "bin"
+#       directory, alongside the Kapok assembly.
+#
+set packageSubDirectories([file join * System.Data.SQLite.dll]) bin
+
+#
+# NOTE: The SQLite interop assemblies must go into sub-directories named
+#       for their platform and/or processor architecture.
+#
+# HACK: On non-Windows operating systems, skip having processor specific
+#       sub-directories for the native library pre-loader as it does not
+#       work right.
+#
+set packageSubDirectories([file join * runtimes %targetPlatform1% native SQLite.Interop.dll]) [file join bin [expr {[isWindows] ? "%targetProcessor1%" : ""}]]
+set packageSubDirectories([file join * runtimes %targetPlatform2% native SQLite.Interop.dll]) [file join bin [expr {[isWindows] ? "%targetProcessor2%" : ""}]]
+
+#
+# NOTE: The SQLite interop assemblies (for the .NET Framework on Windows)
+#       must go into sub-directories named for processor architecture.
+#
+set packageSubDirectories([file join * build %targetFramework% %targetProcessor1% SQLite.Interop.dll]) [file join bin %targetProcessor1%]
+set packageSubDirectories([file join * build %targetFramework% %targetProcessor2% SQLite.Interop.dll]) [file join bin %targetProcessor2%]
+
+###############################################################################
+
+#
+# NOTE: This is the common subset of package files present in all NuGet
+#       packages containing the Eagle core library.
+#
+set packageTemplateFileNames(Eagle.*) [list \
+    [file join lib %targetFramework% Eagle.dll]]
+
+#
+# NOTE: This is the common subset of package files present in all NuGet
+#       packages containing the Harpy (and Badge) plugins.
+#
+set packageTemplateFileNames(Harpy.*) [list \
+    [file join build %targetFramework% lib Badge1.0 Badge.dll] \
+    [file join build %targetFramework% lib Badge1.0 pkgIndex.eagle] \
+    [file join build %targetFramework% lib Badge1.0 pkgIndex.eagle.harpy] \
+    [file join build %targetFramework% lib Harpy1.0 Harpy.dll] \
+    [file join build %targetFramework% lib Harpy1.0 keyRing.General.demo.eagle] \
+    [file join build %targetFramework% lib Harpy1.0 keyRing.General.demo.eagle.harpy] \
+    [file join build %targetFramework% lib Harpy1.0 keyRing.one.eagle] \
+    [file join build %targetFramework% lib Harpy1.0 keyRing.one.eagle.harpy] \
+    [file join build %targetFramework% lib Harpy1.0 keyRing.zero.eagle] \
+    [file join build %targetFramework% lib Harpy1.0 keyRing.zero.eagle.harpy] \
+    [file join build %targetFramework% lib Harpy1.0 pkgIndex.eagle] \
+    [file join build %targetFramework% lib Harpy1.0 pkgIndex.eagle.harpy] \
+    [file join build %targetFramework% lib Harpy1.0 test.eagle] \
+    [file join build %targetFramework% lib Harpy1.0 test.eagle.harpy] \
+    [file join build %targetFramework% lib Harpy1.0 Configurations Harpy.v1.eeagle] \
+    [file join build %targetFramework% lib Harpy1.0 Configurations Harpy.v1.eeagle.b64sig]]
+
+#
+# NOTE: This is the common subset of package files present in all NuGet
+#       packages containing the Kapok (ASP.NET web application) plugin.
+#
+set packageTemplateFileNames(Kapok.*) [list \
+    [file join build %targetFramework% lib Kapok1.0 harpy-trial-certificate.xml] \
+    [file join build %targetFramework% lib Kapok1.0 kapok-trial-certificate.xml] \
+    [file join build %targetFramework% lib Kapok1.0 Web.config] \
+    [file join build %targetFramework% lib Kapok1.0 bin Kapok.dll] \
+    [file join build %targetFramework% lib Kapok1.0 bin keyRing.two.eagle] \
+    [file join build %targetFramework% lib Kapok1.0 bin keyRing.two.eagle.harpy] \
+    [file join build %targetFramework% lib Kapok1.0 bin pkgIndex.eagle] \
+    [file join build %targetFramework% lib Kapok1.0 bin pkgIndex.eagle.harpy] \
+    [file join build %targetFramework% lib Kapok1.0 certificate renew.cgi] \
+    [file join build %targetFramework% lib Kapok1.0 certificate request.cgi] \
+    [file join build %targetFramework% lib Kapok1.0 certificate revoked.cgi] \
+    [file join build %targetFramework% lib Kapok1.0 Data kapok.db] \
+    [file join build %targetFramework% lib Kapok1.0 Data revokedIds.txt] \
+    [file join build %targetFramework% lib Kapok1.0 Data revokedTokens.txt] \
+    [file join build %targetFramework% lib Kapok1.0 Data var.db] \
+    [file join build %targetFramework% lib Kapok1.0 Keys KapokTestPrivate.snk] \
+    [file join build %targetFramework% lib Kapok1.0 Keys KapokTestPublic.snk] \
+    [file join build %targetFramework% lib Kapok1.0 Keys keyRing.db] \
+    [file join build %targetFramework% lib Kapok1.0 service provision.cgi] \
+    [file join build %targetFramework% lib Kapok1.0 support check.cgi] \
+    [file join build %targetFramework% lib Kapok1.0 test page.cgi] \
+    [file join build %targetFramework% lib Kapok1.0 Tools encrypt.eagle] \
+    [file join build %targetFramework% lib Kapok1.0 Tools encrypt.eagle.harpy] \
+    [file join build %targetFramework% lib Kapok1.0 Tools fixupWebConfig.eagle] \
+    [file join build %targetFramework% lib Kapok1.0 Tools fixupWebConfig.eagle.harpy] \
+    [file join build %targetFramework% lib Kapok1.0 Tools install.eagle] \
+    [file join build %targetFramework% lib Kapok1.0 Tools install.eagle.harpy] \
+    [file join build %targetFramework% lib Kapok1.0 Tools license.eagle] \
+    [file join build %targetFramework% lib Kapok1.0 Tools license.eagle.harpy] \
+    [file join build %targetFramework% lib Kapok1.0 Tools provision.eagle] \
+    [file join build %targetFramework% lib Kapok1.0 Tools provision.eagle.harpy] \
+    [file join build %targetFramework% lib Kapok1.0 Tools renew.eagle] \
+    [file join build %targetFramework% lib Kapok1.0 Tools renew.eagle.harpy] \
+    [file join build %targetFramework% lib Kapok1.0 Tools request.eagle] \
+    [file join build %targetFramework% lib Kapok1.0 Tools request.eagle.harpy] \
+    [file join build %targetFramework% lib Kapok1.0 Tools run.bat] \
+    [file join build %targetFramework% lib Kapok1.0 Tools support.eagle] \
+    [file join build %targetFramework% lib Kapok1.0 Tools support.eagle.harpy] \
+    [file join build %targetFramework% lib Kapok1.0 Tools wrapped.eagle] \
+    [file join build %targetFramework% lib Kapok1.0 Tools wrapped.eagle.harpy] \
+    [file join build %targetFramework% lib Kapok1.0 Tools data manifest.eagle] \
+    [file join build %targetFramework% lib Kapok1.0 Tools data manifest.eagle.harpy] \
+    [file join build %targetFramework% lib Kapok1.0 var storage.cgi] \
+    [file join build %targetFramework% lib Kapok1.0 wrapper script.cgi]]
+
+#
+# NOTE: This is the common subset of package files present in all NuGet
+#       packages containing the System.Data.SQLite ADO.NET provider.
+#
+set packageTemplateFileNames(Mistachkin.Data.Core.*) [list \
+    [file join lib %targetFramework1% System.Data.SQLite.dll] \
+    [file join lib %targetFramework2% System.Data.SQLite.dll]]
+
+###############################################################################
+
+set packageFileNames(Eagle.CLRv2.Core) [list \
+    [file join build %targetFramework1% EagleShell.exe]]
+
+set packageFileNames(Eagle.CLRv4.Core) [list \
+    [file join build %targetFramework2% EagleShell.exe]]
+
+set packageFileNames(Eagle.DotNet.Standard.2.0) [list \
+    [file join build %targetFramework1% EagleShell.dll] \
+    [file join content %targetFramework1% EagleShell.runtimeconfig.json]]
+
+set packageFileNames(Eagle.DotNet.Standard.2.1) [list \
+    [file join build %targetFramework2% EagleShell.dll] \
+    [file join content %targetFramework2% EagleShell.runtimeconfig.json]]
+
+###############################################################################
+
+set packageFileNames(Harpy.CLRv2) [list]
+set packageFileNames(Harpy.CLRv4) [list]
+set packageFileNames(Harpy.DotNet.Standard.2.0) [list]
+set packageFileNames(Harpy.DotNet.Standard.2.1) [list]
+
+###############################################################################
+
+set packageFileNames(Kapok.CLRv2) [list]
+set packageFileNames(Kapok.CLRv4) [list]
+set packageFileNames(Kapok.DotNet.Standard.2.0) [list]
+set packageFileNames(Kapok.DotNet.Standard.2.1) [list]
+
+###############################################################################
+
+set packageFileNames(Mistachkin.Data.Core.NetFramework) [list \
+    [file join build %targetFramework% %targetProcessor1% SQLite.Interop.dll] \
+    [file join build %targetFramework% %targetProcessor2% SQLite.Interop.dll]]
+
+set packageFileNames(Mistachkin.Data.Core.NetStandard) [list \
+    [file join runtimes %targetPlatform1% native SQLite.Interop.dll] \
+    [file join runtimes %targetPlatform2% native SQLite.Interop.dll]]

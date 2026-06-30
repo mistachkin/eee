@@ -1,0 +1,168 @@
+###############################################################################
+#
+# sign.eagle --
+#
+# Extensible Adaptable Generalized Logic Engine (Eagle)
+# Kapok Script Signing Package File
+#
+# Copyright (c) 2007-2012 by Joe Mistachkin.  All rights reserved.
+#
+# See the file "license.terms" for information on usage and redistribution of
+# this file, and for a DISCLAIMER OF ALL WARRANTIES.
+#
+# RCS: @(#) $Id: $
+#
+###############################################################################
+
+#
+# NOTE: Use our own namespace here because even though we do not directly
+#       support namespaces ourselves, we do not want to pollute the global
+#       namespace if this script actually ends up being evaluated in Tcl.
+#
+namespace eval ::Eagle {
+  #
+  # NOTE: This procedure attempts to sign the specified script using a key
+  #       pair, optionally using "fake" metadata when a 100% deterministic
+  #       result is required.
+  #
+  proc eagle_sign_script {
+          script publicKeyFileName privateKeyFileName fake } {
+    # <help>
+    # This procedure signs a script body by driving the Harpy sign.eagle
+    # tool inside an isolated child interpreter, returning the signed
+    # script.  It exists so the Kapok OpenAI proxy server (and any other
+    # caller of the Eagle.Signing package) can sign responses without the
+    # caller having to construct the Harpy tool argv or manage temporary
+    # files.
+    #
+    # How it works: it requires the HARPY_TOOL_PATH environment variable
+    # to be set and the sign.eagle tool to exist under it.  It then
+    # obtains a cached "sign" child interpreter via the global
+    # eagle_sign_interp -- if one already exists and still names a valid
+    # interpreter it is reused; otherwise a new -nosecurity interpreter is
+    # created and remembered for future calls.  The script body is
+    # written to a temp file with the .eagle extension.  The vendor
+    # string is taken from the VENDOR environment variable when present,
+    # defaulting to "Mistachkin Systems".  An argv list is assembled for
+    # the sign tool: the temp file, vendor, embed=true, duration=-1,
+    # entityType=Script, encoding=null, the public key file, and the
+    # private key file.  When fake is true, the argv is extended with
+    # importFirst=false, quantity=-1, a fixed id (a9b41fc5-a706-...) and
+    # a fixed UTC timestamp (2007-10-01T09:49:10.4995123Z) so the produced
+    # certificate is byte-identical across runs.  The argv is installed in
+    # the child interpreter and the sign tool is sourced into it inside a
+    # catch.  On success the temp file is read back -- now containing the
+    # script with an embedded certificate -- and returned, then deleted.
+    # On failure a sanitized error is emitted via host result Error,
+    # logged through Kapok at highest priority when Kapok is loaded, and
+    # re-raised.  Tester hooks fire before and after signing, and on
+    # error.
+    #
+    # Tricky and security details: the deterministic id and timestamp
+    # used when fake is true must remain in lockstep with the
+    # fake-*-response-signed.json fixtures or test comparisons will fail.
+    # The child interpreter is cached deliberately to avoid the cost of
+    # reconstructing it on every sign; reuse is safe because argv is
+    # reset on each call.  The interpreter is created with -nosecurity so
+    # the Harpy tool itself can manipulate keys and certificates; this
+    # places the trust boundary at HARPY_TOOL_PATH and the key files,
+    # which must be controlled by the operator.  An exception escaping
+    # the catch surfaces only a generic message about the script's data
+    # id; the full error text is logged but not returned to the caller.
+    #
+    # Arguments:
+    #   script             -- The script text to be signed.
+    #   publicKeyFileName  -- Path to the public strong-name key file used
+    #                         to verify the signature.
+    #   privateKeyFileName -- Path to the private strong-name key file
+    #                         used to produce the signature.
+    #   fake               -- When true, deterministic identity and
+    #                         timestamp metadata are appended to the
+    #                         sign tool argv so the output is reproducible.
+    #
+    # Results:
+    #   Returns the script body with the embedded certificate produced by
+    #   the Harpy sign tool, or raises a script error when signing fails.
+    # </help>
+
+    if {![info exists ::env(HARPY_TOOL_PATH)]} then {
+      error "no Harpy tool path set"
+    }
+
+    set signToolFileName [file join $::env(HARPY_TOOL_PATH) sign.eagle]
+
+    if {![file exists $signToolFileName] || \
+        ![file isfile $signToolFileName]} then {
+      error "missing Harpy script signing tool"
+    }
+
+    global eagle_sign_interp
+
+    if {[info exists eagle_sign_interp] && \
+        [string is interpreter -strict $eagle_sign_interp]} then {
+      set interp $eagle_sign_interp
+    } else {
+      set interp [set eagle_sign_interp [interp create -nosecurity]]
+    }
+
+    set fileName [appendArgs [file tempname] .eagle]
+    writeFile $fileName $script
+
+    if {[info exists ::env(VENDOR)]} then {
+      set vendor $::env(VENDOR)
+    } else {
+      set vendor "Mistachkin Systems"
+    }
+
+    set signArgv [list \
+        $fileName $vendor true -1 Script null \
+        $publicKeyFileName $privateKeyFileName]
+
+    if {$fake} then {
+      #
+      # TODO: This "fake" script certificate metadata must be manually kept
+      #       synchronized with the "fake-*-response-signed.json" test data
+      #       files.
+      #
+      lappend signArgv false -1
+      lappend signArgv a9b41fc5-a706-4b2d-8110-6184f44f83ba; # -maybesetid
+      lappend signArgv 2007-10-01T09:49:10.4995123Z; # -maybesettimestamp
+    }
+
+    interp set $interp argv $signArgv
+    maybeInvokeForTester ::beforeEagle_server_signature; # HOOK
+
+    if {[catch {
+      interp source $interp $signToolFileName
+    } error]} then {
+      set dataId [eagle_buildDataId $script]
+
+      set message [appendArgs \
+          "could not sign response \"" $dataId "\" script file"]
+
+      set fullMessage [appendArgs $message ": " $error]
+
+      host result Error [appendArgs $fullMessage \n]
+      maybeInvokeForTester ::errorEagle_server_signature; # HOOK
+
+      catch {; # Kapok loaded?
+        kapok log $fullMessage {+Highest ForceFlush}
+      }
+
+      error $message
+    }
+
+    set script [readFile $fileName]; # EXCLUSIVE (?)
+    maybeInvokeForTester ::afterEagle_server_signature; # HOOK
+    file delete $fileName
+
+    return $script
+  }
+
+  #
+  # NOTE: Provide the Eagle "signing" package to the interpreter.
+  #
+  package provide Eagle.Signing \
+    [expr {[isEagle] ? [info engine PatchLevel] : "1.0"}]
+}
+

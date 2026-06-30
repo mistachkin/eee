@@ -1,0 +1,65 @@
+<Styles>
+  <Style Name="DEFAULT" FontName="Courier New" Size="12" ForeColor="#D4D4D4" BackColor="#1E1E1E" />
+  <Style Name="LINENUMBER" ForeColor="#D4D4D4" BackColor="Black" />
+  <!--
+      NOTE: Based on the documentation, the purpose of this style is not
+            entirely clear.
+  -->
+  <Style Name="DOCUMENT_DEFAULT" ForeColor="#D4D4D4" />
+  <!-- Single Comment Character '#' -->
+  <Style Name="COMMENT" ForeColor="#6A9955" />
+  <!-- Comment Line -->
+  <Style Name="COMMENTLINE" ForeColor="#6A9955" />
+  <!-- Integer Or Floating Point Number -->
+  <Style Name="NUMBER" ForeColor="#D16969" />
+  <!-- Keyword Within Double Quotes (Lists 0 To 3 Only) -->
+  <Style Name="WORD_IN_QUOTE" ForeColor="#CE9178" />
+  <!-- Text Within Double Quotes -->
+  <Style Name="IN_QUOTE" ForeColor="#CE9178" />
+  <!--
+      #####################################################################
+      Tcl Reserved Characters:
+      #####################################################################
+       '\'     '{'     '}'     '['     ']'     '('     ')'     ';'     '$'
+      #####################################################################
+      Generic "Operator" Characters
+      #####################################################################
+       '%'     '^'     '&'     '*'     '('     ')'     '-'     '+'     '='
+      #####################################################################
+       '|'     '{'     '}'     '['     ']'     ':'     ';'     '<'     '>'
+      #####################################################################
+       ','     '/'     '?'     '!'     '.'     '~'
+      #####################################################################
+  -->
+  <Style Name="OPERATOR" ForeColor="#C586C0" />
+  <!-- Tcl Identifier (Command Or Variable Name) -->
+  <Style Name="IDENTIFIER" ForeColor="#D4D4D4" />
+  <!-- Normal Variable Reference -->
+  <Style Name="SUBSTITUTION" ForeColor="#9CDCFE" />
+  <!-- Curly Braced Variable Reference -->
+  <Style Name="SUB_BRACE" ForeColor="#9CDCFE" />
+  <!-- Minus Sign Not Followed By Number -->
+  <Style Name="MODIFIER" ForeColor="#C586C0" />
+  <!-- Argument Expansion Operator "{*}" (Tcl 8.5+) -->
+  <Style Name="EXPAND" ForeColor="#E06C75" />
+  <!-- Keyword In List #0 (Not Within Double Quotes) -->
+  <Style Name="WORD"  ForeColor="#569CD6" />
+  <!-- Keyword In List #1 (Not Within Double Quotes) -->
+  <Style Name="WORD2" ForeColor="#E06C75" />
+  <!-- Keyword In List #2 (Not Within Double Quotes) -->
+  <Style Name="WORD3" ForeColor="#D19A66" />
+  <!-- Keyword In List #3 (Not Within Double Quotes) -->
+  <Style Name="WORD4" ForeColor="#C5866F" />
+  <!-- Keyword In List #5 -->
+  <Style Name="WORD5" ForeColor="#D7BA7D" />
+  <!-- Keyword In List #6 -->
+  <Style Name="WORD6" ForeColor="#4EC9B0" />
+  <!-- Keyword In List #7 -->
+  <Style Name="WORD7" ForeColor="#05EFEF" />
+  <!-- Keyword In List #8 -->
+  <Style Name="WORD8" ForeColor="#C586C0" />
+  <!-- Single Comment Character '#' Follwed By '#' Or '-' Characters -->
+  <Style Name="COMMENT_BOX" ForeColor="#6A9955" />
+  <!-- Single Comment Character '#' Follwed By '~' Character -->
+  <Style Name="BLOCK_COMMENT" ForeColor="#6A9955" />
+</Styles>

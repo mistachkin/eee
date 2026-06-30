@@ -1,0 +1,37 @@
+###############################################################################
+#
+# hotkey-autoload.eagle --
+#
+# Extensible Adaptable Generalized Logic Engine (Eagle)
+# Hot-Key Auto-Load Script
+#
+# Copyright (c) 2007-2012 by Joe Mistachkin.  All rights reserved.
+#
+# See the file "license.terms" for information on usage and redistribution of
+# this file, and for a DISCLAIMER OF ALL WARRANTIES.
+#
+# RCS: @(#) $Id: $
+#
+###############################################################################
+
+#
+# NOTE: This file contains a top-level Eagle script that will be automatically
+#       evaluated by the [hotkey autoload] sub-command.  The actual evaluation
+#       will take place in a "safe" interpreter with a very limited subset of
+#       commands.  Access to the [hotkey add] sub-command by this script will
+#       be allowed; however, access to all other sub-commands of the [hotkey]
+#       command will be denied.  If there are any per-user, per-machine, or
+#       per-domain files containing configured hot-keys that should be loaded
+#       by the [hotkey autoload] sub-command, they should be named as follows:
+#
+#       hotkey-autoload-${USER}.eagle
+#       hotkey-autoload-${MACHINE}.eagle
+#       hotkey-autoload-${DOMAIN}.eagle
+#       hotkey-autoload.eagle
+#
+#       Whenever the [hotkey autoload] sub-command is executed, if any of the
+#       above named files exist in the current directory, an attempt will be
+#       made to evaluate them [in a "safe" interpreter], in exactly the order
+#       listed above.
+#
+hotkey add F13 LogSynchronous {puts stdout "This is a test hot-key."}

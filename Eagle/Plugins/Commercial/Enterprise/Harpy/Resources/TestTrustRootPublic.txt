@@ -1,0 +1,1 @@
+Kind KeyPair Id 5e57af37-90a1-4ec3-8af2-600d2b00b764 Name TestTrustRootPublic.snk Group "Test Trust Root" Description "Used to sign test data and key rings, not secure." KeyUsage TM

@@ -1,0 +1,242 @@
+###############################################################################
+#
+# request.eagle --
+#
+# Extensible Adaptable Generalized Logic Engine (Eagle)
+# Enterprise Edition Certificate Request Tool
+#
+# Copyright (c) 2007-2012 by Joe Mistachkin.  All rights reserved.
+#
+# See the file "license.terms" for information on usage and redistribution of
+# this file, and for a DISCLAIMER OF ALL WARRANTIES.
+#
+# RCS: @(#) $Id: $
+#
+###############################################################################
+
+proc usage { error } {
+  # <help>
+  # This procedure prints the command-line usage summary for the
+  # certificate request tool and then terminates the process, signaling
+  # failure to whatever invoked it.  It is invoked when the tool is called
+  # with the wrong number of positional arguments.
+  #
+  # How it works: when error is non-empty it is printed first; the usage
+  # line is then printed, naming the host shell executable and this script
+  # followed by the supported positional arguments (the two required: id,
+  # encrypted; and the one optional: certificateDatabaseFile).  Finally it
+  # calls exit 1.
+  #
+  # Tricky details: this procedure never returns to its caller; it always
+  # terminates the process with a non-zero status, so it must only be used
+  # on terminal error paths.
+  #
+  # Arguments:
+  #   error -- An optional leading error message.  When non-empty it is
+  #            shown before the usage text; pass an empty string for plain
+  #            usage.
+  #
+  # Results:
+  #   Does not return; the process exits with status code 1.
+  # </help>
+
+  if {[string length $error] > 0} then {puts stdout $error}
+
+  puts stdout "usage: [file tail [getShellExecutableName]]\
+[file tail [info script]] <id> <encrypted> \[certificateDatabaseFile\]"
+
+  #
+  # NOTE: Indicate to the caller, if any, that we have failed.
+  #
+  exit 1
+}
+
+if {[llength $argv] >= 2 && [llength $argv] <= 3} then {
+  proc cleanup {} {
+    # <help>
+    # This procedure clears the script-local variables that the request
+    # tool may have created at the global level.  It exists so the tool
+    # does not leave stale state behind in a shared interpreter,
+    # particularly when other Kapok tools run in the same interpreter
+    # afterwards and would otherwise see leftover values.
+    #
+    # How it works: it executes [unset -nocomplain] at the global level
+    # against the full list of variables the tool defines (the command-
+    # line arguments id and certificateDatabaseFile, the SQL working
+    # variables sql, count, certificates, certificate, and the
+    # requestFileName array).  The -nocomplain flag tolerates variables
+    # that were never created because the run failed early.
+    #
+    # Tricky details: this procedure is called both at the start of the
+    # tool (to prevent stale state) and from the [finally] block at the
+    # end.  The list MUST stay in sync with the variables actually used.
+    #
+    # Arguments:
+    #   None.
+    #
+    # Results:
+    #   Returns the result of the [uplevel] (effectively empty); its
+    #   purpose is the side effect of unsetting the global variables.
+    # </help>
+
+    uplevel #0 {
+      unset -nocomplain id certificateDatabaseFile sql count
+      unset -nocomplain certificates certificate requestFileName
+    }
+  }
+
+  package require Eagle
+  package require Licensing.Enterprise
+  package require Harpy.Test
+
+  if {![info exists path]} then {
+    set path [file normalize [file dirname [info script]]]
+    set path_set true
+  }
+
+  cleanup
+
+  set id [string trim [lindex $argv 0]]
+
+  if {[string length $id] == 0 || \
+      ![string is guid -strict $id]} then {
+    set id [guid null]
+  }
+
+  if {[llength $argv] >= 2} then {
+    set encrypted [string trim [lindex $argv 1]]
+  }
+
+  if {![info exists encrypted] || \
+      [string length $encrypted] == 0 || \
+      ![string is boolean -strict $encrypted]} then {
+    set encrypted false
+  }
+
+  if {[llength $argv] >= 3} then {
+    set certificateDatabaseFile [string trim [lindex $argv 2]]
+  }
+
+  if {![info exists certificateDatabaseFile] || \
+      [string length $certificateDatabaseFile] == 0} then {
+    set certificateDatabaseFile [file join $path kapok.db]
+  }
+
+  if {![file exists $certificateDatabaseFile]} then {
+    error [appendArgs \
+        "missing certificate database file \"" $certificateDatabaseFile \
+        "\", cannot continue"]
+  }
+
+  #############################################################################
+
+  try {
+    set connection [sql open -type SQLite \
+        [subst {Data Source=${certificateDatabaseFile};}]]
+
+    set transaction [sql transaction begin $connection]
+
+    set sql {
+      SELECT Certificates.Id AS Id,
+             Certificates.Protocol AS Protocol,
+             Certificates.ProtocolVersion AS ProtocolVersion,
+             Certificates.Vendor AS Vendor,
+             Certificates.Origin AS Origin,
+             Certificates.Authority AS Authority,
+             Certificates.Agreement AS Agreement,
+             Certificates.Support AS Support,
+             Certificates.TimeStamp AS TimeStamp,
+             Certificates.Duration AS Duration,
+             Certificates.Key AS Key,
+             Certificates.Number AS Number,
+             Certificates.SerialNumber AS SerialNumber,
+             Certificates.HashAlgorithm AS HashAlgorithm,
+             Certificates.Signature AS Signature,
+             Certificates.Type AS Type,
+             Certificates.EntityType AS EntityType,
+             Certificates.EntityName AS EntityName,
+             Certificates.EntityValue AS EntityValue,
+             Certificates.ExtraData AS ExtraData,
+             Certificates.Quantity AS Quantity,
+             Certificates.Product AS Product,
+             Certificates.Version AS Version,
+             Certificates.Features AS Features,
+             Certificates.Restrictions AS Restrictions
+        FROM Subscriptions LEFT OUTER JOIN Certificates
+          ON Subscriptions.CertificateId = Certificates.Id
+       WHERE Subscriptions.Id = ?;
+    }
+
+    sql execute -transaction $transaction -execute reader -rowsvar \
+        certificates $connection $sql [list param0 String $id]
+
+    set count $certificates(count)
+
+    if {$count != 1} then {
+      error [appendArgs \
+          "found " $count " subscriptions, expected exactly 1"]
+    }
+
+    set certificate [createCertificate certificates 1]
+
+    set requestFileName(1) [file tempname]
+
+    if {[file exists $requestFileName(1)]} then {
+      catch {file delete $requestFileName(1)}; # BUGFIX: May not exist.
+    }
+
+    set requestFileName(2) [appendArgs \
+        [file rootname $requestFileName(1)] .xml]
+
+    set requestFileName(3) [appendArgs \
+        [file rootname $requestFileName(1)] .exml]
+
+    certificate export $certificate $requestFileName(2)
+    certificate warning -type License $requestFileName(2)
+    reformatCertificateSpacing $requestFileName(2)
+
+    if {$encrypted} then {
+      set argv [list $requestFileName(2)]
+
+      set requestFileName(4) [file join $path encrypt.eagle]
+
+      if {![file exists $requestFileName(4)]} then {
+        set requestFileName(4) [file join [file dirname \
+            $path] Tools encrypt.eagle]
+      }
+
+      if {![file exists $requestFileName(4)]} then {
+        set requestFileName(4) [file join [file dirname \
+            [file dirname $path]] Harpy Tools encrypt.eagle]
+      }
+
+      uplevel #0 [list source $requestFileName(4)]
+
+      return [readFile $requestFileName(3)]
+    } else {
+      return [readFile $requestFileName(2)]
+    }
+  } finally {
+    if {[info exists transaction]} then {
+      if {[llength [info transactions $transaction]] == 1} then {
+        sql transaction commit $transaction
+      }
+
+      unset transaction
+    }
+
+    if {[info exists connection]} then {
+      sql close $connection; unset connection
+    }
+
+    cleanup
+
+    if {[info exists path_set]} then {
+      unset -nocomplain path path_set
+    }
+
+    object cleanup
+  }
+} else {
+  usage ""
+}

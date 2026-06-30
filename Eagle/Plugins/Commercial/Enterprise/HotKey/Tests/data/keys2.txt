@@ -1,0 +1,288 @@
+click btnF1 {} false
+select {} {}
+keys F1 modifiers None virtualKey F1
+click btnF1 {} true
+select {} {}
+selection canceled
+click btnF1 chkShift false
+select {} {}
+keys {Shift, F1} modifiers Shift virtualKey F1
+click btnF1 chkShift true
+select {} {}
+selection canceled
+click btnF1 chkControl false
+select {} {}
+keys {Control, F1} modifiers Control virtualKey F1
+click btnF1 chkControl true
+select {} {}
+selection canceled
+click btnF1 chkAlt false
+select {} {}
+keys {Alt, F1} modifiers Alt virtualKey F1
+click btnF1 chkAlt true
+select {} {}
+selection canceled
+click btnF1 {chkShift chkControl} false
+select {} {}
+keys {Shift, Control, F1} modifiers {Shift, Control} virtualKey F1
+click btnF1 {chkShift chkControl} true
+select {} {}
+selection canceled
+click btnF1 {chkShift chkAlt} false
+select {} {}
+keys {Shift, Alt, F1} modifiers {Shift, Alt} virtualKey F1
+click btnF1 {chkShift chkAlt} true
+select {} {}
+selection canceled
+click btnF1 {chkControl chkAlt} false
+select {} {}
+keys {Control, Alt, F1} modifiers {Control, Alt} virtualKey F1
+click btnF1 {chkControl chkAlt} true
+select {} {}
+selection canceled
+click btnF1 {chkShift chkControl chkAlt} false
+select {} {}
+keys {Shift, Control, Alt, F1} modifiers {Shift, Control, Alt} virtualKey F1
+click btnF1 {chkShift chkControl chkAlt} true
+select {} {}
+selection canceled
+click btnD1 {} false
+select {} {}
+keys D1 modifiers None virtualKey D1
+click btnD1 {} true
+select {} {}
+selection canceled
+click btnD1 chkShift false
+select {} {}
+keys {Shift, D1} modifiers Shift virtualKey D1
+click btnD1 chkShift true
+select {} {}
+selection canceled
+click btnD1 chkControl false
+select {} {}
+keys {Control, D1} modifiers Control virtualKey D1
+click btnD1 chkControl true
+select {} {}
+selection canceled
+click btnD1 chkAlt false
+select {} {}
+keys {Alt, D1} modifiers Alt virtualKey D1
+click btnD1 chkAlt true
+select {} {}
+selection canceled
+click btnD1 {chkShift chkControl} false
+select {} {}
+keys {Shift, Control, D1} modifiers {Shift, Control} virtualKey D1
+click btnD1 {chkShift chkControl} true
+select {} {}
+selection canceled
+click btnD1 {chkShift chkAlt} false
+select {} {}
+keys {Shift, Alt, D1} modifiers {Shift, Alt} virtualKey D1
+click btnD1 {chkShift chkAlt} true
+select {} {}
+selection canceled
+click btnD1 {chkControl chkAlt} false
+select {} {}
+keys {Control, Alt, D1} modifiers {Control, Alt} virtualKey D1
+click btnD1 {chkControl chkAlt} true
+select {} {}
+selection canceled
+click btnD1 {chkShift chkControl chkAlt} false
+select {} {}
+keys {Shift, Control, Alt, D1} modifiers {Shift, Control, Alt} virtualKey D1
+click btnD1 {chkShift chkControl chkAlt} true
+select {} {}
+selection canceled
+click btnQ {} false
+select {} {}
+keys Q modifiers None virtualKey Q
+click btnQ {} true
+select {} {}
+selection canceled
+click btnQ chkShift false
+select {} {}
+keys {Shift, Q} modifiers Shift virtualKey Q
+click btnQ chkShift true
+select {} {}
+selection canceled
+click btnQ chkControl false
+select {} {}
+keys {Control, Q} modifiers Control virtualKey Q
+click btnQ chkControl true
+select {} {}
+selection canceled
+click btnQ chkAlt false
+select {} {}
+keys {Alt, Q} modifiers Alt virtualKey Q
+click btnQ chkAlt true
+select {} {}
+selection canceled
+click btnQ {chkShift chkControl} false
+select {} {}
+keys {Shift, Control, Q} modifiers {Shift, Control} virtualKey Q
+click btnQ {chkShift chkControl} true
+select {} {}
+selection canceled
+click btnQ {chkShift chkAlt} false
+select {} {}
+keys {Shift, Alt, Q} modifiers {Shift, Alt} virtualKey Q
+click btnQ {chkShift chkAlt} true
+select {} {}
+selection canceled
+click btnQ {chkControl chkAlt} false
+select {} {}
+keys {Control, Alt, Q} modifiers {Control, Alt} virtualKey Q
+click btnQ {chkControl chkAlt} true
+select {} {}
+selection canceled
+click btnQ {chkShift chkControl chkAlt} false
+select {} {}
+keys {Shift, Control, Alt, Q} modifiers {Shift, Control, Alt} virtualKey Q
+click btnQ {chkShift chkControl chkAlt} true
+select {} {}
+selection canceled
+click {} {} false
+select btnF1 {}
+keys F1 modifiers None virtualKey F1
+click {} {} true
+select btnF1 {}
+selection canceled
+click {} {} false
+select btnF1 chkShift
+keys {Shift, F1} modifiers Shift virtualKey F1
+click {} {} true
+select btnF1 chkShift
+selection canceled
+click {} {} false
+select btnF1 chkControl
+keys {Control, F1} modifiers Control virtualKey F1
+click {} {} true
+select btnF1 chkControl
+selection canceled
+click {} {} false
+select btnF1 chkAlt
+keys {Alt, F1} modifiers Alt virtualKey F1
+click {} {} true
+select btnF1 chkAlt
+selection canceled
+click {} {} false
+select btnF1 {chkShift chkControl}
+keys {Shift, Control, F1} modifiers {Shift, Control} virtualKey F1
+click {} {} true
+select btnF1 {chkShift chkControl}
+selection canceled
+click {} {} false
+select btnF1 {chkShift chkAlt}
+keys {Shift, Alt, F1} modifiers {Shift, Alt} virtualKey F1
+click {} {} true
+select btnF1 {chkShift chkAlt}
+selection canceled
+click {} {} false
+select btnF1 {chkControl chkAlt}
+keys {Control, Alt, F1} modifiers {Control, Alt} virtualKey F1
+click {} {} true
+select btnF1 {chkControl chkAlt}
+selection canceled
+click {} {} false
+select btnF1 {chkShift chkControl chkAlt}
+keys {Shift, Control, Alt, F1} modifiers {Shift, Control, Alt} virtualKey F1
+click {} {} true
+select btnF1 {chkShift chkControl chkAlt}
+selection canceled
+click {} {} false
+select btnD1 {}
+keys D1 modifiers None virtualKey D1
+click {} {} true
+select btnD1 {}
+selection canceled
+click {} {} false
+select btnD1 chkShift
+keys {Shift, D1} modifiers Shift virtualKey D1
+click {} {} true
+select btnD1 chkShift
+selection canceled
+click {} {} false
+select btnD1 chkControl
+keys {Control, D1} modifiers Control virtualKey D1
+click {} {} true
+select btnD1 chkControl
+selection canceled
+click {} {} false
+select btnD1 chkAlt
+keys {Alt, D1} modifiers Alt virtualKey D1
+click {} {} true
+select btnD1 chkAlt
+selection canceled
+click {} {} false
+select btnD1 {chkShift chkControl}
+keys {Shift, Control, D1} modifiers {Shift, Control} virtualKey D1
+click {} {} true
+select btnD1 {chkShift chkControl}
+selection canceled
+click {} {} false
+select btnD1 {chkShift chkAlt}
+keys {Shift, Alt, D1} modifiers {Shift, Alt} virtualKey D1
+click {} {} true
+select btnD1 {chkShift chkAlt}
+selection canceled
+click {} {} false
+select btnD1 {chkControl chkAlt}
+keys {Control, Alt, D1} modifiers {Control, Alt} virtualKey D1
+click {} {} true
+select btnD1 {chkControl chkAlt}
+selection canceled
+click {} {} false
+select btnD1 {chkShift chkControl chkAlt}
+keys {Shift, Control, Alt, D1} modifiers {Shift, Control, Alt} virtualKey D1
+click {} {} true
+select btnD1 {chkShift chkControl chkAlt}
+selection canceled
+click {} {} false
+select btnQ {}
+keys Q modifiers None virtualKey Q
+click {} {} true
+select btnQ {}
+selection canceled
+click {} {} false
+select btnQ chkShift
+keys {Shift, Q} modifiers Shift virtualKey Q
+click {} {} true
+select btnQ chkShift
+selection canceled
+click {} {} false
+select btnQ chkControl
+keys {Control, Q} modifiers Control virtualKey Q
+click {} {} true
+select btnQ chkControl
+selection canceled
+click {} {} false
+select btnQ chkAlt
+keys {Alt, Q} modifiers Alt virtualKey Q
+click {} {} true
+select btnQ chkAlt
+selection canceled
+click {} {} false
+select btnQ {chkShift chkControl}
+keys {Shift, Control, Q} modifiers {Shift, Control} virtualKey Q
+click {} {} true
+select btnQ {chkShift chkControl}
+selection canceled
+click {} {} false
+select btnQ {chkShift chkAlt}
+keys {Shift, Alt, Q} modifiers {Shift, Alt} virtualKey Q
+click {} {} true
+select btnQ {chkShift chkAlt}
+selection canceled
+click {} {} false
+select btnQ {chkControl chkAlt}
+keys {Control, Alt, Q} modifiers {Control, Alt} virtualKey Q
+click {} {} true
+select btnQ {chkControl chkAlt}
+selection canceled
+click {} {} false
+select btnQ {chkShift chkControl chkAlt}
+keys {Shift, Control, Alt, Q} modifiers {Shift, Control, Alt} virtualKey Q
+click {} {} true
+select btnQ {chkShift chkControl chkAlt}
+selection canceled

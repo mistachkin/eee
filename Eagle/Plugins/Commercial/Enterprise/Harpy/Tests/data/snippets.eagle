@@ -1,0 +1,25 @@
+###############################################################################
+#
+# snippets.eagle --
+#
+# Extensible Adaptable Generalized Logic Engine (Eagle)
+# Signed Script Test
+#
+# Copyright (c) 2007-2012 by Joe Mistachkin.  All rights reserved.
+#
+# See the file "license.terms" for information on usage and redistribution of
+# this file, and for a DISCLAIMER OF ALL WARRANTIES.
+#
+# RCS: @(#) $Id: $
+#
+###############################################################################
+
+list [snippet clear] \
+    [addCertificates ""] \
+    [addCertificates $dataPath] \
+    [addCertificates ""] \
+    [snippet clear] \
+    [snippet add [readFile $goodFile]] \
+    [snippet clear] \
+    [snippet add [readFile $badFile]] \
+    [queryStatus Snippet]

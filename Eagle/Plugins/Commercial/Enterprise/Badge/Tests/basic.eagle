@@ -1,0 +1,982 @@
+###############################################################################
+#
+# basic.eagle --
+#
+# Extensible Adaptable Generalized Logic Engine (Eagle)
+# Enterprise Edition Package Tests
+#
+# Copyright (c) 2007-2012 by Joe Mistachkin.  All rights reserved.
+#
+# See the file "license.terms" for information on usage and redistribution of
+# this file, and for a DISCLAIMER OF ALL WARRANTIES.
+#
+# RCS: @(#) $Id: $
+#
+###############################################################################
+
+package require Eagle.Library
+package require Eagle.Test
+
+runTestPrologue
+
+###############################################################################
+
+package require Harpy.Test
+
+###############################################################################
+
+tputs $test_channel "---- start of Badge specific test constraints...\n"
+
+#
+# NOTE: If the Badge plugin was already loaded, keep track of this fact by
+#       adding a named runtime option; otherwise, be sure the named runtime
+#       option is not present.
+#
+if {[catch {package present Badge.Enterprise}] == 0} then {
+  addRuntimeOption Badge_Enterprise_Basic_Already_Loaded
+  removeRuntimeOption Badge_Enterprise_Basic_Not_Loaded
+} else {
+  removeRuntimeOption Badge_Enterprise_Basic_Already_Loaded
+  addRuntimeOption Badge_Enterprise_Basic_Not_Loaded
+}
+
+if {[catch {package present Security.Certificates}] == 0} then {
+  addRuntimeOption Security_Certificates_Basic_Already_Loaded
+  removeRuntimeOption Security_Certificates_Basic_Not_Loaded
+} else {
+  removeRuntimeOption Security_Certificates_Basic_Already_Loaded
+  addRuntimeOption Security_Certificates_Basic_Not_Loaded
+}
+
+#
+# NOTE: Check if the Harpy plugin is available.  Some tests require one or
+#       more of the commands from it.
+#
+if {[catch {package require Licensing.Enterprise} error] == 0} then {
+  if {![haveConstraint command.certificate]} then {
+    checkForCommand $test_channel certificate
+  }
+
+  if {![haveConstraint command.keyring]} then {
+    checkForCommand $test_channel keyring
+  }
+} else {
+  tputs $test_channel [appendArgs \
+      "---- failed to load plugin: " $error \n]
+}
+
+unset -nocomplain error
+
+#
+# NOTE: We need to make sure the plugin is actually loaded prior to
+#       querying the compile options.
+#
+if {[catch {package require Badge.Enterprise} error] == 0} then {
+  #
+  # HACK: Pre-check for the badge command now so that we can show
+  #       the plugin compile options.
+  #
+  if {![haveConstraint command.badge]} then {
+    checkForCommand $test_channel badge
+  }
+
+  #
+  # NOTE: Now, check if the badge command is actually available.
+  #       If so, report the plugin compile options; otherwise, report
+  #       that we cannot.
+  #
+  if {[haveConstraint command.badge]} then {
+    tputs $test_channel [appendArgs \
+        "---- plugin \"Badge.Enterprise\" compile options: " \
+        [formatList [badge options]] \n]
+  } else {
+    tputs $test_channel [appendArgs \
+        "---- badge command not available\n"]
+  }
+} else {
+  tputs $test_channel [appendArgs \
+      "---- failed to load plugin: " $error \n]
+}
+
+unset -nocomplain error
+tputs $test_channel "---- checking for plugin isolation... "
+
+if {[isEagle] && ![haveConstraint badge.isolated]} then {
+  #
+  # NOTE: We need to make sure the plugin is actually loaded prior to
+  #       querying the plugin flags.
+  #
+  if {[catch {package present Badge.Enterprise}] == 0} then {
+    #
+    # NOTE: Query the plugin flags for the plugin and search them for the
+    #       "Isolated" flag.  If this flag is present then the plugin has
+    #       been loaded into an isolated AppDomain and some functionality
+    #       will be unavailable.
+    #
+    if {[lsearch -exact -- \
+        [getPluginFlags {^Badge\.Enterprise, }] Isolated] != -1} then {
+      #
+      # NOTE: This plugin is running in isolated mode.
+      #
+      addConstraint badge.isolated
+
+      tputs $test_channel yes\n
+    } else {
+      tputs $test_channel no\n
+    }
+  } else {
+    tputs $test_channel error\n
+  }
+} else {
+  tputs $test_channel skipped\n
+}
+
+#
+# NOTE: Check for the named runtime options that indicate the plugin was
+#       already loaded (i.e. prior to running any tests).
+#
+checkForRuntimeOption $test_channel Badge_Enterprise_All_Already_Loaded
+checkForRuntimeOption $test_channel Badge_Enterprise_All_Not_Loaded
+checkForRuntimeOption $test_channel Badge_Enterprise_Basic_Already_Loaded
+checkForRuntimeOption $test_channel Badge_Enterprise_Basic_Not_Loaded
+checkForRuntimeOption $test_channel Security_Certificates_All_Already_Loaded
+checkForRuntimeOption $test_channel Security_Certificates_All_Not_Loaded
+checkForRuntimeOption $test_channel Security_Certificates_Basic_Already_Loaded
+checkForRuntimeOption $test_channel Security_Certificates_Basic_Not_Loaded
+
+###############################################################################
+
+set libraryResourcesDirectory [file join [info base] Library Resources]
+
+set libraryResourcesFile [file join \
+    $libraryResourcesDirectory library.resources]
+
+if {![haveConstraint [appendArgs file_ \
+    [file tail $libraryResourcesFile]]]} then {
+  checkForFile $test_channel $libraryResourcesFile
+}
+
+set packagesResourcesFile [file join \
+    $libraryResourcesDirectory packages.resources]
+
+if {![haveConstraint [appendArgs file_ \
+    [file tail $packagesResourcesFile]]]} then {
+  checkForFile $test_channel $packagesResourcesFile
+}
+
+###############################################################################
+
+source [file join $path data data.eagle]
+
+###############################################################################
+
+proc getPeerNameOnly { rootDirectory } {
+  set binaryDirectory [info binary]
+  set tail [file tail $binaryDirectory]; # "bin" (?)
+  set binaryDirectory [file dirname $binaryDirectory]; # "Debug*" (?)
+
+  if {[string match net* $tail]} then {; # .NET Core
+    set binaryDirectory [file dirname $binaryDirectory]; # "Debug*" (?)
+  }
+
+  if {[string length $binaryDirectory] > 0} then {
+    if {![file same $binaryDirectory $rootDirectory]} then {
+      return [file tail $binaryDirectory]; # "Debug*" (?)
+    }
+  }
+
+  return ""
+}
+
+###############################################################################
+
+proc getErrorMessages { all } {
+  global resource_names
+
+  set result [list]
+
+  set names [expr {$all ? \
+      $resource_names(all) : $resource_names(nonLibrary)}]
+
+  foreach name $names {
+    lappend result [appendArgs \
+        "couldn't read or get file \"" [file rootname $name] \
+        "\": no such file or directory"]
+  }
+
+  return $result
+}
+
+###############################################################################
+
+proc badgeEnableTracing { enable } {
+  if {$enable} then {
+    unset -nocomplain ::env(NoTrace)
+  } else {
+    set ::env(NoTrace) 1
+  }
+
+  object invoke -flags +NonPublic \
+      Eagle._Components.Private.TraceOps ResetTraceEnabled
+
+  return ""
+}
+
+###############################################################################
+
+proc unloadBadgeEnterprise {} {
+  #
+  # NOTE: This will work in both isolated and non-isolated modes.
+  #
+  set loaded [lindex [info loaded "" *Badge.Enterprise*] 0]
+  unload [lindex $loaded 0] [lindex $loaded 1]
+}
+
+###############################################################################
+
+proc unloadSecurityCertificates {} {
+  #
+  # NOTE: This will work in both isolated and non-isolated modes.
+  #
+  set loaded [lindex [info loaded "" *Security.Certificates*] 0]
+  unload [lindex $loaded 0] [lindex $loaded 1]
+}
+
+###############################################################################
+
+runTest {test badge-1.1 {loading} -body {
+  package require Badge.Enterprise
+} -constraints {eagle} -match regexp -result {^\d+\.\d+\.\d+\.\d+$}}
+
+###############################################################################
+
+runTest {test badge-2.1 {embedded resource names} -setup {
+  package require Badge.Enterprise
+} -body {
+  lsort [badge names]
+} -constraints {eagle command.badge} -result [lsort $resource_names(all)]}
+
+###############################################################################
+
+runTest {test badge-3.1 {getting all embedded non-empty strings} -setup {
+  package require Badge.Enterprise
+} -body {
+  set interpreter [object invoke -alias Interpreter GetActive]
+  set token 0; set plugin null; set error null
+
+  set code [$interpreter -alias GetPlugin \
+      [getPluginName {Badge\.Enterprise, }] Default token plugin \
+      error]
+
+  if {$code ne "Ok"} then {
+    error [getStringFromObjectHandle $error]
+  }
+
+  set errors [list]
+
+  foreach name $resource_names(all) {
+    #
+    # NOTE: Query the "script" resource from the plugin.  If this
+    #       fails, it is considered missing and the test fails.
+    #
+    set error null; set result [$plugin GetString "" $name null error]
+
+    if {[string length $result] > 0} then {
+      lappend errors Ok
+    } else {
+      lappend errors $name
+    }
+  }
+
+  set errors
+} -cleanup {
+  unset -nocomplain result name errors code error plugin token interpreter
+} -constraints {eagle command.object} -result \
+[appendArgs "badgeEmpty empty " [lrepeat $resource_counts(allCertificate) Ok]]}
+
+###############################################################################
+
+runTest {test badge-4.1 {reading all embedded resources} -setup {
+  package require Licensing.Enterprise
+
+  savePolicy savedPolicy; resetPolicy
+  certificate policy -enabled true
+
+  package require Badge.Enterprise
+  badgeEnableTracing false
+} -body {
+  set errors [list]
+
+  foreach name $resource_names(all) {
+    if {[catch {
+      #
+      # NOTE: The "NoXml" flag is required because without it the script
+      #       engine will try to treat script certificates as scripts in
+      #       the XML format.  The "NoPolicy" flag is required because
+      #       without it, the Harpy policies will require signatures on
+      #       the signature files themselves, which will not work.
+      #
+      interp readorgetscriptfile -scriptflags [combineFlags \
+          $resource_flags(plugin) "+NoXml NoPolicy"] -- "" $name
+    } error] == 0} then {
+      lappend errors Ok
+    } else {
+      lappend errors $error
+    }
+  }
+
+  set errors
+} -cleanup {
+  catch {badgeEnableTracing true}
+
+  unset -nocomplain error name errors
+
+  restorePolicy savedPolicy
+} -constraints {eagle command.certificate command.keyring} -result \
+[lrepeat $resource_counts(all) Ok]}
+
+###############################################################################
+
+runTest {test badge-5.1 {verifying embedded script library files} -setup {
+  package require Licensing.Enterprise
+
+  savePolicy savedPolicy; resetPolicy
+  certificate policy -enabled true
+
+  saveKeyRing savedKeyRing; resetKeyRing
+
+  package require Badge.Enterprise
+  badgeEnableTracing false
+
+  set savedPwd [pwd]; # save current directory
+  cd ~; # change to somewhere outside install
+} -body {
+  set errors [list]
+
+  foreach name $resource_names(all) {
+    set rootName [file rootname $name]
+
+    if {[catch {
+      #
+      # NOTE: Attempt to read the script associated with this resource
+      #       name (e.g. for later evaluation, etc).  This will only
+      #       work when the script is also embedded within the core
+      #       library itself.  Since the Harpy policies are now active,
+      #       this will also [indirectly] verify the signature on the
+      #       script.
+      #
+      # HACK: Apparently (?), this must disable searching the actual
+      #       file system just in case there are "stray" script files
+      #       in places they "should not be", e.g. a "pkgIndex.eagle"
+      #       file in the application directory.  This issue was seen
+      #       first when running on .NET Core, where the Kapok package
+      #       index file ends up in the application directory, due to
+      #       differences in the build process.
+      #
+      interp readorgetscriptfile -scriptflags $resource_flags(embedded) \
+          -- "" $rootName
+    } error] == 0} then {
+      lappend errors Ok
+    } else {
+      lappend errors $error
+    }
+  }
+
+  set errors
+} -cleanup {
+  catch {cd $savedPwd}; # restore saved current directory
+
+  catch {badgeEnableTracing true}
+
+  unset -nocomplain error rootName name errors savedPwd
+
+  restoreKeyRing savedKeyRing
+
+  restorePolicy savedPolicy
+} -constraints \
+{eagle command.certificate command.keyring compile.EMBEDDED_LIBRARY} -result \
+[appendArgs [list {couldn't read or get file "badgeEmpty": no such file or\
+directory}] " " [list {couldn't read or get file "empty": no such file or\
+directory}] " " [lrepeat $resource_counts(libraryVerify) Ok] " " \
+[getErrorMessages false]]}
+
+###############################################################################
+
+runTest {test badge-5.2 {verifying external script library files} -setup {
+  package require Licensing.Enterprise
+
+  savePolicy savedPolicy; resetPolicy
+  certificate policy -enabled true
+
+  saveKeyRing savedKeyRing; resetKeyRing
+
+  package require Badge.Enterprise
+  badgeEnableTracing false
+
+  set rootDirectory [info base]
+  set peerNameOnly [getPeerNameOnly $rootDirectory]
+  set resourcesDirectory [file join Library Resources]
+} -body {
+  set errors [list]
+
+  foreach name $resource_names(all) {
+    #
+    # NOTE: Attempt to determine the fully qualified path of the script
+    #       on the file system.  This file name may not actually exist.
+    #
+    set fileName [file normalize \
+        [file join $rootDirectory [file rootname $name]]]
+
+    #
+    # NOTE: Perform a bit of special handling on the package index file
+    #       for the example plugin.
+    #
+    if {![file exists $fileName] && \
+        [string length $peerNameOnly] > 0} then {
+      set pluginDirectory [file join bin $peerNameOnly lib Plugin1.0]
+
+      #
+      # HACK: [#1] For .NET Core, append extra "versioning" directory
+      #       at the end.
+      #
+      if {[isDotNetCore]} then {
+        if {[haveConstraint compile.NET_STANDARD_21]} then {
+          set pluginDirectory [file join $pluginDirectory netstandard2.1]
+        } else {
+          set pluginDirectory [file join $pluginDirectory netstandard2.0]
+        }
+
+        #
+        # HACK: [#2] Check to see if the sample plugin package index
+        #       is present in extra "versioning" directory.  If not,
+        #       back up one level.
+        #
+        if {![file exists [file join \
+            $rootDirectory $pluginDirectory pkgIndex.eagle]]} then {
+          set pluginDirectory [file dirname $pluginDirectory]
+        }
+      }
+
+      set fileName [string map [list \
+          /lib/Loader1.0/ [appendArgs / $resourcesDirectory /] \
+          /lib/Plugin1.0/ [appendArgs / $pluginDirectory /]] \
+          $fileName]
+    }
+
+    #
+    # NOTE: If the file does not exist on the file system, just skip it.
+    #
+    if {[file exists $fileName]} then {
+      if {[catch {
+        #
+        # NOTE: Attempt to read the script associated with this resource
+        #       name (e.g. for later evaluation, etc).  In general, this
+        #       will only work when the script is actually present on the
+        #       file system -OR- embedded within the core library itself.
+        #       Since the Harpy policies are now active, this will also
+        #       [indirectly] verify the signature on the associated script.
+        #
+        interp readorgetscriptfile -scriptflags $resource_flags(plugin) \
+            -- "" $fileName
+      } error] == 0} then {
+        lappend errors Ok
+      } else {
+        lappend errors $error
+      }
+    } else {
+      lappend errors FileNotFound
+    }
+  }
+
+  set errors
+} -cleanup {
+  catch {badgeEnableTracing true}
+
+  unset -nocomplain error fileName name errors
+  unset -nocomplain rootDirectory peerNameOnly
+  unset -nocomplain resourcesDirectory pluginDirectory
+
+  restoreKeyRing savedKeyRing
+
+  restorePolicy savedPolicy
+} -constraints {eagle command.certificate command.keyring} -result \
+[appendArgs "FileNotFound FileNotFound " \
+[lrepeat $resource_counts(libraryVerifyExternalOk) Ok] " " \
+[lrepeat $resource_counts(libraryVerifyExternalNotFound) FileNotFound]]}
+
+###############################################################################
+
+runTest {test badge-5.3 {verifying external test suite files} -setup {
+  package require Licensing.Enterprise
+
+  savePolicy savedPolicy; resetPolicy
+  certificate policy -enabled true
+
+  saveKeyRing savedKeyRing; resetKeyRing
+
+  package require Badge.Enterprise
+  badgeEnableTracing false
+} -body {
+  set errors [list]
+
+  foreach name $resource_names(all) {
+    #
+    # NOTE: Skip over the temporary script file generated by the [test2]
+    #       process isolation feature during core library test runs.
+    #
+    if {$name eq "lib/Tests/temporary-isolated.eagle.harpy"} then {
+      continue
+    }
+
+    #
+    # NOTE: Attempt to determine the fully qualified path of the script
+    #       on the file system.
+    #
+    set fileName [file normalize \
+        [file join [info base] [file rootname $name]]]
+
+    #
+    # NOTE: This test is for scripts within the test suite directory.
+    #
+    if {![string match */lib/Tests/* $fileName]} then {
+      continue
+    }
+
+    #
+    # NOTE: If necessary, fixup the file name for this script (i.e. if it
+    #       is supposed to reside in the "/lib/Tests/" directory).  This
+    #       way, it will work from within the source checkout.
+    #
+    if {![file exists $fileName]} then {
+      set fileName [string map \
+          [list /lib/Tests/ /Library/Tests/] $fileName]
+    }
+
+    #
+    # NOTE: If the file does not exist on the file system, just skip it.
+    #
+    if {[file exists $fileName]} then {
+      if {[catch {
+        #
+        # NOTE: Attempt to read the script associated with this resource
+        #       name (e.g. for later evaluation, etc).  In general, this
+        #       will only work when the script is actually present on the
+        #       file system -OR- embedded within the core library itself.
+        #       Since the Harpy policies are now active, this will also
+        #       [indirectly] verify the signature on the associated script.
+        #
+        interp readorgetscriptfile -scriptflags $resource_flags(plugin) \
+            -- "" $fileName
+      } error] == 0} then {
+        lappend errors Ok
+      } else {
+        lappend errors $error
+      }
+    } else {
+      lappend errors FileNotFound
+    }
+  }
+
+  set errors
+} -cleanup {
+  catch {badgeEnableTracing true}
+
+  unset -nocomplain error fileName name errors
+
+  restoreKeyRing savedKeyRing
+
+  restorePolicy savedPolicy
+} -constraints {eagle command.certificate command.keyring} -result \
+[lrepeat $resource_counts(testsNonTemporary) Ok]}
+
+###############################################################################
+
+runTest {test badge-5.4 {verifying external resource files} -setup {
+  package require Licensing.Enterprise
+
+  savePolicy savedPolicy; resetPolicy
+  certificate policy -enabled true
+
+  saveKeyRing savedKeyRing; resetKeyRing
+
+  package require Badge.Enterprise
+  badgeEnableTracing false
+} -body {
+  set errors [list]
+
+  foreach name $resource_names(nonScript) {
+    #
+    # NOTE: Attempt to determine the fully qualified path of the script
+    #       on the file system.
+    #
+    set fileName [file normalize \
+        [file join $libraryResourcesDirectory [file rootname $name]]]
+
+    #
+    # NOTE: If the file does not exist on the file system, just skip it.
+    #
+    if {[file exists $fileName]} then {
+      if {[catch {
+        #
+        # NOTE: Attempt to read the script associated with this resource
+        #       name (e.g. for later evaluation, etc).  In general, this
+        #       will only work when the script is actually present on the
+        #       file system -OR- embedded within the core library itself.
+        #       Since the Harpy policies are now active, this will also
+        #       [indirectly] verify the signature on the associated script.
+        #
+        interp readorgetscriptfile -scriptflags $resource_flags(plugin) \
+            -- "" $fileName
+      } error] == 0} then {
+        lappend errors Ok
+      } else {
+        lappend errors $error
+      }
+    } else {
+      lappend errors FileNotFound
+    }
+  }
+
+  set errors
+} -cleanup {
+  catch {badgeEnableTracing true}
+
+  unset -nocomplain error fileName name errors
+
+  restoreKeyRing savedKeyRing
+
+  restorePolicy savedPolicy
+} -constraints {eagle command.certificate command.keyring\
+file_library.resources file_packages.resources} -result \
+[lrepeat $resource_counts(nonScript) Ok]}
+
+###############################################################################
+
+runTest {test badge-6.1 {enable sub-command (white-box)} -setup {
+  catch {unloadSecurityCertificates}
+  catch {unloadBadgeEnterprise}
+
+  package require Badge.Enterprise
+
+  set savedEnabled [badge enable]
+} -body {
+  list [badge enable true] [badge enable] \
+      [catch {badge test badgeEmpty} result] $result \
+      [badge enable false] [badge enable] \
+      [catch {badge test badgeEmpty} result] $result
+} -cleanup {
+  catch {badge enable $savedEnabled}
+  catch {package require Security.Certificates}
+
+  unset -nocomplain result savedEnabled
+} -constraints {eagle command.badge} -result \
+{True True 0 {} False False 1 {string not found}}}
+
+###############################################################################
+
+runTest {test badge-6.2 {enable sub-command (black-box)} -setup {
+  package require Licensing.Enterprise
+
+  savePolicy savedPolicy; resetPolicy
+  restoreLicensePolicy savedPolicy
+
+  catch {unloadSecurityCertificates}
+  catch {unloadBadgeEnterprise}
+
+  package require Badge.Enterprise
+
+  set savedEnabled [badge enable]
+} -body {
+  list [badge enable true] [badge enable] \
+      [catch {interp readorgetscriptfile -- "" badgeEmpty} result] $result \
+      [badge enable false] [badge enable] \
+      [catch {interp readorgetscriptfile -- "" badgeEmpty} result] $result
+} -cleanup {
+  catch {badge enable $savedEnabled}
+  catch {package require Security.Certificates}
+
+  unset -nocomplain result savedEnabled
+
+  restorePolicy savedPolicy
+} -constraints {eagle command.certificate command.badge} -result {True True 0\
+{} False False 1 {couldn't read or get file "badgeEmpty": no such file or\
+directory}}}
+
+###############################################################################
+
+runTest {test badge-7.1 {[gs]etstring sub-commands (white-box)} -setup {
+  catch {unloadSecurityCertificates}
+  catch {unloadBadgeEnterprise}
+
+  package require Badge.Enterprise
+
+  badge clearstrings
+  set name [appendArgs badge_string_ [pid]]
+} -body {
+  list [badge clearstrings] [badge liststrings] \
+      [catch {badge getstring $name} result] $result \
+      [catch {badge removestring $name} result] $result \
+      [catch {badge setstring $name ""} result] $result \
+      [badge liststrings] [catch {badge getstring $name} result] $result \
+      [catch {badge setstring $name ""} result] $result \
+      [badge liststrings] [catch {badge getstring $name} result] $result \
+      [catch {badge resetstring $name reset} result] $result \
+      [badge liststrings] [catch {badge getstring $name} result] $result \
+      [catch {badge removestring $name} result] $result \
+      [badge liststrings] [catch {badge getstring $name} result] $result \
+      [badge clearstrings] [badge liststrings]
+} -cleanup {
+  catch {badge clearstrings}
+  catch {package require Security.Certificates}
+
+  unset -nocomplain result name
+} -constraints {eagle command.badge} -match regexp -result {^\d+ \{\} 1 \{key\
+not present\} 1 \{key not present\} 0 True badge_string_\d+ 0 \{\} 1 \{key\
+already present\} badge_string_\d+ 0 \{\} 0 False badge_string_\d+ 0 reset 0\
+\{\} \{\} 1 \{key not present\} 0 \{\}$}}
+
+###############################################################################
+
+runTest {test badge-7.2 {(re)nullstring sub-commands (mixed-box)} -setup {
+  package require Licensing.Enterprise
+
+  savePolicy savedPolicy; resetPolicy
+  restoreLicensePolicy savedPolicy
+
+  catch {unloadSecurityCertificates}
+  catch {unloadBadgeEnterprise}
+
+  package require Badge.Enterprise
+
+  badge clearstrings
+} -body {
+  list [catch {badge test badgeEmpty} result] $result \
+      [catch {interp readorgetscriptfile -- "" badgeEmpty} result] $result \
+      [catch {badge nullstring badgeEmpty} result] $result \
+      [badge liststrings] [catch {badge test badgeEmpty} result] $result \
+      [catch {interp readorgetscriptfile -- "" badgeEmpty} result] $result \
+      [catch {badge nullstring badgeEmpty} result] $result \
+      [catch {badge renullstring badgeEmpty} result] $result \
+      [badge liststrings] [badge clearstrings] [badge liststrings]
+} -cleanup {
+  catch {badge clearstrings}
+  catch {package require Security.Certificates}
+
+  unset -nocomplain result
+
+  restorePolicy savedPolicy
+} -constraints {eagle command.certificate command.badge} -result {0 {} 0 {} 0\
+True badgeEmpty 1 {string not found} 1 {couldn't read or get file "badgeEmpty":\
+no such file or directory} 1 {key already present} 0 False badgeEmpty 1 {}}}
+
+###############################################################################
+
+#
+# HACK: This test does not really belong in this file as it does not actually
+#       use any of the Badge resources; however, it does require Harpy and it
+#       is related to the use of embedded script signatures.
+#
+runTest {test badge-8.1 {reading script library embedded-only data} -setup {
+  package require Licensing.Enterprise
+
+  savePolicy savedPolicy; resetPolicy
+  certificate policy -enabled true
+
+  badgeEnableTracing false
+} -body {
+  set errors [list]
+
+  foreach name $resource_names(libraryOnly) {
+    if {[catch {
+      #
+      # NOTE: The "NoXml" flag is required because without it the script
+      #       engine will try to treat script certificates as scripts in
+      #       the XML format.  The "NoPolicy" flag is required because
+      #       without it, the Harpy policies will require signatures on
+      #       the signature files themselves, which will not work.
+      #
+      interp readorgetscriptfile -scriptflags [combineFlags \
+          $resource_flags(library) "+NoXml NoPolicy"] -- "" $name
+    } error] == 0} then {
+      lappend errors Ok
+    } else {
+      lappend errors $error
+    }
+  }
+
+  set errors
+} -cleanup {
+  catch {badgeEnableTracing true}
+
+  unset -nocomplain error name errors
+
+  restorePolicy savedPolicy
+} -constraints {eagle command.certificate command.keyring} -result \
+[lrepeat $resource_counts(libraryOnly) Ok]}
+
+###############################################################################
+
+#
+# HACK: This test does not really belong in this file as it does not actually
+#       use any of the Badge resources; however, it does require Harpy and it
+#       is related to the use of embedded script signatures.
+#
+runTest {test badge-9.1 {verifying script library embedded-only data} -setup {
+  package require Licensing.Enterprise
+
+  savePolicy savedPolicy; resetPolicy
+  certificate policy -enabled true
+
+  saveKeyRing savedKeyRing; resetKeyRing
+
+  badgeEnableTracing false
+
+  set savedPwd [pwd]; # save current directory
+  cd ~; # change to somewhere outside install
+} -body {
+  set errors [list]
+
+  foreach name $resource_names(libraryOnly) {
+    set rootName [file rootname $name]
+
+    if {[catch {
+      #
+      # NOTE: Attempt to read the script associated with this resource
+      #       name (e.g. for later evaluation, etc).  This will only
+      #       work when the script is also embedded within the core
+      #       library itself.  Since the Harpy policies are now active,
+      #       this will also [indirectly] verify the signature on the
+      #       script.
+      #
+      interp readorgetscriptfile -- "" $rootName
+    } error] == 0} then {
+      lappend errors Ok
+    } else {
+      lappend errors $error
+    }
+  }
+
+  set errors
+} -cleanup {
+  catch {cd $savedPwd}; # restore saved current directory
+
+  catch {badgeEnableTracing true}
+
+  unset -nocomplain error rootName name errors savedPwd
+
+  restoreKeyRing savedKeyRing
+
+  restorePolicy savedPolicy
+} -constraints \
+{eagle command.certificate command.keyring compile.EMBEDDED_LIBRARY} -result \
+[lrepeat $resource_counts(libraryOnly) Ok]}
+
+###############################################################################
+
+runTest {test badge-10.1 {primary unloading} -setup {
+  unset -nocomplain loaded
+} -body {
+  unloadBadgeEnterprise
+} -cleanup {
+  unset -nocomplain loaded
+} -constraints {eagle} -match regexp -result \
+{^\{Badge\.Enterprise, Badge, Version=1\.0\.\d+\.\d+, Culture=neutral,\
+PublicKeyToken=[0-9a-f]{16}\} 1\.0\.\d+\.\d+$}}
+
+###############################################################################
+
+runTest {test badge-10.2 {secondary unloading} -setup {
+  unset -nocomplain loaded
+} -body {
+  unloadSecurityCertificates
+} -cleanup {
+  unset -nocomplain loaded
+} -constraints {eagle} -match regexp -result \
+{^\{Security\.Certificates, Badge, Version=1\.0\.\d+\.\d+, Culture=neutral,\
+PublicKeyToken=[0-9a-f]{16}\} 1\.0\.\d+\.\d+$}}
+
+###############################################################################
+
+if {![info exists no(reloadBadgePlugin)] && \
+    ![info exists no(reloadBadgeEnterprise)]} then {
+  #
+  # NOTE: Check if this file (i.e. "basic.eagle") or the "all.eagle" file
+  #       (if applicable) caused the Badge plugin to be loaded.   If not,
+  #       attempt to reload it now.
+  #
+  if {(([haveConstraint runtime.Badge_Enterprise_All_Already_Loaded] || \
+        [haveConstraint runtime.Badge_Enterprise_All_Not_Loaded]) && \
+       ([haveConstraint runtime.Badge_Enterprise_All_Already_Loaded] && \
+        ![haveConstraint runtime.Badge_Enterprise_All_Not_Loaded])) || \
+      ((![haveConstraint runtime.Badge_Enterprise_All_Already_Loaded] && \
+        ![haveConstraint runtime.Badge_Enterprise_All_Not_Loaded]) && \
+       ([haveConstraint runtime.Badge_Enterprise_Basic_Already_Loaded] && \
+        ![haveConstraint runtime.Badge_Enterprise_Basic_Not_Loaded]))} then {
+    #
+    # NOTE: Since the Badge plugin was apparently pre-loaded (i.e. from the
+    #       perspective of the test suite -OR- this test file), reload it
+    #       now as there may be other, external tests that rely on it being
+    #       loaded.
+    #
+    if {[catch {package require Badge.Enterprise} error] == 0} then {
+      tputs $test_channel \
+          "---- plugin \"Badge.Enterprise\" was reloaded\n"
+    } else {
+      tputs $test_channel [appendArgs \
+          "---- failed to reload plugin: " $error \n]
+    }
+
+    unset -nocomplain error
+  }
+}
+
+###############################################################################
+
+if {![info exists no(reloadBadgePlugin)] && \
+    ![info exists no(reloadSecurityCertificates)]} then {
+  if {(([haveConstraint runtime.Security_Certificates_All_Already_Loaded] || \
+        [haveConstraint runtime.Security_Certificates_All_Not_Loaded]) && \
+       ([haveConstraint runtime.Security_Certificates_All_Already_Loaded] && \
+        ![haveConstraint runtime.Security_Certificates_All_Not_Loaded])) || \
+      ((![haveConstraint runtime.Security_Certificates_All_Already_Loaded] && \
+        ![haveConstraint runtime.Security_Certificates_All_Not_Loaded]) && \
+       ([haveConstraint runtime.Security_Certificates_Basic_Already_Loaded] && \
+        ![haveConstraint runtime.Security_Certificates_Basic_Not_Loaded]))} then {
+    #
+    # NOTE: Since the Badge plugin was apparently pre-loaded (i.e. from the
+    #       perspective of the test suite -OR- this test file), reload it
+    #       now as there may be other, external tests that rely on it being
+    #       loaded.
+    #
+    if {[catch {package require Security.Certificates} error] == 0} then {
+      tputs $test_channel \
+          "---- plugin \"Security.Certificates\" was reloaded\n"
+    } else {
+      tputs $test_channel [appendArgs \
+          "---- failed to reload plugin: " $error \n]
+    }
+
+    unset -nocomplain error
+  }
+}
+
+###############################################################################
+
+rename unloadSecurityCertificates ""
+rename unloadBadgeEnterprise ""
+rename badgeEnableTracing ""
+rename getErrorMessages ""
+rename getPeerNameOnly ""
+
+###############################################################################
+
+unset -nocomplain resource_flags resource_counts resource_names
+
+###############################################################################
+
+unset -nocomplain libraryResourcesDirectory libraryResourcesFile \
+    packagesResourcesFile
+
+###############################################################################
+
+runTestEpilogue

@@ -1,0 +1,357 @@
+###############################################################################
+#
+# license.eagle --
+#
+# Extensible Adaptable Generalized Logic Engine (Eagle)
+# Enterprise Edition License Tool
+#
+# Copyright (c) 2007-2012 by Joe Mistachkin.  All rights reserved.
+#
+# See the file "license.terms" for information on usage and redistribution of
+# this file, and for a DISCLAIMER OF ALL WARRANTIES.
+#
+# RCS: @(#) $Id: $
+#
+###############################################################################
+
+proc usage { {error ""} } {
+  # <help>
+  # This procedure prints the command-line usage summary for the license
+  # tool and then terminates the process, signaling failure to whatever
+  # invoked it.  It is invoked when the tool is called with the wrong
+  # number of positional arguments.
+  #
+  # How it works: when error is non-empty it is printed first; the usage
+  # line is then printed, naming the host shell executable and this script
+  # followed by the supported positional arguments (the three required:
+  # entityName, duration, encrypted; and the two optional ones:
+  # templateType, path).  Finally it calls exit 1.
+  #
+  # Tricky details: this procedure never returns to its caller; it always
+  # terminates the process with a non-zero status, so it must only be used
+  # on terminal error paths.
+  #
+  # Arguments:
+  #   error -- An optional leading error message that defaults to the
+  #            empty string.  When non-empty it is shown before the usage
+  #            text.
+  #
+  # Results:
+  #   Does not return; the process exits with status code 1.
+  # </help>
+
+  if {[string length $error] > 0} then {puts stdout $error}
+
+  puts stdout "usage:\
+[file tail [getShellExecutableName]]\
+[file tail [info script]] <entityName> <duration> <encrypted>\
+\[templateType\] \[path\]"
+
+  exit 1
+}
+
+proc licenseCleanup {} {
+  # <help>
+  # This procedure clears every script-local variable the license tool may
+  # have created at the global level.  It exists so the tool does not leak
+  # state (notably sensitive items like the certificate handle, the
+  # password, the encryption salt, and the key pair) into a shared
+  # interpreter when this run finishes, regardless of whether the run
+  # succeeded or failed.
+  #
+  # How it works: it executes a single [uplevel #0] [unset] that names the
+  # complete set of variables the tool establishes during a license run.
+  # The -nocomplain flag tolerates variables that were never created, the
+  # -maybezerostring flag deals with placeholder zero-length variables, and
+  # -purge ensures the names are fully removed rather than just blanked.
+  #
+  # Tricky and security details: routing cleanup through this procedure
+  # means a single update is enough whenever the tool gains a new variable
+  # -- the list MUST stay in sync.  Because the password and salt are in
+  # this list, calling this procedure (typically through
+  # [readFileAndCleanup]) is what actually drops the encryption secrets
+  # from the interpreter.
+  #
+  # Arguments:
+  #   None.
+  #
+  # Results:
+  #   Returns the result of the inner [uplevel] (effectively empty).
+  # </help>
+
+  return [uplevel #0 {
+    unset -nocomplain -maybezerostring -purge -- \
+        showPassword templateType duration path id templateFileName \
+        privateKeyFileName serialFileName licenseDirectory \
+        licenseDataDirectory licenseFileName licenseDataFileName \
+        serialNumber certificate support keyPair certificateId \
+        certificateEntityName interp signFile stagingDirectory \
+        encryptedLicenseFileName data password guid salt triplet
+  }]
+}
+
+proc readFileAndCleanup { fileName } {
+  # <help>
+  # This procedure reads the entire contents of a file and then performs
+  # the script-level license cleanup, returning the file contents to the
+  # caller.  It exists as the tool's single "return the produced license
+  # and forget everything we used to make it" exit point, so the caller
+  # gets the new license bytes while the working state -- including the
+  # password and salt -- is dropped from the interpreter.
+  #
+  # How it works: inside [try]/[finally], [readFile] obtains the full
+  # contents; the finally block invokes [licenseCleanup] so cleanup runs
+  # whether the read succeeded or threw.  The file content is returned via
+  # the [try] body.
+  #
+  # Arguments:
+  #   fileName -- The path of the (plain or encrypted) license file whose
+  #               contents are to be returned.
+  #
+  # Results:
+  #   Returns the file's contents.  The cleanup side effect runs even when
+  #   [readFile] raises.
+  # </help>
+
+  try {
+    return [readFile $fileName]
+  } finally {
+    licenseCleanup
+  }
+}
+
+if {[llength $argv] >= 3 && [llength $argv] <= 5} then {
+  package require Eagle
+  package require Licensing.Enterprise
+  package require Harpy.Test
+
+  if {![info exists showPassword]} then {
+    set showPassword false
+  }
+
+  if {[llength $argv] >= 4} then {
+    set templateType [lindex $argv 3]
+  } else {
+    set templateType ""
+  }
+
+  if {![string is alnum $templateType]} then {
+    error [appendArgs \
+        "bad template type \"" $templateType \
+        "\", must be alphanumeric"]
+  }
+
+  set duration [lindex $argv 1]
+
+  if {[llength $argv] >= 5} then {
+    set path [lindex $argv 4]
+  } elseif {[info exists env(toolPath)]} then {
+    set path $env(toolPath)
+  } else {
+    set path [file dirname [info script]]
+  }
+
+  if {![file exists $path]} then {
+    file mkdir $path
+  }
+
+  set id [appendArgs \
+      [clock format [clock seconds] -format yyyy-MM-dd] - \
+      [format %016lx [expr {[isWindows] ? [expr {random()}] : \
+      [pid]}]]]
+
+  if {[info exists env(templateFileName)]} then {
+    set templateFileName $env(templateFileName)
+  } elseif {[string length $templateType] > 0} then {
+    set templateFileName [file join $path [appendArgs \
+        template- $templateType .xml]]
+  } else {
+    if {[string length $duration] == 0 || $duration < 0} then {
+      set templateFileName [file join $path template.xml]
+    } else {
+      set templateFileName [file join $path template-timed.xml]
+    }
+  }
+
+  if {![file exists $templateFileName]} then {
+    error [appendArgs \
+        "license provisioning template file \"" \
+        $templateFileName "\" is missing"]
+  }
+
+  if {[info exists env(privateKeyFileName)]} then {
+    set privateKeyFileName $env(privateKeyFileName)
+  } else {
+    set privateKeyFileName [file join $path private.snk]
+  }
+
+  if {![file exists $privateKeyFileName]} then {
+    error [appendArgs \
+        "license provisioning private key file \"" \
+        $privateKeyFileName "\" is missing"]
+  }
+
+  set serialFileName [file join $path serial.num]
+  set licenseDirectory [file join $path Certificates]
+  set licenseDataDirectory [file join $path Data]
+
+  if {[string length $templateType] > 0} then {
+    set licenseFileName [file join \
+        $licenseDirectory [appendArgs $templateType \
+        -license- $id .xml]]
+
+    set licenseDataFileName [file join \
+        $licenseDataDirectory [appendArgs $templateType \
+        -license- $id .eagle]]
+  } else {
+    set licenseFileName [file join \
+        $licenseDirectory [appendArgs license- $id .xml]]
+
+    set licenseDataFileName [file join \
+        $licenseDataDirectory [appendArgs license- $id .eagle]]
+  }
+
+  if {[file exists $serialFileName]} then {
+    set serialNumber [string trim [readFile $serialFileName]]
+
+    if {![string is wide -strict $serialNumber]} then {
+      error [appendArgs \
+          "bad serial number file \"" $serialNumber \
+          "\", not integer"]
+    }
+  } else {
+    set serialNumber 0; # TODO: random initial value?
+  }
+
+  incr serialNumber
+  writeFile $serialFileName [appendArgs $serialNumber \n]
+
+  set certificate [certificate import -alias $templateFileName]
+
+  $certificate Number [appendArgs 0x [format %lx [expr {random()}]]]
+
+  $certificate SerialNumber [appendArgs \
+      [$certificate SerialNumber] [format %04lX \
+      [expr {([$certificate Number] & 0xFFFF) ^ $serialNumber}]]]
+
+  $certificate EntityName [lindex $argv 0]; # customer company name
+
+  if {[string length $duration] > 0} then {
+    $certificate Duration $duration; # license days, -1 is forever
+  }
+
+  set support [$certificate Support]
+
+  if {[string length $support] > 0} then {
+    set support [string map [list /-id-. [appendArgs / [string \
+        range [string map [list - ""] $id] end-9 end] .]] $support]
+
+    $certificate Support $support
+  }
+
+  set keyPair [keypair open \
+      -alias -public -private $privateKeyFileName]
+
+  if {[info exists certificateId]} then {
+    $certificate Id $certificateId; # for debugging use only
+    certificate sign -settimestamp -setkey $certificate $keyPair
+  } else {
+    certificate sign -setid -settimestamp -setkey $certificate $keyPair
+    set certificateId [$certificate Id]
+  }
+
+  certificate verify $certificate $keyPair
+  set certificateEntityName [$certificate EntityName]
+
+  file mkdir $licenseDirectory
+
+  if {$templateType eq "ekm"} then {; # HACK: Hard-coded template type.
+    file mkdir $licenseDataDirectory
+
+    writeFile $licenseDataFileName [string trim \
+        [subst -nocommands -nobackslashes {
+set licenseId {${certificateId}}
+set licenseEntityName {${certificateEntityName}}
+
+# set ::env([appendArgs [set licenseId] _ [pid]]) [set licenseEntityName]
+object invoke System.AppDomain.CurrentDomain SetData [appendArgs [set licenseId] _ [pid]] [set licenseEntityName]
+    }]]
+
+    set interp [interp create]
+
+    interp set $interp argv [list \
+        $licenseDataFileName "Mistachkin Systems"]
+
+    if {[info exists ::env(SignFile)]} then {
+      set signFile $::env(SignFile)
+    } else {
+      set signFile [file join \
+          $env(EAGLE) Plugins Commercial Enterprise \
+          Harpy Tools sign.eagle]
+    }
+
+    interp source $interp $signFile
+    interp delete $interp
+
+    if {![info exists ::no(staging)]} then {
+      set stagingDirectory [file join $env(TEMP) [appendArgs data- $id]]
+      file mkdir $stagingDirectory
+
+      file copy $licenseDataFileName \
+          [file join $stagingDirectory license.data.eagle]
+
+      file copy [appendArgs $licenseDataFileName .harpy] \
+          [file join $stagingDirectory license.data.eagle.harpy]
+    }
+  }
+
+  certificate export $certificate $licenseFileName
+  certificate warning -type License $licenseFileName
+  reformatCertificateSpacing $licenseFileName
+
+  host result Ok [appendArgs "OK: " [file tail $licenseFileName] \n]
+
+  if {[string is true -strict [lindex $argv 2]]} then {
+    set encryptedLicenseFileName [appendArgs \
+        [file rootname $licenseFileName] .exml]
+
+    set data [object invoke \
+        -create System.IO.File ReadAllBytes $licenseFileName]
+
+    set password [$certificate EntityName]
+    set guid [$certificate -create -alias Id]
+    set salt [$guid -create ToByteArray]
+
+    set triplet [cryptography encrypt3 -alias $data $password $salt]
+
+    set data [$triplet -create Y]
+    set salt [object invoke Convert ToBase64String $salt]
+
+    set data [string map [list \r\n \n] [object invoke \
+        Convert ToBase64String $data InsertLineBreaks]]
+
+    writeFile $encryptedLicenseFileName [string trim \
+        [subst -nocommands -nobackslashes {
+! EncryptedData: v1.0
+! symmetricAlgorithmName: Rijndael
+! salt: $salt
+
+$data
+    }]]
+
+    host result Ok [appendArgs \
+        "ENCRYPTED: " [file tail $encryptedLicenseFileName] \n]
+
+    host result Continue [appendArgs "GUID: " [$guid ToString] \n]
+
+    if {$showPassword} then {
+      host result Continue [appendArgs "PASSWORD: " $password \n]
+    }
+
+    return [readFileAndCleanup $encryptedLicenseFileName]
+  } else {
+    return [readFileAndCleanup $licenseFileName]
+  }
+} else {
+  licenseCleanup; usage
+}

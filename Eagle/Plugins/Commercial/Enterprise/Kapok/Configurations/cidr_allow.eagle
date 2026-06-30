@@ -1,0 +1,40 @@
+###############################################################################
+#
+# cidr_allow.eagle --
+#
+# Extensible Adaptable Generalized Logic Engine (Eagle)
+# Eagle CIDR Configuration File
+#
+# Copyright (c) 2007-2012 by Joe Mistachkin.  All rights reserved.
+#
+# See the file "license.terms" for information on usage and redistribution of
+# this file, and for a DISCLAIMER OF ALL WARRANTIES.
+#
+# RCS: @(#) $Id: $
+#
+###############################################################################
+
+apply [list [list] {
+  package require Eagle.CIDR
+
+  set countryCodes [lsort [list us]]
+
+  upvar 1 cidrs cidrs
+
+  foreach version [list 4 6] {
+    foreach countryCode $countryCodes  {
+      catch {
+        loadCidrFileFast $::env(CIDR_DATA_ROOT) \
+            $version $countryCode null cidrs
+      }
+    }
+  }
+
+  lappend cidrs(127.*) 127.0.0.0/8
+
+  lappend cidrs(*) ::1/128 \
+      mistachkin.net/32 mistachkin.net/128 \
+      mistachkin.nyc/32 mistachkin.nyc/128
+
+  return "CIDR \"allow\" lists fully loaded."
+}]

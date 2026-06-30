@@ -1,0 +1,258 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+ *
+ * Harpy.xsd -
+ *
+ * Copyright (c) 2007-2012 by Joe Mistachkin.  All rights reserved.
+ *
+ * See the file "license.terms" for information on usage and redistribution of
+ * this file, and for a DISCLAIMER OF ALL WARRANTIES.
+ *
+ * RCS: @(#) $Id: $
+ *
+-->
+<xsd:schema xmlns:harpy="https://eagle.to/2011/harpy"
+            xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+            elementFormDefault="qualified"
+            attributeFormDefault="unqualified"
+            targetNamespace="https://eagle.to/2011/harpy">
+  <xsd:simpleType name="certificateId"
+                  final="#all">
+    <xsd:restriction base="xsd:string">
+      <xsd:pattern value="^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$" />
+    </xsd:restriction>
+  </xsd:simpleType>
+
+  <xsd:simpleType name="protocolType"
+                  final="#all">
+    <xsd:restriction base="xsd:string">
+      <xsd:enumeration value="None" />
+      <xsd:enumeration value="Invalid" />
+      <xsd:enumeration value="Local" />
+      <xsd:enumeration value="Remote" />
+      <xsd:enumeration value="Secure" />
+    </xsd:restriction>
+  </xsd:simpleType>
+
+  <xsd:simpleType name="entityType"
+                  final="#all">
+    <xsd:restriction base="xsd:string">
+      <xsd:enumeration value="Any" />
+      <xsd:enumeration value="None" />
+      <xsd:enumeration value="Invalid" />
+      <xsd:enumeration value="Individual" />
+      <xsd:enumeration value="Team" />
+      <xsd:enumeration value="Section" />
+      <xsd:enumeration value="Division" />
+      <xsd:enumeration value="Department" />
+      <xsd:enumeration value="Site" />
+      <xsd:enumeration value="Company" />
+      <xsd:enumeration value="Worldwide" />
+      <xsd:enumeration value="Script" />
+      <xsd:enumeration value="String" />
+      <xsd:enumeration value="File" />
+      <xsd:enumeration value="KeyRing" />
+      <xsd:enumeration value="List" />
+      <xsd:enumeration value="Time" />
+      <xsd:enumeration value="Stream" />
+      <xsd:enumeration value="Special" />
+      <xsd:enumeration value="Trusted" />
+      <xsd:enumeration value="Machine" />
+    </xsd:restriction>
+  </xsd:simpleType>
+
+  <xsd:simpleType name="version"
+                  final="#all">
+    <xsd:restriction base="xsd:string">
+      <xsd:pattern value="^\d+(\.\d+(\.\d+(\.\d+)?)?)?$" />
+    </xsd:restriction>
+  </xsd:simpleType>
+
+  <xsd:simpleType name="duration"
+                  final="#all">
+    <xsd:restriction base="xsd:string">
+      <xsd:pattern value="^(-?\d{1,8})$|^(-?\d{1,8}\.)?\d{2}:\d{2}:\d{2}(\.\d{7})?$" />
+    </xsd:restriction>
+  </xsd:simpleType>
+
+  <!--
+  <xsd:simpleType name="identifier"
+                  final="#all">
+    <xsd:restriction base="xsd:string">
+      <xsd:pattern value="^[a-zA-Z][a-zA-Z0-9]*$" />
+    </xsd:restriction>
+  </xsd:simpleType>
+  -->
+
+  <xsd:simpleType name="type"
+                  final="#all">
+    <xsd:restriction base="xsd:string">
+      <xsd:pattern value="^[\w\s\-]*$" />
+    </xsd:restriction>
+  </xsd:simpleType>
+
+  <xsd:simpleType name="product"
+                  final="#all">
+    <xsd:restriction base="xsd:string">
+      <xsd:pattern value="^[\w\s\.]*$" />
+    </xsd:restriction>
+  </xsd:simpleType>
+
+  <xsd:simpleType name="attributeFlags"
+                  final="#all">
+    <xsd:restriction base="xsd:string">
+      <xsd:pattern value="^([a-zA-Z0-9]*|\{[a-fA-F0-9]{16}[a-zA-Z0-9]*\}|\{[a-fA-F0-9]{1,16}:[a-zA-Z0-9]*\})*$" />
+    </xsd:restriction>
+  </xsd:simpleType>
+
+  <xsd:simpleType name="prefixedHexBinary"
+                  final="#all">
+    <xsd:restriction base="xsd:string">
+      <xsd:pattern value="^0x[a-fA-F0-9]{16}$" />
+    </xsd:restriction>
+  </xsd:simpleType>
+
+  <xsd:complexType name="keyList"
+                   final="#all">
+    <xsd:sequence>
+      <xsd:element name="Key"
+                   type="harpy:prefixedHexBinary"
+                   minOccurs="0"
+                   maxOccurs="unbounded" />
+    </xsd:sequence>
+  </xsd:complexType>
+
+  <xsd:complexType name="signatureList"
+                   final="#all">
+    <xsd:sequence>
+      <xsd:element name="Signature"
+                   type="xsd:base64Binary"
+                   minOccurs="0"
+                   maxOccurs="unbounded" />
+    </xsd:sequence>
+  </xsd:complexType>
+
+  <xsd:complexType name="certificate"
+                   final="#all">
+    <xsd:all>
+      <xsd:element name="Id"
+                   type="harpy:certificateId"
+                   minOccurs="0" />
+
+      <xsd:element name="Protocol"
+                   type="harpy:protocolType"
+                   minOccurs="0" />
+
+      <xsd:element name="ProtocolVersion"
+                   type="harpy:version"
+                   minOccurs="0" />
+
+      <xsd:element name="Vendor"
+                   type="xsd:string"
+                   minOccurs="0" />
+
+      <xsd:element name="Origin"
+                   type="xsd:anyURI"
+                   minOccurs="0" />
+
+      <xsd:element name="Authority"
+                   type="xsd:anyURI"
+                   minOccurs="0" />
+
+      <xsd:element name="Agreement"
+                   type="xsd:anyURI"
+                   minOccurs="0" />
+
+      <xsd:element name="Support"
+                   type="xsd:anyURI"
+                   minOccurs="0" />
+
+      <xsd:element name="EntityType"
+                   type="harpy:entityType"
+                   minOccurs="0" />
+
+      <xsd:element name="EntityName"
+                   type="xsd:string"
+                   minOccurs="0" />
+
+      <xsd:element name="EntityValue"
+                   type="xsd:string"
+                   minOccurs="0" />
+
+      <xsd:element name="Type"
+                   type="harpy:type"
+                   minOccurs="0" />
+
+      <xsd:element name="Product"
+                   type="harpy:product"
+                   minOccurs="0" />
+
+      <xsd:element name="Version"
+                   type="harpy:version"
+                   minOccurs="0" />
+
+      <xsd:element name="Quantity"
+                   type="xsd:integer"
+                   minOccurs="0" />
+
+      <xsd:element name="Features"
+                   type="harpy:attributeFlags"
+                   minOccurs="0" />
+
+      <xsd:element name="Restrictions"
+                   type="harpy:attributeFlags"
+                   minOccurs="0" />
+
+      <xsd:element name="SerialNumber"
+                   type="xsd:string"
+                   minOccurs="0" />
+
+      <xsd:element name="HashAlgorithm"
+                   type="xsd:string"
+                   minOccurs="0" />
+
+      <xsd:element name="TimeStamp"
+                   type="xsd:dateTime"
+                   minOccurs="0" />
+
+      <xsd:element name="Duration"
+                   type="harpy:duration"
+                   minOccurs="0" />
+
+      <xsd:element name="Number"
+                   type="harpy:prefixedHexBinary"
+                   minOccurs="0" />
+
+      <xsd:element name="ExtraData"
+                   type="xsd:string"
+                   minOccurs="0" />
+
+      <xsd:element name="Key"
+                   type="harpy:prefixedHexBinary"
+                   minOccurs="0" />
+
+      <xsd:element name="Keys"
+                   type="harpy:keyList"
+                   minOccurs="0" />
+
+      <xsd:element name="Signature"
+                   type="xsd:base64Binary"
+                   minOccurs="0" />
+
+      <xsd:element name="Signatures"
+                   type="harpy:signatureList"
+                   minOccurs="0" />
+
+      <xsd:element name="Notes"
+                   type="xsd:string"
+                   minOccurs="0" />
+
+      <xsd:element name="ServerInfo"
+                   type="xsd:string"
+                   minOccurs="0" />
+    </xsd:all>
+  </xsd:complexType>
+
+  <xsd:element name="Certificate"
+               type="harpy:certificate" />
+</xsd:schema>

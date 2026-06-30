@@ -1,0 +1,67 @@
+###############################################################################
+#
+# provision.eagle --
+#
+# Extensible Adaptable Generalized Logic Engine (Eagle)
+# Enterprise Edition Provisioning Tool
+#
+# Copyright (c) 2007-2012 by Joe Mistachkin.  All rights reserved.
+#
+# See the file "license.terms" for information on usage and redistribution of
+# this file, and for a DISCLAIMER OF ALL WARRANTIES.
+#
+# RCS: @(#) $Id: $
+#
+###############################################################################
+
+package require Eagle
+
+if {1} then {
+  #
+  # HACK: This script is relatively simple.  It is designed to be called by
+  #       the Kapok code.  The command line arguments are of the following
+  #       form:
+  #
+  #       <name1> <value1> ... <nameN> <valueN>
+  #
+  #       The "provisionType" name / value pair is required for this script.
+  #       All other name / value pairs are optional.  If present, they will
+  #       be passed as command line arguments, in the order provided, to the
+  #       script file associated with the specified provisioning type.  This
+  #       script is designed to avoid "polluting" the global namespace, e.g.
+  #       via using [apply], etc.
+  #
+  #       After the (new) command line arguments are built, this script uses
+  #       the [source] command in order to evaluate a script file associated
+  #       with the specified provisioning type, using the call frame of the
+  #       immediate caller, which should (almost always) be the global call
+  #       frame.
+  #
+  apply [list [list argv] {
+    set path [file dirname [info script]]
+    set provisionType [getDictionaryValue $argv provisionType]
+
+    if {![string is alpha -strict $provisionType]} then {
+      error "bad provision type"
+    }
+
+    set provisionFileName [file join $path \
+        [appendArgs [string tolower $provisionType] .eagle]]
+
+    if {![file exists $provisionFileName] || \
+        ![file isfile $provisionFileName]} then {
+      error "script file not found for provision type"
+    }
+
+    set newArgv [list]
+
+    foreach {name value} $argv {
+      if {$name eq "provisionType"} then continue
+      lappend newArgv $value
+    }
+
+    uplevel 1 [list set argv $newArgv]
+
+    return [uplevel 1 [list source $provisionFileName]]
+  }] $argv
+}

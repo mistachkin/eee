@@ -1,0 +1,376 @@
+###############################################################################
+#
+# data.eagle --
+#
+# Extensible Adaptable Generalized Logic Engine (Eagle)
+# Enterprise Edition Package Tests Data
+#
+# Copyright (c) 2007-2012 by Joe Mistachkin.  All rights reserved.
+#
+# See the file "license.terms" for information on usage and redistribution of
+# this file, and for a DISCLAIMER OF ALL WARRANTIES.
+#
+# RCS: @(#) $Id: $
+#
+###############################################################################
+#
+# NOTE: Setup lists of resource names that are embedded within the Badge
+#       plugin.  All of these are tested and verified by the test suite;
+#       also, setup the lists of other (auxiliary) resource related test
+#       information, e.g. expected counts, script flags, etc.
+#
+# TODO: Always update this (primary) list when adding or removing plugin
+#       resources.  Additionally, if adding a script certificate for the
+#       loader package, library package, or test package, make sure the
+#       "nonLibrary" offset (below) is incremented as necessary.
+#
+# TODO: Are these lists useful to anybody outside of the test suite?
+#
+###############################################################################
+
+set resource_names(all) [list \
+    badgeEmpty \
+    empty \
+    lib/Loader1.0/loader.eagle.harpy \
+    lib/Eagle1.0/auxiliary.eagle.harpy \
+    lib/Eagle1.0/compat.eagle.harpy \
+    lib/Eagle1.0/csharp.eagle.harpy \
+    lib/Eagle1.0/database.eagle.harpy \
+    lib/Eagle1.0/embed.eagle.harpy \
+    lib/Eagle1.0/exec.eagle.harpy \
+    lib/Eagle1.0/file1.eagle.harpy \
+    lib/Eagle1.0/file2.eagle.harpy \
+    lib/Eagle1.0/file2u.eagle.harpy \
+    lib/Eagle1.0/file3.eagle.harpy \
+    lib/Eagle1.0/info.eagle.harpy \
+    lib/Eagle1.0/init.eagle.harpy \
+    lib/Eagle1.0/list.eagle.harpy \
+    lib/Eagle1.0/object.eagle.harpy \
+    lib/Eagle1.0/pkgIndex.eagle.harpy \
+    lib/Eagle1.0/pkgt.eagle.harpy \
+    lib/Eagle1.0/platform.eagle.harpy \
+    lib/Eagle1.0/process.eagle.harpy \
+    lib/Eagle1.0/runopt.eagle.harpy \
+    lib/Eagle1.0/safe.eagle.harpy \
+    lib/Eagle1.0/shell.eagle.harpy \
+    lib/Eagle1.0/shim.eagle.harpy \
+    lib/Eagle1.0/test.eagle.harpy \
+    lib/Eagle1.0/testlog.eagle.harpy \
+    lib/Eagle1.0/unkobj.eagle.harpy \
+    lib/Eagle1.0/unzip.eagle.harpy \
+    lib/Eagle1.0/update.eagle.harpy \
+    lib/Eagle1.0/vendor.eagle.harpy \
+    lib/Eagle1.0/word.tcl.harpy \
+    lib/Test1.0/all.eagle.harpy \
+    lib/Test1.0/constraints.eagle.harpy \
+    lib/Test1.0/epilogue.eagle.harpy \
+    lib/Test1.0/pkgIndex.eagle.harpy \
+    lib/Test1.0/prologue.eagle.harpy \
+    lib/Plugin1.0/pkgIndex.eagle.harpy \
+    lib/Tests/all.eagle.harpy \
+    lib/Tests/aplus.eagle.harpy \
+    lib/Tests/append.eagle.harpy \
+    lib/Tests/apply.eagle.harpy \
+    lib/Tests/array.eagle.harpy \
+    lib/Tests/array2.eagle.harpy \
+    lib/Tests/bad-subst.eagle.harpy \
+    lib/Tests/base64.eagle.harpy \
+    lib/Tests/basic.eagle.harpy \
+    lib/Tests/benchmark.eagle.harpy \
+    lib/Tests/big-dir.eagle.harpy \
+    lib/Tests/busy.eagle.harpy \
+    lib/Tests/catch.eagle.harpy \
+    lib/Tests/commands.eagle.harpy \
+    lib/Tests/continue.eagle.harpy \
+    lib/Tests/data/callStack.eagle.harpy \
+    lib/Tests/data/client.tcl.harpy \
+    lib/Tests/data/evaluate.eagle.harpy \
+    lib/Tests/data/garbage.txt.harpy \
+    lib/Tests/data/isolated.eagle.harpy \
+    lib/Tests/data/read.eagle.harpy \
+    lib/Tests/data/read2.eagle.harpy \
+    lib/Tests/data/read3.eagle.harpy \
+    lib/Tests/data/read4.eagle.harpy \
+    lib/Tests/data/script.eagle.harpy \
+    lib/Tests/data/settings.eagle.harpy \
+    lib/Tests/data/showArgv.eagle.harpy \
+    lib/Tests/data/source.eagle.harpy \
+    lib/Tests/data/substitute.eagle.harpy \
+    lib/Tests/data/tcl_unload.tcl.harpy \
+    lib/Tests/data/testProcs.tcl.harpy \
+    lib/Tests/data/unbalanced_brace.eagle.harpy \
+    lib/Tests/data/unbalanced_brace2.eagle.harpy \
+    lib/Tests/data/xaml2.eagle.harpy \
+    lib/Tests/debug-ops.eagle.harpy \
+    lib/Tests/debug-try.eagle.harpy \
+    lib/Tests/debug.eagle.harpy \
+    lib/Tests/debug2.eagle.harpy \
+    lib/Tests/debug3.eagle.harpy \
+    lib/Tests/delay-out.eagle.harpy \
+    lib/Tests/dict.eagle.harpy \
+    lib/Tests/empty.eagle.harpy \
+    lib/Tests/epilogue.eagle.harpy \
+    lib/Tests/error.eagle.harpy \
+    lib/Tests/error2.eagle.harpy \
+    lib/Tests/excel.eagle.harpy \
+    lib/Tests/excel2.eagle.harpy \
+    lib/Tests/exec.eagle.harpy \
+    lib/Tests/expr.eagle.harpy \
+    lib/Tests/expr2.eagle.harpy \
+    lib/Tests/expr3.eagle.harpy \
+    lib/Tests/fib.eagle.harpy \
+    lib/Tests/file-io.eagle.harpy \
+    lib/Tests/flush.eagle.harpy \
+    lib/Tests/foreach.eagle.harpy \
+    lib/Tests/format.eagle.harpy \
+    lib/Tests/function.eagle.harpy \
+    lib/Tests/garbage.eagle.harpy \
+    lib/Tests/global-upvar.eagle.harpy \
+    lib/Tests/host.eagle.harpy \
+    lib/Tests/info-level.eagle.harpy \
+    lib/Tests/interp-exited.eagle.harpy \
+    lib/Tests/io.eagle.harpy \
+    lib/Tests/library.eagle.harpy \
+    lib/Tests/library2.eagle.harpy \
+    lib/Tests/library3.eagle.harpy \
+    lib/Tests/library4.eagle.harpy \
+    lib/Tests/list.eagle.harpy \
+    lib/Tests/lmap.eagle.harpy \
+    lib/Tests/load.eagle.harpy \
+    lib/Tests/lsearch.eagle.harpy \
+    lib/Tests/lsearch2.eagle.harpy \
+    lib/Tests/lset.eagle.harpy \
+    lib/Tests/lsort.eagle.harpy \
+    lib/Tests/lsort2.eagle.harpy \
+    lib/Tests/lsort3.eagle.harpy \
+    lib/Tests/namespace-delete.eagle.harpy \
+    lib/Tests/namespace-delete2.eagle.harpy \
+    lib/Tests/namespace-inscope.eagle.harpy \
+    lib/Tests/namespace-old.eagle.harpy \
+    lib/Tests/namespace.eagle.harpy \
+    lib/Tests/nested.eagle.harpy \
+    lib/Tests/null.eagle.harpy \
+    lib/Tests/object-create.eagle.harpy \
+    lib/Tests/object-refcount.eagle.harpy \
+    lib/Tests/object.eagle.harpy \
+    lib/Tests/object10.eagle.harpy \
+    lib/Tests/object11.eagle.harpy \
+    lib/Tests/object12.eagle.harpy \
+    lib/Tests/object13.eagle.harpy \
+    lib/Tests/object14.eagle.harpy \
+    lib/Tests/object15.eagle.harpy \
+    lib/Tests/object2.eagle.harpy \
+    lib/Tests/object3.eagle.harpy \
+    lib/Tests/object4.eagle.harpy \
+    lib/Tests/object5.eagle.harpy \
+    lib/Tests/object6.eagle.harpy \
+    lib/Tests/object7.eagle.harpy \
+    lib/Tests/object8.eagle.harpy \
+    lib/Tests/object9.eagle.harpy \
+    lib/Tests/open.eagle.harpy \
+    lib/Tests/package.eagle.harpy \
+    lib/Tests/parser.eagle.harpy \
+    lib/Tests/parser2.eagle.harpy \
+    lib/Tests/parser3.eagle.harpy \
+    lib/Tests/parser4.eagle.harpy \
+    lib/Tests/parser5.eagle.harpy \
+    lib/Tests/perf.eagle.harpy \
+    lib/Tests/perf2.eagle.harpy \
+    lib/Tests/proc-uplevel.eagle.harpy \
+    lib/Tests/proc.eagle.harpy \
+    lib/Tests/prologue.eagle.harpy \
+    lib/Tests/redefine.eagle.harpy \
+    lib/Tests/regexp.eagle.harpy \
+    lib/Tests/regsub.eagle.harpy \
+    lib/Tests/remoting-server.eagle.harpy \
+    lib/Tests/return.eagle.harpy \
+    lib/Tests/return2.eagle.harpy \
+    lib/Tests/scope-array.eagle.harpy \
+    lib/Tests/scope-array2.eagle.harpy \
+    lib/Tests/scope-error.eagle.harpy \
+    lib/Tests/scope-error2.eagle.harpy \
+    lib/Tests/scope-error3.eagle.harpy \
+    lib/Tests/scope.eagle.harpy \
+    lib/Tests/scope2.eagle.harpy \
+    lib/Tests/scope3.eagle.harpy \
+    lib/Tests/set-element.eagle.harpy \
+    lib/Tests/set-nested.eagle.harpy \
+    lib/Tests/set.eagle.harpy \
+    lib/Tests/short-circuit.eagle.harpy \
+    lib/Tests/socket.eagle.harpy \
+    lib/Tests/socket2.eagle.harpy \
+    lib/Tests/socket3.eagle.harpy \
+    lib/Tests/sql.eagle.harpy \
+    lib/Tests/string-map.eagle.harpy \
+    lib/Tests/subst.eagle.harpy \
+    lib/Tests/switch.eagle.harpy \
+    lib/Tests/tcl-cancel.eagle.harpy \
+    lib/Tests/tcl-encoding.eagle.harpy \
+    lib/Tests/tcl-errorInfo.eagle.harpy \
+    lib/Tests/tcl-load.eagle.harpy \
+    lib/Tests/tcl-reset-cancel.eagle.harpy \
+    lib/Tests/tcl-reset-cancel2.eagle.harpy \
+    lib/Tests/tcl-reset-cancel3.eagle.harpy \
+    lib/Tests/tcl-reset-cancel4.eagle.harpy \
+    lib/Tests/tcl-set.eagle.harpy \
+    lib/Tests/tcl-subst.eagle.harpy \
+    lib/Tests/tcl/format.test.harpy \
+    lib/Tests/tcl/lmap.test.harpy \
+    lib/Tests/tcl/namespace-old.test.harpy \
+    lib/Tests/tcl/namespace.test.harpy \
+    lib/Tests/temporary-isolated.eagle.harpy \
+    lib/Tests/try.eagle.harpy \
+    lib/Tests/try2.eagle.harpy \
+    lib/Tests/try3.eagle.harpy \
+    lib/Tests/try4.eagle.harpy \
+    lib/Tests/unicode.eagle.harpy \
+    lib/Tests/unicode2.eagle.harpy \
+    lib/Tests/uplevel-tcl.eagle.harpy \
+    lib/Tests/uplevel.eagle.harpy \
+    lib/Tests/uplevel2.eagle.harpy \
+    lib/Tests/uplevel3.eagle.harpy \
+    lib/Tests/uplevel3a.eagle.harpy \
+    lib/Tests/uplevel4.eagle.harpy \
+    lib/Tests/uplevel5.eagle.harpy \
+    lib/Tests/upvar-reverse.eagle.harpy \
+    lib/Tests/upvar-tcl.eagle.harpy \
+    lib/Tests/version.eagle.harpy \
+    lib/Tests/vwait.eagle.harpy \
+    lib/Tests/watch-alias.eagle.harpy \
+    lib/Tests/winforms.eagle.harpy \
+    lib/Tests/winforms2.eagle.harpy \
+    lib/Tests/winforms3.eagle.harpy \
+    lib/Tests/winforms4.eagle.harpy \
+    lib/Tests/winforms5.eagle.harpy \
+    lib/Tests/winforms6.eagle.harpy \
+    lib/Tests/winforms7.eagle.harpy \
+    lib/Tests/winforms8.eagle.harpy \
+    lib/Tests/writebox.eagle.harpy \
+    lib/Tests/xaml.eagle.harpy \
+    lib/Tests/xml.eagle.harpy \
+    library.resources.harpy \
+    packages.resources.harpy]
+
+###############################################################################
+
+#
+# NOTE: This is the list of embedded resources that refer to script files
+#       that are not part of the core script library nor the test script
+#       library.
+#
+# TODO: Always double-check this when adding or removing loader package,
+#       library package, or test package files.
+#
+set resource_names(nonLibrary) [lrange $resource_names(all) 37 end]
+
+#
+# NOTE: This is the list of embedded resources that refer to the bundled
+#       embedded resources files for the core library, which contain the
+#       embedded core script library and test script library files.
+#
+set resource_names(nonScript) [lrange $resource_names(all) end-1 end]
+
+#
+# NOTE: These scripts -AND- their associated script certificates actually
+#       reside entirely within the core library itself, not this plugin;
+#       however, it is easier to test them here.
+#
+set resource_names(libraryOnly) [list \
+    enableSecurity.harpy \
+    disableSecurity.harpy \
+    removeCommands.harpy \
+    removeVariables.harpy \
+    fetchKeyRing.harpy \
+    mergeKeyRing.harpy]
+
+###############################################################################
+
+set resource_counts(all) [llength $resource_names(all)]
+set resource_counts(nonLibrary) [llength $resource_names(nonLibrary)]
+
+###############################################################################
+
+set resource_counts(library) [expr {
+  $resource_counts(all) - $resource_counts(nonLibrary)
+}]
+
+###############################################################################
+
+#
+# NOTE: The "empty" and "badgeEmpty" resources are not certificates.  They
+#       are empty strings, which cannot be signed.
+#
+set resource_counts(nonCertificate) 2
+
+###############################################################################
+
+#
+# NOTE: The resources named "*.resources" are not scripts; however, they do
+#       have associated certificates.
+#
+set resource_counts(nonScript) [llength $resource_names(nonScript)]
+
+###############################################################################
+
+#
+# NOTE: The "temporary-isolated.eagle" script file will be generated by the
+#       [test2] core library command during test suite runs.  It does have
+#       an associated script certificate; however, that certificate file name
+#       reflects the file name as it is used during actual runs of the test
+#       suite, not the file name as it exists within source checkout, which
+#       is (core library) test data directory.
+#
+set resource_counts(temporary) 1
+
+###############################################################################
+
+set resource_counts(allCertificate) [expr {
+  $resource_counts(all) - $resource_counts(nonCertificate)
+}]
+
+set resource_counts(libraryVerify) [expr {
+  $resource_counts(library) - $resource_counts(nonCertificate)
+}]
+
+set resource_counts(tests) [llength \
+    [regexp -all -inline -- {lib/Tests/} $resource_names(all)]]
+
+set resource_counts(testsNonTemporary) [expr {
+  $resource_counts(tests) - $resource_counts(temporary)
+}]
+
+set resource_counts(libraryVerifyExternalOk) [expr {
+  $resource_counts(allCertificate) - \
+  $resource_counts(tests) - $resource_counts(nonScript)
+}]
+
+set resource_counts(libraryVerifyExternalNotFound) [expr {
+  $resource_counts(allCertificate) - \
+  $resource_counts(libraryVerifyExternalOk)
+}]
+
+set resource_counts(libraryOnly) [llength $resource_names(libraryOnly)]
+
+###############################################################################
+
+#
+# NOTE: These script flags are used to make the associated tests run faster
+#       by skipping various superfluous alternative code paths and resource
+#       names.
+#
+set resource_flags(plugin) {
+  +NoFileSystem NoResourceManager NoAssemblyManifest
+  NoPluginResourceName SkipFileName SkipRelative
+  SkipNonQualified SkipLibraryToLib SkipTestsToLib
+}
+
+set resource_flags(embedded) {
+  +NoFileSystem
+}
+
+set resource_flags(library) {
+  +CoreAssemblyOnly SkipFileName SkipRelative
+  SkipNonQualified SkipLibraryToLib SkipTestsToLib
+}
+
+###############################################################################

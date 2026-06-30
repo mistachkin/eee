@@ -1,0 +1,41 @@
+<!--
+ *
+ * Badge.StrongName.Settings.targets -
+ *
+ * WARNING: Contains more evil MSBuild hacks than your doctor recommended.
+ *
+ * Copyright (c) 2007-2012 by Joe Mistachkin.  All rights reserved.
+ *
+ * See the file "license.terms" for information on usage and redistribution of
+ * this file, and for a DISCLAIMER OF ALL WARRANTIES.
+ *
+ * RCS: @(#) $Id: $
+ *
+-->
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!--
+  ******************************************************************************
+  **                          Load Per-User Settings                          **
+  ******************************************************************************
+  -->
+
+  <!--
+      NOTE: If the per-user settings file exists, import it now.  The contained
+            settings, if any, will override the default ones provided below.
+  -->
+  <Import Condition="'$(BadgeDir)' != '' And
+                     !HasTrailingSlash('$(BadgeDir)') And
+                     Exists('$(BadgeDir)\Targets\Badge.StrongName.Settings.targets.user')"
+          Project="$(BadgeDir)\Targets\Badge.StrongName.Settings.targets.user" />
+
+  <!--
+  ******************************************************************************
+  **                   Badge Strong Name Signing Properties                   **
+  ******************************************************************************
+  -->
+
+  <Import Condition="'$(HarpyDir)' != '' And
+                     !HasTrailingSlash('$(HarpyDir)') And
+                     Exists('$(HarpyDir)\Targets\Harpy.StrongName.Settings.targets')"
+          Project="$(HarpyDir)\Targets\Harpy.StrongName.Settings.targets" />
+</Project>

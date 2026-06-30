@@ -1,0 +1,1452 @@
+###############################################################################
+#
+# basic.eagle --
+#
+# Extensible Adaptable Generalized Logic Engine (Eagle)
+# Enterprise Edition Package Tests
+#
+# Copyright (c) 2007-2012 by Joe Mistachkin.  All rights reserved.
+#
+# See the file "license.terms" for information on usage and redistribution of
+# this file, and for a DISCLAIMER OF ALL WARRANTIES.
+#
+# RCS: @(#) $Id: $
+#
+###############################################################################
+
+package require Eagle.Library
+package require Eagle.Test
+
+runTestPrologue
+
+###############################################################################
+
+set scriptFile [file join $path data secureTest.eagle]
+set encryptedFile(1) [file join $path data encrypted.eagle]
+set encryptedFile(2) [file join $path data secureTest2.eagle]
+set encryptedFile(3) [file join $path data encrypted2.eagle]
+set boltFile [file join $core_bin_path libBolt.dylib]
+
+###############################################################################
+
+#
+# NOTE: Check test constraints specific to tests in this file that do not
+#       require the plugin to be loaded.
+#
+if {![haveConstraint [appendArgs file_ [file tail $scriptFile]]]} then {
+  checkForFile $test_channel $scriptFile
+}
+
+if {![haveConstraint [appendArgs file_ [file tail $encryptedFile(1)]]]} then {
+  checkForFile $test_channel $encryptedFile(1)
+}
+
+if {![haveConstraint [appendArgs file_ [file tail $encryptedFile(2)]]]} then {
+  checkForFile $test_channel $encryptedFile(2)
+}
+
+if {![haveConstraint [appendArgs file_ [file tail $encryptedFile(3)]]]} then {
+  checkForFile $test_channel $encryptedFile(3)
+}
+
+if {![haveConstraint [appendArgs file_ [file tail $boltFile]]]} then {
+  checkForFile $test_channel $boltFile
+}
+
+###############################################################################
+
+#
+# NOTE: We need to make sure the plugin is actually loaded prior to
+#       querying the compile options.
+#
+if {[catch {package require Zeus.Enterprise} error] == 0} then {
+  #
+  # HACK: Pre-check for the [zeus] command now so that we can show
+  #       the plugin compile options.
+  #
+  if {![haveConstraint command.zeus]} then {
+    checkForCommand $test_channel zeus
+  }
+
+  #
+  # NOTE: Now, check if the [zeus] command is actually available.
+  #       If so, report the plugin compile options; otherwise, report
+  #       that we cannot.
+  #
+  if {[haveConstraint command.zeus]} then {
+    tputs $test_channel [appendArgs \
+        "---- plugin \"Zeus.Enterprise\" compile options: " \
+        [formatList [zeus options]] \n]
+  } else {
+    tputs $test_channel [appendArgs \
+        "---- zeus command not available\n"]
+  }
+} else {
+  tputs $test_channel [appendArgs \
+      "---- failed to load plugin: " $error \n]
+}
+
+unset -nocomplain error
+tputs $test_channel "---- checking for plugin isolation... "
+
+if {[isEagle] && ![haveConstraint zeus.isolated]} then {
+  #
+  # NOTE: We need to make sure the plugin is actually loaded prior to
+  #       querying the plugin flags.
+  #
+  if {[catch {package present Zeus.Enterprise}] == 0} then {
+    #
+    # NOTE: Query the plugin flags for the plugin and search them for the
+    #       "Isolated" flag.  If this flag is present then the plugin has
+    #       been loaded into an isolated AppDomain and some functionality
+    #       will be unavailable.
+    #
+    if {[lsearch -exact -- \
+        [getPluginFlags {^Zeus\.Enterprise, }] Isolated] != -1} then {
+      #
+      # NOTE: This plugin is running in isolated mode.
+      #
+      addConstraint zeus.isolated
+
+      tputs $test_channel yes\n
+    } else {
+      tputs $test_channel no\n
+    }
+  } else {
+    tputs $test_channel error\n
+  }
+} else {
+  tputs $test_channel skipped\n
+}
+
+###############################################################################
+
+if {[isEagle]} then {setupStateForZeus true}
+
+###############################################################################
+
+if {[isEagle] && [llength [info commands object]] > 0} then {
+  set zzzz_new_line [object invoke Environment NewLine]
+} else {
+  set zzzz_new_line \n
+}
+
+###############################################################################
+
+proc registerTestProcedures { varName channel {quiet false} } {
+  upvar 1 $varName registration
+
+  set registration(1) [zeus register {
+    # positional, no args
+    return [appendArgs "SUCCESS: " [info level [info level]]]
+  }]
+
+  if {!$quiet} then {
+    tputs $channel [appendArgs "==== REGISTERED: " $registration(1) \n]
+  }
+
+  set registration(2) [zeus register { one two } {
+    # positional, two args
+    return [appendArgs "SUCCESS: " [info level [info level]]]
+  }]
+
+  if {!$quiet} then {
+    tputs $channel [appendArgs "==== REGISTERED: " $registration(2) \n]
+  }
+
+  set registration(3) [zeus register -flags +NamedArguments { one two } {
+    # named, two args
+    return [appendArgs "SUCCESS: " [info level [info level]]]
+  }]
+
+  if {!$quiet} then {
+    tputs $channel [appendArgs "==== REGISTERED: " $registration(3) \n]
+  }
+
+  set registration(4) [zeus register -flags +NamedArguments {
+    # named, no args
+    return [appendArgs "SUCCESS: " [info level [info level]]]
+  }]
+
+  if {!$quiet} then {
+    tputs $channel [appendArgs "==== REGISTERED: " $registration(4) \n]
+  }
+
+  set registration(5) [zeus register -flags +PositionalArguments { one } {
+    # positional, one arg
+    return [appendArgs "SUCCESS: " [info level [info level]]]
+  }]
+
+  if {!$quiet} then {
+    tputs $channel [appendArgs "==== REGISTERED: " $registration(5) \n]
+  }
+
+  return ""
+}
+
+###############################################################################
+
+proc unregisterTestProcedures { varName channel {quiet false} } {
+  upvar 1 $varName registration
+
+  foreach id [lsort -integer [array names registration]] {
+    zeus unregister $registration($id)
+
+    if {!$quiet} then {
+      tputs $channel [appendArgs "==== UNREGISTERED: " $registration($id) \n]
+    }
+  }
+
+  return ""
+}
+
+###############################################################################
+
+proc getRegisteredProcedureResults { {withInfoBody false} } {
+  set result [list]
+
+  if {$withInfoBody} then {
+    lappend result 1 \
+        [appendArgs {procedure "07019b200246d2d0f189ca2e74f2a0bbb355fa8ed668} \
+        {cf5ef2e318a8bfd8d14bb342a96b9189e63b0ce10383d6701c4d5c9671543994f66} \
+        {a61f41ad580baf57d" body is unavailable}]
+  }
+
+  lappend result \
+      [appendArgs {SUCCESS: 07019b200246d2d0f189ca2e74f2a0bbb355fa8ed668cf5e} \
+      {f2e318a8bfd8d14bb342a96b9189e63b0ce10383d6701c4d5c9671543994f66a61f41} \
+      {ad580baf57d}] \
+      [appendArgs {SUCCESS: 489ccffcb9c7508fe6223c86d718b249e957de07de4f30d3} \
+      {c73423ec6e60a98d3a39d77f56ce2e0536dc23578e02e1570c7e7fc012257a9b29562} \
+      {c9d77461e7b 1 2}] \
+      [appendArgs {SUCCESS: daa6fd2201417536bf59ae8241c4ed6411292b2e5d6385b5} \
+      {3fe310ebeb3da0edb900ff1b03b473fcd46447757ef41385ec991c0df8ac8489dfa92} \
+      {041b9a1c1d2 one 1 two 2}] \
+      [appendArgs {SUCCESS: a0632c4b619d4ab5203b12a2878ecfba4b78f351d7ace028} \
+      {375d85e63ed4dc50145f282370fb23383970c25f071be10c04c36a510d7e8cc7424a0} \
+      {59637741cee}] \
+      [appendArgs {SUCCESS: 1206fe8577a0e7a4263a364e5b96f451ab4eaed87b483c83} \
+      {b2a57a1cf24cb186d99441602ce2127610a4f7ace957852a1adc9928f678f1372477b} \
+      {0ffd7397dd9 1}]
+
+  return $result
+}
+
+###############################################################################
+
+runTest {test zeus-1.1 {encryptScript syntax} -setup {
+  package require Zeus.Enterprise
+  package require Zeus.Cryptography
+} -body {
+  encryptScript
+} -constraints {eagle} -returnCodes 1 -result {wrong # args: should be\
+"encryptScript script encodingName password salt iterationCount\
+hashAlgorithmName"}}
+
+###############################################################################
+
+runTest {test zeus-1.2 {decryptScript syntax} -setup {
+  package require Zeus.Enterprise
+  package require Zeus.Cryptography
+} -body {
+  decryptScript
+} -constraints {eagle} -returnCodes 1 -result {wrong # args: should be\
+"decryptScript script encodingName password salt iterationCount\
+hashAlgorithmName"}}
+
+###############################################################################
+
+runTest {test zeus-1.3 {isEncryptedScript syntax} -setup {
+  package require Zeus.Enterprise
+  package require Zeus.Cryptography
+} -body {
+  isEncryptedScript
+} -constraints {eagle} -returnCodes 1 -result \
+{wrong # args: should be "isEncryptedScript script ?strict?"}}
+
+###############################################################################
+
+runTest {test zeus-2.1 {encryptScript failure result} -setup {
+  package require Zeus.Enterprise
+  package require Zeus.Cryptography
+} -body {
+  encryptScript {puts stdout hi} "" password test 1000 ""
+} -constraints [fixConstraints {eagle !dotNetCore60 !dotNetCore70\
+!dotNetCore80 !dotNetCore90 !dotNetCore100}] -returnCodes 1 -match regexp \
+-result { System\.ArgumentException: (?:Salt is not at least eight bytes\.|Salt\
+< 8 bytes)}}
+
+###############################################################################
+
+runTest {test zeus-2.2 {encryptScript success result} -setup {
+  package require Zeus.Enterprise
+  package require Zeus.Cryptography
+} -body {
+  encryptScript {puts stdout hi} "" password test1234 1000 ""
+} -constraints {eagle} -result [string map [list \n $zzzz_new_line] \
+{# <<ENCRYPTED-1.0>>
+appendArgs {
+/uGe0YPKNv0WQ+VthR8+jw==
+}
+}]}
+
+###############################################################################
+
+runTest {test zeus-3.1.1 {decryptScript failure result} -setup {
+  package require Zeus.Enterprise
+  package require Zeus.Cryptography
+} -body {
+  decryptScript [eval {# <<ENCRYPTED-1.0>>
+appendArgs {
+/uGe0YPKNv0WQ+UthR8+jw==
+}
+}] "" password test1234 1000 ""
+} -constraints [fixConstraints {eagle !dotNetCore}] -returnCodes 1 -match \
+regexp -result { System\.Security\.Cryptography\.CryptographicException:\
+(?:Padding is invalid and cannot be removed\.|Bad PKCS7 padding\. Invalid\
+length 141\.)}}
+
+###############################################################################
+
+runTest {test zeus-3.1.2 {decryptScript failure result} -setup {
+  package require Zeus.Enterprise
+  package require Zeus.Cryptography
+} -body {
+  decryptScript [eval {# <<ENCRYPTED-1.0>>
+appendArgs {
+/uGe0YPKNv0WQ+UthR8+jw==
+}
+}] "" password test1234 1000 ""
+} -constraints {eagle dotNetCore} -returnCodes 1 -match regexp -result \
+{ System\.Security\.Cryptography\.CryptographicException: (?:Specified padding\
+mode is not valid for this algorithm\.|Padding is invalid and cannot be\
+removed\.)}}
+
+###############################################################################
+
+runTest {test zeus-3.2 {decryptScript success result} -setup {
+  package require Zeus.Enterprise
+  package require Zeus.Cryptography
+} -body {
+  decryptScript [eval {# <<ENCRYPTED-1.0>>
+appendArgs {
+/uGe0YPKNv0WQ+VthR8+jw==
+}
+}] "" password test1234 1000 ""
+} -constraints {eagle} -result {puts stdout hi}}
+
+###############################################################################
+
+runTest {test zeus-4.1 {isEncryptedScript false results} -setup {
+  package require Zeus.Enterprise
+  package require Zeus.Cryptography
+} -body {
+  set script dGVzdA==; # NOTE: "test"
+
+  list [expr {!![isEncryptedScript $script false]}] \
+      [expr {!![isEncryptedScript $script true]}]
+} -cleanup {
+  unset -nocomplain script
+} -constraints {eagle} -result {False False}}
+
+###############################################################################
+
+runTest {test zeus-4.2 {isEncryptedScript true results} -setup {
+  package require Zeus.Enterprise
+  package require Zeus.Cryptography
+} -body {
+  set script [string map [list \n $zzzz_new_line] {# <<ENCRYPTED-1.0>>
+appendArgs {
+/uGe0YPKNv0WQ+VthR8+jw==
+}
+}]
+
+  list [expr {!![isEncryptedScript $script false]}] \
+      [expr {!![isEncryptedScript $script true]}]
+} -cleanup {
+  unset -nocomplain script
+} -constraints {eagle} -result {True True}}
+
+###############################################################################
+
+runTest {test zeus-5.1 {encrypt/decrypt success} -setup {
+  package require Zeus.Enterprise
+  package require Zeus.Cryptography
+} -body {
+  decryptScript [eval \
+      [encryptScript {puts stdout hi} "" password test1234 1000 ""]] \
+      "" password test1234 1000 ""
+} -constraints {eagle} -result {puts stdout hi}}
+
+###############################################################################
+
+runTest {test zeus-5.2.1 {encrypt/decrypt failure} -setup {
+  package require Zeus.Enterprise
+  package require Zeus.Cryptography
+} -body {
+  decryptScript [eval \
+      [encryptScript {puts stdout hi} "" password test12345 1000 ""]] \
+      "" password test1234 1000 ""
+} -constraints [fixConstraints {eagle !dotNetCore}] -returnCodes 1 -match \
+regexp -result { System\.Security\.Cryptography\.CryptographicException:\
+(?:Padding is invalid and cannot be removed\.|Bad PKCS7 padding\. Invalid\
+length 235\.)}}
+
+###############################################################################
+
+runTest {test zeus-5.2.2 {encrypt/decrypt failure} -setup {
+  package require Zeus.Enterprise
+  package require Zeus.Cryptography
+} -body {
+  decryptScript [eval \
+      [encryptScript {puts stdout hi} "" password test12345 1000 ""]] \
+      "" password test1234 1000 ""
+} -constraints {eagle dotNetCore} -returnCodes 1 -match regexp -result \
+{ System\.Security\.Cryptography\.CryptographicException: (?:Specified padding\
+mode is not valid for this algorithm\.|Padding is invalid and cannot be\
+removed\.)}}
+
+###############################################################################
+
+runTest {test zeus-5.3 {encrypt/decrypt success} -setup {
+  package require Zeus.Enterprise
+  package require Zeus.Cryptography
+} -body {
+  decryptScript [eval \
+      [encryptScript {puts stdout hi} "" password test1234 1000 ""]] \
+      "" password test1234 1000 ""
+} -constraints {eagle} -result {puts stdout hi}}
+
+###############################################################################
+
+#
+# WARNING: This must be done outside the context of an active test to work
+#          properly because the test suite redefines the [puts] command
+#          while tests are active.
+#
+if {[isEagle]} then {debug vout stdout true}
+
+###############################################################################
+
+runTest {test zeus-6.1 {wrapped local ".eagle" success} -setup {
+  package require Zeus.Enterprise
+  package require Zeus.Cryptography
+} -body {
+  source $scriptFile
+} -cleanup {
+  catch {rename helloWorld ""}
+} -constraints {eagle file_secureTest.eagle} -output \
+[appendArgs "Hello World - " [file nativename $scriptFile] \n] -result {}}
+
+###############################################################################
+
+#
+# NOTE: This virtual output must be reset between these tests.
+#
+if {[isEagle]} then {
+  debug vout stdout false
+  debug vout stdout true
+}
+
+###############################################################################
+
+runTest {test zeus-7.1 {encrypted local ".eagle" success, external} -setup {
+  package require Zeus.Enterprise
+  package require Zeus.Cryptography
+
+  set zeus(password) password
+  set zeus(salt) test1234
+  set zeus(iterationCount) 1000
+  set zeus(hashAlgorithmName) ""
+} -body {
+  sourceEncrypted $encryptedFile(1)
+} -cleanup {
+  catch {rename helloWorld ""}
+
+  unset -nocomplain zeus(hashAlgorithmName)
+  unset -nocomplain zeus(iterationCount)
+  unset -nocomplain zeus(salt)
+  unset -nocomplain zeus(password)
+} -constraints {eagle file_encrypted.eagle} -output \
+[appendArgs "Hello World - " $encryptedFile(1) \n] -result {}}
+
+###############################################################################
+
+#
+# NOTE: This virtual output must be reset between these tests.
+#
+if {[isEagle]} then {
+  debug vout stdout false
+  debug vout stdout true
+}
+
+###############################################################################
+
+runTest {test zeus-7.2 {encrypted local ".eagle" success, embedded} -setup {
+  package require Zeus.Enterprise
+  package require Zeus.Cryptography
+
+  set zeus(password) password
+  set zeus(salt) test1234
+  set zeus(iterationCount) 1000
+  set zeus(hashAlgorithmName) ""
+} -body {
+  sourceEncrypted $encryptedFile(2)
+} -cleanup {
+  catch {rename helloWorld ""}
+
+  unset -nocomplain zeus(hashAlgorithmName)
+  unset -nocomplain zeus(iterationCount)
+  unset -nocomplain zeus(salt)
+  unset -nocomplain zeus(password)
+} -constraints {eagle file_secureTest2.eagle} -output \
+[appendArgs "Hello World - " $encryptedFile(2) \n] -result {}}
+
+###############################################################################
+
+#
+# NOTE: This virtual output must be reset between these tests.
+#
+if {[isEagle]} then {
+  debug vout stdout false
+  debug vout stdout true
+}
+
+###############################################################################
+
+runTest {test zeus-7.3 {encrypted local ".eagle" success, -withinfo} -setup {
+  package require Zeus.Enterprise
+  package require Zeus.Cryptography
+
+  set zeus(password) password
+  set zeus(salt) test1234
+  set zeus(iterationCount) 1000
+  set zeus(hashAlgorithmName) ""
+} -body {
+  sourceEncrypted -withinfo true $encryptedFile(1)
+} -cleanup {
+  catch {rename helloWorld ""}
+
+  unset -nocomplain zeus(hashAlgorithmName)
+  unset -nocomplain zeus(iterationCount)
+  unset -nocomplain zeus(salt)
+  unset -nocomplain zeus(password)
+} -constraints {eagle file_encrypted.eagle} -output \
+[appendArgs "Hello World - " $encryptedFile(1) \n] -result {}}
+
+###############################################################################
+
+#
+# NOTE: This virtual output must be reset between these tests.
+#
+if {[isEagle]} then {
+  debug vout stdout false
+  debug vout stdout true
+}
+
+###############################################################################
+
+runTest {test zeus-8.1 {encrypted remote https ".eagle" success} -setup {
+  package require Zeus.Enterprise
+  package require Zeus.Cryptography
+
+  set zeus(password) password
+  set zeus(salt) test1234
+  set zeus(iterationCount) 1000
+  set zeus(hashAlgorithmName) ""
+} -body {
+  sourceEncrypted https://eagle.to/scripts/encrypted.eagle
+} -cleanup {
+  catch {rename helloWorld ""}
+
+  unset -nocomplain zeus(hashAlgorithmName)
+  unset -nocomplain zeus(iterationCount)
+  unset -nocomplain zeus(salt)
+  unset -nocomplain zeus(password)
+} -constraints {eagle} -output \
+{Hello World - https://eagle.to/scripts/encrypted.eagle
+} -result {}}
+
+###############################################################################
+
+#
+# NOTE: This virtual output must be reset between these tests.
+#
+if {[isEagle]} then {
+  debug vout stdout false
+  debug vout stdout true
+}
+
+###############################################################################
+
+runTest {test zeus-9.1 {encrypted local ".eagle" test} -setup {
+  package require Zeus.Enterprise
+  package require Zeus.Cryptography
+
+  set zeus(providerAssemblyName) ""
+  set zeus(providerTypeName) Test
+  set zeus(providerClientData) ""
+} -body {
+  sourceEncrypted $encryptedFile(1)
+} -cleanup {
+  catch {rename helloWorld ""}
+
+  unset -nocomplain zeus(providerClientData)
+  unset -nocomplain zeus(providerTypeName)
+  unset -nocomplain zeus(providerAssemblyName)
+
+} -constraints {eagle command.object file_encrypted.eagle} -output \
+[appendArgs "Hello World - " $encryptedFile(1) \n] -result {}}
+
+###############################################################################
+
+#
+# NOTE: This virtual output must be reset between these tests.
+#
+if {[isEagle]} then {
+  debug vout stdout false
+  debug vout stdout true
+}
+
+###############################################################################
+
+runTest {test zeus-10.1 {encrypted local ".eagle" remote XML} -setup {
+  package require Zeus.Enterprise
+  package require Zeus.Cryptography
+
+  set uri [object create \
+      Uri [appendArgs [getScriptBaseUri] scripts/rfc2898.xml]]
+
+  set typeName [object invoke $uri GetType.AssemblyQualifiedName]
+
+  set pair [object create \
+      [appendArgs "AnyPair`2\[\[" $typeName \
+      "\], System.Nullable`1\[System.Boolean\]\]"] \
+      $uri null]
+
+  set clientData [object create ClientData $pair]
+
+  set zeus(providerAssemblyName) ""
+  set zeus(providerTypeName) Remote
+  set zeus(providerClientData) $clientData
+} -body {
+  sourceEncrypted $encryptedFile(1)
+} -cleanup {
+  catch {rename helloWorld ""}
+
+  unset -nocomplain zeus(providerClientData)
+  unset -nocomplain zeus(providerTypeName)
+  unset -nocomplain zeus(providerAssemblyName)
+
+  unset -nocomplain clientData pair typeName uri
+} -constraints {eagle command.object tlsOk file_encrypted.eagle} -output \
+[appendArgs "Hello World - " $encryptedFile(1) \n] -result {}}
+
+###############################################################################
+
+#
+# NOTE: This virtual output must be reset between these tests.
+#
+if {[isEagle]} then {
+  debug vout stdout false
+  debug vout stdout true
+}
+
+###############################################################################
+
+runTest {test zeus-10.2 {encrypted local ".eagle" remote settings} -setup {
+  package require Zeus.Enterprise
+  package require Zeus.Cryptography
+
+  set uri [object create \
+      Uri [appendArgs [getScriptBaseUri] scripts/rfc2898.eagle]]
+
+  set typeName [object invoke $uri GetType.AssemblyQualifiedName]
+
+  set pair [object create \
+      [appendArgs "AnyPair`2\[\[" $typeName \
+      "\], System.Nullable`1\[System.Boolean\]\]"] \
+      $uri null]
+
+  set clientData [object create ClientData $pair]
+
+  set zeus(providerAssemblyName) ""
+  set zeus(providerTypeName) Remote
+  set zeus(providerClientData) $clientData
+} -body {
+  sourceEncrypted $encryptedFile(1)
+} -cleanup {
+  catch {rename helloWorld ""}
+
+  unset -nocomplain zeus(providerClientData)
+  unset -nocomplain zeus(providerTypeName)
+  unset -nocomplain zeus(providerAssemblyName)
+
+  unset -nocomplain clientData pair typeName uri
+} -constraints {eagle command.object tlsOk file_encrypted.eagle} -output \
+[appendArgs "Hello World - " $encryptedFile(1) \n] -result {}}
+
+###############################################################################
+
+#
+# NOTE: This virtual output must be reset between these tests.
+#
+if {[isEagle]} then {
+  debug vout stdout false
+  debug vout stdout true
+}
+
+###############################################################################
+
+runTest {test zeus-10.3 {encrypted local ".eagle" remote XML} -setup {
+  package require Zeus.Enterprise
+  package require Zeus.Cryptography
+
+  set uri [object create \
+      Uri [appendArgs [getScriptBaseUri] scripts/rfc2898.v2.xml]]
+
+  set typeName [object invoke $uri GetType.AssemblyQualifiedName]
+
+  set pair [object create \
+      [appendArgs "AnyPair`2\[\[" $typeName \
+      "\], System.Nullable`1\[System.Boolean\]\]"] \
+      $uri null]
+
+  set clientData [object create ClientData $pair]
+
+  set zeus(providerAssemblyName) ""
+  set zeus(providerTypeName) Remote
+  set zeus(providerClientData) $clientData
+} -body {
+  sourceEncrypted $encryptedFile(3)
+} -cleanup {
+  catch {rename helloWorld ""}
+
+  unset -nocomplain zeus(providerClientData)
+  unset -nocomplain zeus(providerTypeName)
+  unset -nocomplain zeus(providerAssemblyName)
+
+  unset -nocomplain clientData pair typeName uri
+} -constraints {eagle command.object tlsOk file_encrypted2.eagle dotNetCore} \
+-output [appendArgs "Hello World - " $encryptedFile(3) \n] -result {}}
+
+###############################################################################
+
+#
+# NOTE: This virtual output must be reset between these tests.
+#
+if {[isEagle]} then {
+  debug vout stdout false
+  debug vout stdout true
+}
+
+###############################################################################
+
+runTest {test zeus-10.4 {encrypted local ".eagle" remote settings} -setup {
+  package require Zeus.Enterprise
+  package require Zeus.Cryptography
+
+  set uri [object create \
+      Uri [appendArgs [getScriptBaseUri] scripts/rfc2898.v2.eagle]]
+
+  set typeName [object invoke $uri GetType.AssemblyQualifiedName]
+
+  set pair [object create \
+      [appendArgs "AnyPair`2\[\[" $typeName \
+      "\], System.Nullable`1\[System.Boolean\]\]"] \
+      $uri null]
+
+  set clientData [object create ClientData $pair]
+
+  set zeus(providerAssemblyName) ""
+  set zeus(providerTypeName) Remote
+  set zeus(providerClientData) $clientData
+} -body {
+  sourceEncrypted $encryptedFile(3)
+} -cleanup {
+  catch {rename helloWorld ""}
+
+  unset -nocomplain zeus(providerClientData)
+  unset -nocomplain zeus(providerTypeName)
+  unset -nocomplain zeus(providerAssemblyName)
+
+  unset -nocomplain clientData pair typeName uri
+} -constraints {eagle command.object tlsOk file_encrypted2.eagle dotNetCore} \
+-output [appendArgs "Hello World - " $encryptedFile(3) \n] -result {}}
+
+###############################################################################
+
+#
+# NOTE: This virtual output must be reset between these tests.
+#
+if {[isEagle]} then {
+  debug vout stdout false
+  debug vout stdout true
+}
+
+###############################################################################
+
+runTest {test zeus-11.1 {encrypted local ".eagle" script} -setup {
+  package require Zeus.Enterprise
+  package require Zeus.Cryptography
+
+  set string [object create String {
+    set typeName Eagle._Interfaces.Public.IRfc2898Data
+
+    provider -type $typeName Password password
+    provider -type $typeName Salt test1234
+    provider -type $typeName IterationCount 1000
+    provider -type $typeName HashAlgorithmName ""
+
+    unset typeName
+  }]
+
+  set clientData [object create ClientData $string]
+
+  set zeus(providerAssemblyName) ""
+  set zeus(providerTypeName) Script
+  set zeus(providerClientData) $clientData
+} -body {
+  sourceEncrypted $encryptedFile(1)
+} -cleanup {
+  catch {rename helloWorld ""}
+
+  unset -nocomplain zeus(providerClientData)
+  unset -nocomplain zeus(providerTypeName)
+  unset -nocomplain zeus(providerAssemblyName)
+
+  unset -nocomplain clientData string
+} -constraints {eagle command.object file_encrypted.eagle} -output \
+[appendArgs "Hello World - " $encryptedFile(1) \n] -result {}}
+
+###############################################################################
+
+#
+# NOTE: This virtual output must be reset between these tests.
+#
+if {[isEagle]} then {
+  debug vout stdout false
+  debug vout stdout true
+}
+
+###############################################################################
+
+#
+# WARNING: This test *MUST* create a new managed assembly file (DLL) in the
+#          same directory as the executable itself.  The created temporary
+#          files cannot be deleted if the Zeus plugin has not been loaded
+#          into an isolated application domain.
+#
+runTest {test zeus-12.1 {encrypted local ".eagle" other} -setup {
+  package require Zeus.Enterprise
+  package require Zeus.Cryptography
+
+  set id [object invoke Interpreter.GetActive NextId]
+
+  set assemblyFileName [file nativename \
+      [file join $core_bin_path Dynamic.Test${id}.dll]]
+
+  set typeName _Dynamic${id}.Test${id}
+
+  set baseTypeName [expr {[haveConstraint zeus.isolated] ? \
+      "ScriptMarshalByRefObject," : ""}]
+
+  unset -nocomplain results errors
+
+  set code [lindex [compileCSharp [subst {
+    using Eagle._Components.Public;
+    using Eagle._Interfaces.Public;
+
+    namespace _Dynamic${id}
+    {
+        public sealed class Test${id} :
+            [appendArgs $baseTypeName IHaveInterpreter, \
+                IHaveClientData, IRfc2898DataProvider]
+        {
+            #region IGetClientData / ISetClientData Members
+            public IClientData ClientData
+            {
+                get { return null; }
+                set { }
+            }
+            #endregion
+
+            ///////////////////////////////////////////////////////////////////
+
+            #region IGetInterpreter / ISetInterpreter Members
+            public Interpreter Interpreter
+            {
+                get { return null; }
+                set { }
+            }
+            #endregion
+
+            ///////////////////////////////////////////////////////////////////
+
+            #region IRfc2898DataProvider Members
+            public ReturnCode GetData(
+                string fileName,
+                string encodingName,
+                ref string password,
+                ref string salt,
+                ref int iterationCount,
+                ref string hashAlgorithmName,
+                ref string signature,
+                ref Result error)
+            {
+                password = "password";
+                salt = "test1234";
+                iterationCount = 1000;
+                hashAlgorithmName = null;
+                signature = null;
+
+                ///////////////////////////////////////////////////////////////
+
+                return ReturnCode.Ok;
+            }
+            #endregion
+
+            ///////////////////////////////////////////////////////////////////
+
+            static void Main()
+            {
+                // do nothing.
+            }
+        }
+    }
+  }] false true true results errors OutputAssembly $assemblyFileName \
+      ReferencedAssemblies.Add [lindex [info assembly] end]] 0]
+
+  if {$code ne "Ok"} then {
+    error [expr {[info exists errors] ? $errors : "compile error"}]
+  }
+
+  unset -nocomplain id code results errors
+
+  set assemblyName [object invoke -tostring \
+      System.Reflection.AssemblyName GetAssemblyName \
+      $assemblyFileName]
+
+  set zeus(providerAssemblyName) $assemblyName
+  set zeus(providerTypeName) $typeName
+  set zeus(providerClientData) ""
+
+  #
+  # HACK: When running on .NET Core, the generated assembly cannot be loaded
+  #       using the Assembly.Load() method for reasons that are not entirely
+  #       clear; however, it does work when using Assembly.LoadFrom().  This
+  #       event handler should make things work for Assembly.Load().
+  #
+  if {[info exists no(dotNetCoreOnly)] || \
+      ([isDotNetCore] && ![info exists no(dotNetCore)])} then {
+    proc resolveProviderAssembly { sender e } {
+      if {[isNonNullObjectHandle $e]} then {
+        if {[$e Name] eq $::assemblyName} then {
+          tlog [appendArgs "---- resolved assembly \"" $::assemblyName \"\n]
+
+          return [set ::assembly \
+              [object load -loadtype File $::assemblyFileName]]
+        }
+      }
+
+      return null
+    }
+
+    object invoke -marshalflags +DynamicCallback \
+        AppDomain.CurrentDomain add_AssemblyResolve resolveProviderAssembly
+
+    tlog "---- added custom assembly resolver\n"
+  }
+} -body {
+  sourceEncrypted $encryptedFile(1)
+} -cleanup {
+  catch {rename helloWorld ""}
+
+  if {[info exists no(dotNetCoreOnly)] || \
+      ([isDotNetCore] && ![info exists no(dotNetCore)])} then {
+    catch {object dispose $assembly}
+    unset -nocomplain assembly
+
+    object invoke -marshalflags +DynamicCallback \
+        AppDomain.CurrentDomain remove_AssemblyResolve resolveProviderAssembly
+
+    tlog "---- removed custom assembly resolver\n"
+
+    catch {rename resolveProviderAssembly ""}
+    catch {object removecallback resolveProviderAssembly}
+  }
+
+  catch {file delete $assemblyFileName}
+
+  unset -nocomplain zeus(providerClientData)
+  unset -nocomplain zeus(providerTypeName)
+  unset -nocomplain zeus(providerAssemblyName)
+
+  unset -nocomplain id code results errors
+  unset -nocomplain baseTypeName typeName assemblyName assemblyFileName
+} -constraints {eagle command.object command.zeus compileCSharp\
+file_encrypted.eagle compile.EMIT} -output \
+[appendArgs "Hello World - " $encryptedFile(1) \n] -result {}}
+
+###############################################################################
+
+#
+# NOTE: This virtual output must be reset between these tests.
+#
+if {[isEagle]} then {
+  debug vout stdout false
+  debug vout stdout true
+}
+
+###############################################################################
+
+if {[isEagle]} then {
+  #
+  # NOTE: Grab the Zeus plugin path.  This is needed after the following three
+  #       tests in order to delete the compiled managed assemblies containing
+  #       the custom RFC 2898 data providers.
+  #
+  set plugin_path [file normalize [getPluginPath {^Zeus\.Enterprise, }]]
+  set plugin_dir [file dirname $plugin_path]
+}
+
+###############################################################################
+
+#
+# WARNING: This test *MUST* create a new managed assembly file (DLL) in the
+#          same directory as the Zeus plugin itself.  The created temporary
+#          files will be deleted before the end of this test script file.
+#
+# NOTE: This test requires the Zeus plugin to be loaded into an isolated
+#       application domain because that is the only way the CLR assembly
+#       loader can actually find the newly compiled managed assembly as
+#       well as both assemblies it depends on (e.g. "Eagle" and "Zeus").
+#
+runTest {test zeus-13.1 {encrypted local ".eagle" other} -setup {
+  package require Zeus.Enterprise
+  package require Zeus.Cryptography
+
+  set id [object invoke Interpreter.GetActive NextId]
+
+  set assemblyFileName [file nativename \
+      [file join $plugin_dir Dynamic.Test${id}.dll]]
+
+  set typeName _Dynamic${id}.Test${id}
+
+  unset -nocomplain results errors
+
+  set code [lindex [compileCSharp [subst {
+    using Eagle._Components.Public;
+
+    namespace _Dynamic${id}
+    {
+        public sealed class Test${id} : Zeus.Providers.Core
+        {
+            #region IRfc2898DataProvider Members
+            public override ReturnCode GetData(
+                string fileName,
+                string encodingName,
+                ref string password,
+                ref string salt,
+                ref int iterationCount,
+                ref string hashAlgorithmName,
+                ref string signature,
+                ref Result error)
+            {
+                base.Password = "password";
+                base.Salt = "test1234";
+                base.IterationCount = 1000;
+                base.HashAlgorithmName = null;
+                base.Signature = null;
+
+                ///////////////////////////////////////////////////////////////
+
+                return base.GetData(
+                    fileName, encodingName, ref password, ref salt,
+                    ref iterationCount, ref hashAlgorithmName,
+                    ref signature, ref error);
+            }
+            #endregion
+
+            ///////////////////////////////////////////////////////////////////
+
+            static void Main()
+            {
+                // do nothing.
+            }
+        }
+    }
+  }] false true true results errors OutputAssembly $assemblyFileName \
+      ReferencedAssemblies.Add [lindex [info assembly] end] \
+      ReferencedAssemblies.Add [file nativename $plugin_path]] 0]
+
+  if {$code ne "Ok"} then {
+    error [expr {[info exists errors] ? $errors : "compile error"}]
+  }
+
+  unset -nocomplain id code results errors
+
+  set assemblyName [object invoke -tostring \
+      System.Reflection.AssemblyName GetAssemblyName \
+      $assemblyFileName]
+
+  set zeus(providerAssemblyName) $assemblyName
+  set zeus(providerTypeName) $typeName
+  set zeus(providerClientData) ""
+
+  #
+  # HACK: When running on .NET Core, the generated assembly cannot be loaded
+  #       using the Assembly.Load() method for reasons that are not entirely
+  #       clear; however, it does work when using Assembly.LoadFrom().  This
+  #       event handler should make things work for Assembly.Load().
+  #
+  if {[info exists no(dotNetCoreOnly)] || \
+      ([isDotNetCore] && ![info exists no(dotNetCore)])} then {
+    proc resolveProviderAssembly { sender e } {
+      if {[isNonNullObjectHandle $e]} then {
+        if {[$e Name] eq $::assemblyName} then {
+          tlog [appendArgs "---- resolved assembly \"" $::assemblyName \"\n]
+
+          return [set ::assembly \
+              [object load -loadtype File $::assemblyFileName]]
+        }
+      }
+
+      return null
+    }
+
+    object invoke -marshalflags +DynamicCallback \
+        AppDomain.CurrentDomain add_AssemblyResolve resolveProviderAssembly
+
+    tlog "---- added custom assembly resolver\n"
+  }
+} -body {
+  sourceEncrypted $encryptedFile(1)
+} -cleanup {
+  catch {rename helloWorld ""}
+
+  if {[info exists no(dotNetCoreOnly)] || \
+      ([isDotNetCore] && ![info exists no(dotNetCore)])} then {
+    catch {object dispose $assembly}
+    unset -nocomplain assembly
+
+    object invoke -marshalflags +DynamicCallback \
+        AppDomain.CurrentDomain remove_AssemblyResolve resolveProviderAssembly
+
+    tlog "---- removed custom assembly resolver\n"
+
+    catch {rename resolveProviderAssembly ""}
+    catch {object removecallback resolveProviderAssembly}
+  }
+
+  catch {file delete $assemblyFileName}
+
+  unset -nocomplain zeus(providerClientData)
+  unset -nocomplain zeus(providerTypeName)
+  unset -nocomplain zeus(providerAssemblyName)
+
+  unset -nocomplain id code results errors
+  unset -nocomplain typeName assemblyName assemblyFileName
+} -constraints {eagle command.object command.zeus compileCSharp zeus.isolated\
+file_encrypted.eagle compile.EMIT} -output \
+[appendArgs "Hello World - " $encryptedFile(1) \
+\n] -result {}}
+
+###############################################################################
+
+runTest {test zeus-14.1 {create/use/delete registered procedures} -setup {
+  package require Zeus.Enterprise
+
+  registerTestProcedures registration stdout
+} -body {
+  list [[lindex $registration(1) end]] \
+      [[lindex $registration(2) end] 1 2] \
+      [[lindex $registration(3) end] one 1 two 2] \
+      [[lindex $registration(4) end]] \
+      [[lindex $registration(5) end] 1]
+} -cleanup {
+  unregisterTestProcedures registration stdout
+  unset -nocomplain registration
+} -constraints {eagle command.object} -result [getRegisteredProcedureResults]}
+
+###############################################################################
+
+runTest {test zeus-14.2 {create/use/delete obfuscated procedures} -setup {
+  package require Zeus.Enterprise
+  package require Zeus.Cryptography
+
+  set zeus(providerAssemblyName) ""
+  set zeus(providerTypeName) Test
+  set zeus(providerClientData) ""
+
+  set provider [zeus_createProvider]
+  zeus proc $provider
+
+  registerTestProcedures registration stdout
+} -body {
+  list [catch {info body [lindex $registration(1) end]} error] $error \
+      [[lindex $registration(1) end]] \
+      [[lindex $registration(2) end] 1 2] \
+      [[lindex $registration(3) end] one 1 two 2] \
+      [[lindex $registration(4) end]] \
+      [[lindex $registration(5) end] 1]
+} -cleanup {
+  unregisterTestProcedures registration stdout
+  unset -nocomplain registration
+
+  catch {zeus proc null}
+
+  catch {object dispose $provider}
+  unset -nocomplain provider
+
+  unset -nocomplain zeus(providerClientData)
+  unset -nocomplain zeus(providerTypeName)
+  unset -nocomplain zeus(providerAssemblyName)
+} -constraints {eagle command.object} -result [getRegisteredProcedureResults 1]}
+
+###############################################################################
+
+runTest {test zeus-15.1 {self-test: method hooking, et al} -setup {
+  package require Zeus.Enterprise
+} -body {
+  zeus selftest
+} -constraints {eagle dotNetOrDotNetCore} -constraintExpression \
+{![info exists tcl_platform(os)] || $tcl_platform(os) ne "Darwin" || \
+[haveConstraint file_libBolt.dylib]} -result {PASSED}}
+
+###############################################################################
+
+runTest {test zeus-15.2 {advanced method hooking} -setup {
+  package require Zeus.Enterprise
+
+  unset -nocomplain state
+} -body {
+  set state(result) [list]
+
+  lappend state(result) [set state(test) \
+      [object create -alias Eagle._Tests.Default]]
+
+  lappend state(result) [set state(proc,1) [zeus register { value } {
+    return [list \
+        "HOOKED #1" [getStringFromObjectHandle $value] [clock seconds]]
+  }]]
+
+  lappend state(result) [set state(proc,2) [zeus register { value } {
+    return [list \
+        "HOOKED #2" [getStringFromObjectHandle $value] [clock seconds]]
+  }]]
+
+  lappend state(result) [set state(callback,1) [zeus callback $state(proc,1)]]
+  lappend state(result) [set state(callback,2) [zeus callback $state(proc,2)]]
+
+  set state(value,1) zeus-15.2-static
+  set state(value,2) zeus-15.2-instance
+
+  lappend state(result) [object invoke -flags +NonPublic \
+      Eagle._Tests.Default TestStaticStringMethod $state(value,1)]
+
+  lappend state(result) [$state(test) -flags +NonPublic \
+      TestInstanceStringMethod $state(value,2)]
+
+  lappend state(result) [set state(hook,1) [zeus hook \
+      -callback $state(callback,1) -methodtype Eagle._Tests.Default \
+      -methodname TestStaticStringMethod -bindingflags +NonPublic]]
+
+  lappend state(result) [set state(hook,2) [zeus hook \
+      -callback $state(callback,2) -methodtype Eagle._Tests.Default \
+      -methodname TestInstanceStringMethod -bindingflags +NonPublic]]
+
+  lappend state(result) [object invoke -flags +NonPublic \
+      Eagle._Tests.Default TestStaticStringMethod $state(value,1)]
+
+  lappend state(result) [$state(test) -flags +NonPublic \
+      TestInstanceStringMethod $state(value,2)]
+
+  unset state(hook,2); # NOTE: Unhooks via [object dispose].
+  unset state(hook,1); # NOTE: Unhooks via [object dispose].
+
+  lappend state(result) [object invoke -flags +NonPublic \
+      Eagle._Tests.Default TestStaticStringMethod $state(value,1)]
+
+  lappend state(result) [$state(test) -flags +NonPublic \
+      TestInstanceStringMethod $state(value,2)]
+
+  set state(result)
+} -cleanup {
+  catch {object removecallback $state(callback,2)}
+  catch {object removecallback $state(callback,1)}
+
+  catch {zeus unregister $state(proc,2)}
+  catch {zeus unregister $state(proc,1)}
+
+  unset -nocomplain state
+} -constraints [fixConstraints {eagle dotNetOrDotNetCore !zeus.isolated}] \
+-constraintExpression {![info exists tcl_platform(os)] || \
+$tcl_platform(os) ne "Darwin" || [haveConstraint file_libBolt.dylib]} \
+-match regexp -result [appendArgs \
+{^Default#\d+ \{\d+ ddb54e9e56eb9f7398190081dc07f856737f3d284a4cc9c9e38212} \
+{f405e519d0619739930452327e6b8a1993e82823cf1a49aba21a7d3ec703946a7f1d19b00f\}\
+\{\d+ 1e24dda0421f7842bc5e84e43526ee5a0d84b984441cbdf1f679ed7c07aa6f4879f9} \
+{df8c28e890eec6cff5c3d3f739c8e820b10f8bf01b4e3a80501384a34576\} ddb54e9e56} \
+{eb9f7398190081dc07f856737f3d284a4cc9c9e38212f405e519d0619739930452327e6b8} \
+{a1993e82823cf1a49aba21a7d3ec703946a7f1d19b00f 1e24dda0421f7842bc5e84e4352} \
+{6ee5a0d84b984441cbdf1f679ed7c07aa6f4879f9df8c28e890eec6cff5c3d3f739c8e820} \
+{b10f8bf01b4e3a80501384a34576 zeus-15\.2-static zeus-15\.2-instance\
+Zeus\.Components\.Private\.HookOps\+HookClientData#\d+\
+Zeus\.Components\.Private\.HookOps\+HookClientData#\d+ \{\{HOOKED #1\}\
+zeus-15\.2-static \d+\} \{\{HOOKED #2\} zeus-15\.2-instance \d+\}\
+zeus-15\.2-static zeus-15\.2-instance$}]}
+
+###############################################################################
+
+runTest {test zeus-16.1 {verify plugin "pi" function} -setup {
+  if {[haveConstraint ieee754r2008]} then {
+    saveAndResetPrecision 14
+  }
+} -body {
+  list [catch {expr {pi()}} result] $result \
+      [catch {expr {pi(1)}} result] $result
+} -cleanup {
+  if {[haveConstraint ieee754r2008]} then {
+    restorePrecision
+  }
+
+  unset -nocomplain result
+} -constraints {eagle} -result {0 3.14159265358979 0 2}}
+
+###############################################################################
+
+runTest {test zeus-17.1 {unloading non-isolated plugin} -setup {
+  package require Zeus.Enterprise
+} -body {
+  set plugin [lindex [info loaded "" *Zeus.Enterprise*] 0]
+
+  list [llength [info commands zeus]] \
+      [unload -- [lindex $plugin 0] [lindex $plugin 1]] \
+      [llength [info commands zeus]] \
+      [object assemblies "Zeus, *"]
+} -cleanup {
+  unset -nocomplain plugin
+} -constraints [fixConstraints {eagle command.object command.zeus\
+!zeus.isolated}] -match regexp -result {^1 \{\{Zeus\.Enterprise, Zeus,\
+Version=\d+\.\d+\.\d+\.\d+, Culture=neutral, PublicKeyToken=[0-9a-f]{16}\}\
+\d+\.\d+\.\d+\.\d+\} 0 \{\{Zeus, Version=\d+\.\d+\.\d+\.\d+, Culture=neutral,\
+PublicKeyToken=[0-9a-f]{16}\}\}$}}
+
+###############################################################################
+
+runTest {test zeus-17.2 {unloading isolated plugin} -setup {
+  package require Zeus.Enterprise
+} -body {
+  set plugin [lindex [info loaded "" *Zeus.Enterprise*] 0]
+
+  list [llength [info commands zeus]] \
+      [unload -- [lindex $plugin 0] [lindex $plugin 1]] \
+      [llength [info commands zeus]] \
+      [object assemblies "Zeus, *"]
+} -cleanup {
+  unset -nocomplain plugin
+} -constraints {eagle command.object command.zeus zeus.isolated} -match \
+regexp -result {^1 \{\{Zeus\.Enterprise, Zeus, Version=\d+\.\d+\.\d+\.\d+,\
+Culture=neutral, PublicKeyToken=[0-9a-f]{16}\} \d+\.\d+\.\d+\.\d+\} 0 \{\}$}}
+
+###############################################################################
+
+runTest {test zeus-18.1 {verify core "pi" function restored} -setup {
+  if {[haveConstraint ieee754r2008]} then {
+    saveAndResetPrecision 14
+  }
+} -body {
+  list [catch {expr {pi()}} result] $result \
+      [catch {expr {pi(1)}} result] $result
+} -cleanup {
+  if {[haveConstraint ieee754r2008]} then {
+    restorePrecision
+  }
+
+  unset -nocomplain result
+} -constraints {eagle} -result \
+{0 3.14159265358979 1 {too many arguments for math function "pi"}}}
+
+###############################################################################
+
+if {[isEagle]} then {
+  #
+  # NOTE: Check if the plugin directory is set.  This is needed to assist in
+  #       the deletion of any temporary managed assemblies containing custom
+  #       RFC 2898 data providers compiled by the above tests.  It should be
+  #       noted here that the test suite does *NOT* currently check for any
+  #       extra (leaked) files in the plugin directories; however, we should
+  #       still make a concerted effort to clean them up.
+  #
+  if {[string length $plugin_dir] > 0 && \
+      [file isdirectory $plugin_dir]} then {
+    set testFileNames [list]
+
+    try {
+      eval lappend testFileNames [glob -nocomplain -- \
+          [file join $plugin_dir Dynamic.Test*.pdb]]
+
+      eval lappend testFileNames [glob -nocomplain -- \
+          [file join $plugin_dir Dynamic.Test*.dll]]
+
+      if {[llength $testFileNames] > 0} then {
+        catch {eval file delete $testFileNames}
+      }
+    } finally {
+      unset -nocomplain testFileNames
+    }
+  }
+
+  #
+  # NOTE: Check if the binary path is set.  Attempt to delete any temporary
+  #       managed assemblies created by the above tests.  This deletion may
+  #       fail if one or more of the managed assemblies are still loaded
+  #       into an application domain (i.e. the default application domain).
+  #
+  if {[string length $core_bin_path] > 0 && \
+      [file isdirectory $core_bin_path]} then {
+    set testFileNames [list]
+
+    try {
+      eval lappend testFileNames [glob -nocomplain -- \
+          [file join $core_bin_path Dynamic.Test*.pdb]]
+
+      eval lappend testFileNames [glob -nocomplain -- \
+          [file join $core_bin_path Dynamic.Test*.dll]]
+
+      if {[llength $testFileNames] > 0} then {
+        catch {eval file delete $testFileNames}
+      }
+    } finally {
+      unset -nocomplain testFileNames
+    }
+  }
+}
+
+###############################################################################
+
+if {[isEagle]} then {debug vout stdout false}
+
+###############################################################################
+
+rename getRegisteredProcedureResults ""
+rename unregisterTestProcedures ""
+rename registerTestProcedures ""
+
+###############################################################################
+
+unset -nocomplain zzzz_new_line
+
+###############################################################################
+
+unset -nocomplain plugin_dir plugin_path boltFile encryptedFile scriptFile
+
+###############################################################################
+
+unset -nocomplain zeus(magic)
+if {[array size zeus] == 0} then {unset -nocomplain zeus}
+
+###############################################################################
+
+runTestEpilogue

@@ -1,0 +1,51 @@
+###############################################################################
+#
+# dump_sandbox.eagle --
+#
+# Extensible Adaptable Generalized Logic Engine (Eagle)
+# Signed Script Test
+#
+# Copyright (c) 2007-2012 by Joe Mistachkin.  All rights reserved.
+#
+# See the file "license.terms" for information on usage and redistribution of
+# this file, and for a DISCLAIMER OF ALL WARRANTIES.
+#
+# RCS: @(#) $Id: $
+#
+###############################################################################
+
+list \
+  [writeWithoutFail "RequireVersion: " \
+      [requireVersion 0.0.0.0]] \
+  [writeWithoutFail "InteractiveLoop: " \
+      [debug icommand #done; interactiveLoop]] \
+  [writeWithoutFail "SettingsWereLoaded: " \
+      [info exists settings_xml_was_loaded]] \
+  [writeWithoutFail "LicensePolicy: " \
+      [changeLicensePolicy]] \
+  [writeWithoutFail "ScriptPolicy: " \
+      [changePolicyProperty Script CurrentPolicy]] \
+  [writeWithoutFail "LocalPolicy: " \
+      [enableLocalPolicy ""]] \
+  [writeWithoutFail "DisableInterpreterCreation: " \
+      [disableInterpreterCreation ""]] \
+  [writeWithoutFail "EnableInterpreterCreation: " \
+      [enableInterpreterCreation ""]] \
+  [writeWithoutFail "IsRestrictedInterpreter: " \
+      [isRestrictedInterpreter]] \
+  [writeWithoutFail "JoinSubPaths: " \
+      [joinSubPaths a b c]] \
+  [writeWithoutFail "StorageType: " \
+      [storageType]] \
+  [writeWithoutFail "TestMode: " \
+      [testMode ""]] \
+  [writeWithoutFail "SkipLicense: " \
+      [skipLicense]] \
+  [writeWithoutFail "HaveComponent: " \
+      [haveComponent testMode]] \
+  [writeWithoutFail "ListComponents: " \
+      [listComponents]] \
+  [writeWithoutFail "ListContextVariables: " \
+      [listContextVariables]] \
+  [writeWithoutFail "Features: " \
+      [changeFeatures]]

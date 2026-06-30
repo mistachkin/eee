@@ -1,0 +1,310 @@
+###############################################################################
+#
+# local-storage-manager.eagle --
+#
+# Extensible Adaptable Generalized Logic Engine (Eagle)
+# Harpy Local Storage Manager
+#
+# Copyright (c) 2007-2012 by Joe Mistachkin.  All rights reserved.
+#
+# See the file "license.terms" for information on usage and redistribution of
+# this file, and for a DISCLAIMER OF ALL WARRANTIES.
+#
+# RCS: @(#) $Id: $
+#
+###############################################################################
+
+namespace eval ::Harpy::StorageManager::Local {
+  proc setup { enable } {
+    # <help>
+    # This procedure installs or removes the SQL statement set that the local
+    # storage manager uses to talk to its SQLite-backed storage table.  It
+    # exists so that [processRequest] can wrap each request in a paired
+    # setup/teardown -- the statements are present only while a request is in
+    # flight, leaving the calling scope clean before and after.
+    #
+    # How it works: when enable is true it runs an [uplevel 1] script in the
+    # caller's scope that sets the sql array with six entries -- "create"
+    # (a CREATE TABLE IF NOT EXISTS for the storage table with id, name, and
+    # value columns), "read" (SELECT value by name limit one), "write"
+    # (INSERT OR REPLACE name and value), "delete" (DELETE by name), "list"
+    # (SELECT name ordered ascending), and "cleanup" (VACUUM).  When enable
+    # is false it runs an [uplevel 1] script that unsets each of those same
+    # entries with [unset -nocomplain] in reverse order.
+    #
+    # Tricky details: the statements are installed in the CALLER'S scope via
+    # [uplevel 1], so the caller (typically [processRequest]) sees the sql
+    # array as its own local variable.  The "read" statement carries an ORDER
+    # BY id LIMIT 1 clause as belt-and-braces protection against duplicate
+    # rows -- the UNIQUE constraint on name is the real guarantee.  All
+    # statements are parameterized to avoid SQL injection through caller-
+    # supplied storage names or values.
+    #
+    # Arguments:
+    #   enable -- True to install the SQL statement set, false to remove it.
+    #
+    # Results:
+    #   Returns the empty string; its purpose is the side effect on the
+    #   caller's sql array.
+    # </help>
+
+    if {$enable} then {
+      uplevel 1 {
+        set sql(create) {
+          CREATE TABLE IF NOT EXISTS storage(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL UNIQUE,
+            value TEXT NOT NULL
+          );
+        }
+
+        set sql(read) {
+          SELECT value FROM storage WHERE name = ? ORDER BY id LIMIT 1;
+        }
+
+        set sql(write) {
+          INSERT OR REPLACE INTO storage (name, value) VALUES(?, ?);
+        }
+
+        set sql(delete) {
+          DELETE FROM storage WHERE name = ?;
+        }
+
+        set sql(list) {
+          SELECT name FROM storage ORDER BY name ASC;
+        }
+
+        set sql(cleanup) {
+          VACUUM;
+        }
+      }
+    } else {
+      uplevel 1 {
+        unset -nocomplain sql(cleanup)
+        unset -nocomplain sql(list)
+        unset -nocomplain sql(delete)
+        unset -nocomplain sql(write)
+        unset -nocomplain sql(read)
+        unset -nocomplain sql(create)
+      }
+    }
+  }
+
+  proc cleanupDb {} {
+    # <help>
+    # This procedure releases the SQLite database connection that
+    # [processRequest] opened, optionally running a cleanup statement first.
+    # It exists so the local storage manager never leaks an open connection,
+    # regardless of whether the request succeeded or raised an error -- it is
+    # called from the outer [finally] block of [processRequest].
+    #
+    # How it works: it runs an [uplevel 1] script in the caller's scope that
+    # only acts when a "db" variable exists there.  If the sql array still
+    # holds a "cleanup" entry it is executed against the connection inside a
+    # [catch] (so a failed VACUUM never masks the real error path).  The
+    # connection is then closed (also inside a [catch]) and the db variable
+    # is removed.
+    #
+    # Tricky details: every step that touches the database is wrapped in a
+    # [catch], which is deliberate -- this procedure runs in error-recovery
+    # paths and must complete its book-keeping even when the underlying
+    # connection is already broken.  The cleanup statement (VACUUM) is only
+    # attempted when [setup] was called with enable true earlier in the same
+    # request; otherwise sql(cleanup) is absent and the step is skipped.
+    #
+    # Arguments:
+    #   (none)
+    #
+    # Results:
+    #   Returns the empty string; its purpose is the side effect of closing
+    #   the caller's database connection and removing the db variable.
+    # </help>
+
+    uplevel 1 {
+      if {[info exists db]} then {
+        if {[info exists sql(cleanup)]} then {
+          catch {sql execute $db $sql(cleanup)}
+        }
+
+        catch {sql close $db}; unset db
+      }
+    }
+  }
+
+  proc getDbFileName {} {
+    # <help>
+    # This procedure returns the on-disk path of the SQLite database file
+    # used by the local storage manager.  It exists so [processRequest] has a
+    # single, intention-revealing source of truth for where to open the
+    # storage database, anchored to the directory this script was loaded
+    # from.
+    #
+    # How it works: it imports the namespace variable scriptPath (set at load
+    # time, near the bottom of this file, to the directory of [info script])
+    # and returns the path formed by joining scriptPath with "storage.db".
+    # If scriptPath has not been established, it raises an error naming the
+    # current namespace.
+    #
+    # Tricky details: the database file lives alongside the script that
+    # defines the local storage manager.  This means the data the local
+    # storage manager keeps is intentionally co-located with the script and
+    # therefore subject to the same filesystem access controls.
+    #
+    # Arguments:
+    #   (none)
+    #
+    # Results:
+    #   Returns the absolute path of the storage.db file; raises an error
+    #   when the namespace's scriptPath variable is not set.
+    # </help>
+
+    variable scriptPath
+
+    if {![info exists scriptPath]} then {
+      error [appendArgs \
+          "script path is not set for namespace \"" \
+          [namespace current] \"]
+    }
+
+    return [file join $scriptPath storage.db]
+  }
+
+  proc processRequest { args } {
+    # <help>
+    # This procedure is the local storage manager's single entry point: the
+    # core Harpy licensing code reaches it through the global
+    # "::storageManager" alias and asks it to read, write, delete, or list a
+    # storage entry on this machine.  It exists so the local backend can
+    # service those four methods against a SQLite database living next to
+    # this script.
+    #
+    # How it works: it installs the SQL statement set via [setup true],
+    # arranged in two nested [try] blocks so cleanup is guaranteed.  Inside
+    # the outer [try] it emits a "LOCAL_BEFORE" trace via [logRequest] (with
+    # a "LOCAL_AFTER" counterpart in the outer [finally]).  Inside the inner
+    # [try] it opens the SQLite connection with [getDbFileName], runs the
+    # create-table statement, extracts the "method" entry from the request
+    # dictionary, and dispatches on it: read selects the value for the
+    # qualified name and errors when no row is returned; write performs an
+    # insert-or-replace; delete removes the row and errors when no row was
+    # affected; list returns the result of [filterList] applied to the raw
+    # name list (which restricts the list to this machine and test run).
+    # Any other method value raises an error naming the offending method.
+    # The inner [finally] emits the LOCAL_AFTER trace, and the outer
+    # [finally] invokes [cleanupDb] and [setup false] to close the connection
+    # and unset the SQL statement set.
+    #
+    # Tricky details: the qualified name supplied to each SQL statement comes
+    # from [getName], which prefixes the caller-supplied logical name with
+    # the machine Id (and the test run Id when available) -- this is what
+    # gives the shared storage table per-machine and per-test-run isolation.
+    # SQL parameter binding via the dollar-param lists is used throughout, so
+    # caller-supplied names and values cannot inject SQL.  The double
+    # [finally] structure ensures that the LOCAL_AFTER trace is emitted even
+    # when the inner block errors, and that the database is closed even when
+    # the LOCAL_AFTER trace itself errors.
+    #
+    # Arguments:
+    #   args -- The flattened request dictionary supplied by the core
+    #           licensing code; must contain a "method" key whose value is
+    #           one of read, write, delete, or list, plus the keys those
+    #           methods require ("name", "value", "machineId", and so on).
+    #
+    # Results:
+    #   Returns the requested value for read, the row count for write, an
+    #   empty string for delete, and the filtered list of logical names for
+    #   list; raises an error for an unsupported method, a missing row on
+    #   read or delete, or any underlying SQLite failure.
+    # </help>
+
+    setup true
+
+    try {
+      eval logRequest result LOCAL_BEFORE $args
+
+      try {
+        set fileName [getDbFileName]
+
+        set db [sql open \
+            -type SQLite [subst {Data Source=${fileName};}]]
+
+        sql execute $db $sql(create)
+
+        set method [getDictionaryValue $args method]
+
+        switch -exact -- $method {
+          read {
+            set name [eval getName $args]
+
+            set dataReader [sql execute \
+                -alias -execute reader \
+                -format dataReader $db \
+                $sql(read) [list param1 \
+                String $name]]
+
+            if {![$dataReader Read]} then {
+              error "storage name not found"
+            }
+
+            return [set result \
+                [$dataReader GetValue 0]]
+          }
+          write {
+            set name [eval getName $args]
+
+            return [set result \
+                [sql execute $db $sql(write) \
+                [list param1 String $name] \
+                [list param2 String \
+                [getDictionaryValue $args \
+                value]]]]
+          }
+          delete {
+            set name [eval getName $args]
+
+            if {[sql execute $db $sql(delete) \
+                [list param1 String $name]] != 1} then {
+              error "storage name not found"
+            }
+
+            return [set result ""]
+          }
+          list {
+            return [set result \
+                [eval filterList [list [sql \
+                execute -execute reader \
+                -format list $db $sql(list)]] \
+                $args]]
+          }
+          default {
+            error [set result [appendArgs \
+                "unsupported storage method \"" \
+                $method \"]]
+          }
+        }
+      } finally {
+        eval logRequest result LOCAL_AFTER $args
+      }
+    } finally {
+      cleanupDb; setup false
+    }
+  }
+
+  package require Harpy.StorageManager.Shared 1.0
+
+  namespace eval ::Harpy::StorageManager::Local {
+    namespace import ::Harpy::StorageManager::Shared::*
+  }
+
+  namespace export processRequest
+
+  namespace eval :: {
+    namespace import -force ::Harpy::StorageManager::Local::*
+  }
+
+  interp alias {} storageManager {} processRequest
+
+  variable scriptPath [file dirname [info script]]
+
+  package provide Harpy.StorageManager.Local 1.0
+}

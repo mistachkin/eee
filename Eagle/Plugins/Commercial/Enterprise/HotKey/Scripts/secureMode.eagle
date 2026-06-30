@@ -1,0 +1,56 @@
+###############################################################################
+#
+# secureMode.eagle --
+#
+# Extensible Adaptable Generalized Logic Engine (Eagle)
+# Script To Enable "Secure-Mode"
+#
+# Copyright (c) 2007-2012 by Joe Mistachkin.  All rights reserved.
+#
+# See the file "license.terms" for information on usage and redistribution of
+# this file, and for a DISCLAIMER OF ALL WARRANTIES.
+#
+# RCS: @(#) $Id: $
+#
+###############################################################################
+
+#
+# NOTE: Make sure the necessary package locations are in the auto-path.
+#
+package require Eagle.Test
+maybeAddToAutoPath [info binary]
+
+#
+# NOTE: This must be done first because all other plugins require the base
+#       license certificate checking functionality.  Also, this installs the
+#       secure script, file, and stream policies.
+#
+package require Licensing.Enterprise
+
+#
+# NOTE: Configure the secure script, file, stream, and other policies.  Also
+#       note that setting the "VerifyFile" for the stream policy will most
+#       likely cause it to fail all the time.
+#
+security true; # WAS: [certificate policy -enabled true]
+
+#
+# NOTE: Load the plugin that provides the script certificates for the various
+#       pieces of the standard Eagle script library, including the testing
+#       package.
+#
+package require Badge.Enterprise
+
+#
+# NOTE: In order to actually make use of script policy and certificates, we
+#       now need to attempt to load the bootstrap keyring(s).
+#
+keyring bootstrap
+
+#
+# NOTE: Enable full plugin isolation (i.e. using non-default CLR application
+#       domains).  Please note that some plugins may fail to load in this
+#       configuration; however, it allows for plugins [with it enabled] to be
+#       fully and cleanly unloaded.
+#
+package require Eagle.Test; enablePluginFlags Isolated true

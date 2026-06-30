@@ -1,0 +1,39 @@
+#
+# NOTE: Make the text of this demo script file more visible.
+#
+set fg [host color -fg white]
+
+#
+# NOTE: Enable (optional) enforcement of script signing policies.
+#
+source enableSecurity
+
+#
+# NOTE: Enable (optional) use of the Harpy plugin root public key
+#       to verify file and script signatures.
+#
+if {[info exists env(SCRATCH_ROOT)]} then {
+  keyring merge [file join \
+      $env(SCRATCH_ROOT) eagle Harpy KeyRings \
+      keyRing.enterprise.production.eagle]
+}
+
+#
+# NOTE: Enable use of the Zeus update hook, which then allows for
+#       use of encrypted update scripts.
+#
+#zeus 1
+
+#
+# NOTE: Run the update check, which should result in three scripts
+#       being evaluated successfully.  For each, the string "Hello
+#       World" should be shown, followed by the full URI of that
+#       particular script.
+#
+#check 1
+
+#
+# NOTE: Finally, always return control to the caller.
+#
+host color -fg $fg; unset fg
+demo shutdown

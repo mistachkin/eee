@@ -1,0 +1,80 @@
+###############################################################################
+#
+# ksource_commands.eagle --
+#
+# Extensible Adaptable Generalized Logic Engine (Eagle)
+# Signed Script Test
+#
+# Copyright (c) 2007-2012 by Joe Mistachkin.  All rights reserved.
+#
+# See the file "license.terms" for information on usage and redistribution of
+# this file, and for a DISCLAIMER OF ALL WARRANTIES.
+#
+# RCS: @(#) $Id: $
+#
+###############################################################################
+
+list \
+  [info exists settings_xml_was_loaded] \
+  [requireVersion 0.0.0.0] \
+  [debug icommand #done; interactiveLoop] \
+  [storageType] \
+  [storageType Interpreter] \
+  [storageType] \
+  [testMode] \
+  [testMode true] \
+  [testMode] \
+  [testMode false] \
+  [testMode ""] \
+  [testMode] \
+  [skipLicense] \
+  [skipLicense true Any] \
+  [skipLicense] \
+  [skipLicense false None] \
+  [skipLicense] \
+  [skipLicense "" ""] \
+  [skipLicense] \
+  [haveComponent ""] \
+  [haveComponent somethingElse] \
+  [haveComponent testMode] \
+  [haveComponent LICENSING] \
+  [requireComponent testMode] \
+  [requireComponent LICENSING] \
+  [listComponents] \
+  [listContextVariables] \
+  [set savedFeatures [changeFeatures]] \
+  [changeFeatures =X] \
+  [changeFeatures] \
+  [requireFeatures] \
+  [requireFeatures X] \
+  [requireFeatures] \
+  [changeFeatures [appendArgs = $savedFeatures]] \
+  [changeLicensePolicy =Invalid] \
+  [changeLicensePolicy] \
+  [changePolicyProperty Script KeyName one] \
+  [changePolicyProperty Script KeyRingName two] \
+  [changePolicyProperty Script CurrentPolicy =Invalid] \
+  [changePolicyProperty Script ScriptFlags =Invalid] \
+  [changePolicyProperty Script KeyName] \
+  [changePolicyProperty Script KeyRingName] \
+  [changePolicyProperty Script CurrentPolicy] \
+  [changePolicyProperty Script ScriptFlags] \
+  [disableInterpreterCreation ""] \
+  [enableInterpreterCreation ""] \
+  [enableLocalPolicy ""] \
+  [enableLocalPolicy true] \
+  [evaluateWithoutError {error "this is an error"}] \
+  [isRestrictedInterpreter] \
+  [joinSubPaths a b c] \
+  [maybeEvaluate {0} {error wrong 1} else {}] \
+  [maybeEvaluate {1} {} else {error wrong 2}] \
+  [set id [evaluateInSandbox $infoScriptFile sandboxResults]] \
+  [waitForSandbox $id] \
+  [writeWithoutFail this] \
+  [writeWithoutFail "that other"] \
+  [requireLicense] \
+  [requireNetwork License] \
+  [requireNetwork License true] \
+  [requireNetwork License] \
+  [requireNetwork License false] \
+  [requireNetwork License]

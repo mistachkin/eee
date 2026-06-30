@@ -1,0 +1,189 @@
+###############################################################################
+#
+# encrypt-self.eagle --
+#
+# Extensible Adaptable Generalized Logic Engine (Eagle)
+# Enterprise Edition Zeus Library Encryption Tool
+#
+# Copyright (c) 2007-2012 by Joe Mistachkin.  All rights reserved.
+#
+# See the file "license.terms" for information on usage and redistribution of
+# this file, and for a DISCLAIMER OF ALL WARRANTIES.
+#
+# RCS: @(#) $Id: $
+#
+###############################################################################
+
+proc usage { error } {
+  # <help>
+  # This procedure prints the command-line usage summary for the self-encryption
+  # tool (the one that re-encrypts the Zeus library script using parameters
+  # baked into the Zeus.Enterprise assembly) and then terminates the process
+  # with a failure status.  It is the single entry point for the "you called me
+  # incorrectly" path and is invoked when the tool is run with more than the
+  # two supported positional arguments.
+  #
+  # How it works: when the error argument is a non-empty string, it is printed
+  # to stdout first; the usage line is then printed naming the host shell
+  # executable, this script, and the supported optional positional arguments
+  # (inFileName and outFileName).  Finally it calls [exit 1].
+  #
+  # Tricky details: this procedure never returns to its caller -- it always
+  # exits the process with a non-zero (failure) status, so it must only be
+  # used on terminal error paths.  Unlike the Harpy signing tool, output goes
+  # directly to stdout via [puts] rather than through a helper, because this
+  # tool deliberately keeps its surface area minimal.
+  #
+  # Arguments:
+  #   error -- An optional leading error message.  When non-empty it is shown
+  #            before the usage text; pass an empty string to show plain usage.
+  #
+  # Results:
+  #   Does not return; the process exits with status code 1.
+  # </help>
+
+  if {[string length $error] > 0} then {puts stdout $error}
+
+  puts stdout "usage:\
+[file tail [getShellExecutableName]]\
+[file tail [info script]] \[inFileName\] \[outFileName\]"
+
+  #
+  # NOTE: Indicate to the caller, if any, that we have failed.
+  #
+  exit 1
+}
+
+if {[llength $argv] >= 0 && [llength $argv] <= 2} then {
+  #
+  # NOTE: This tool requires Eagle.
+  #
+  package require Eagle
+
+  #
+  # NOTE: This tool requires the enterprise encryption features.
+  #
+  package require Zeus.Enterprise
+  package require Zeus.Cryptography
+
+  #
+  # NOTE: What is the default base file name?
+  #
+  set fileName(only) zeus.eagle
+
+  #
+  # NOTE: Grab the first argument to this tool (the name of the script file
+  #       to encrypt).
+  #
+  if {[llength $argv] >= 1} then {
+    set fileName(input) [file normalize [lindex $argv 0]]
+  } else {
+    set fileName(input) ""
+  }
+
+  if {[string length $fileName(input)] == 0} then {
+    if {![info exists env(EAGLE)]} then {
+      error "the EAGLE environment variable is not set"
+    }
+
+    set fileName(input) [file normalize [file join \
+        $env(EAGLE) Plugins Commercial Enterprise Zeus lib \
+        $fileName(only)]]
+  }
+
+  #
+  # NOTE: Grab the second argument to this tool (the name of the file to
+  #       write the encrypted script to).
+  #
+  if {[llength $argv] >= 2} then {
+    set fileName(output) [file normalize [lindex $argv 1]]
+  } else {
+    set fileName(output) ""
+  }
+
+  if {[string length $fileName(output)] == 0} then {
+    if {![info exists env(EAGLE)]} then {
+      error "the EAGLE environment variable is not set"
+    }
+
+    set fileName(output) [file normalize [file join \
+        $env(EAGLE) Plugins Commercial Enterprise Zeus Generated \
+        $fileName(only)]]
+  }
+
+  #
+  # NOTE: Grab the third argument to this tool (the password the encryption
+  #       key will be based on).
+  #
+  set encoding [object invoke \
+      -flags +NonPublic Zeus.Enterprise SelfEncoding]
+
+  if {[string length $encoding] == 0} then {
+    set encoding null
+  }
+
+  set password [object invoke \
+      -flags +NonPublic Zeus.Enterprise SelfPassword]
+
+  if {[string length $password] == 0} then {
+    set password null
+  }
+
+  set salt [object invoke \
+      -flags +NonPublic Zeus.Enterprise SelfSalt]
+
+  if {[string length $salt] == 0} then {
+    set salt null
+  }
+
+  set iterationCount [object invoke \
+      -flags +NonPublic Zeus.Enterprise SelfIterationCount]
+
+  if {[string length $iterationCount] == 0} then {
+    set iterationCount 0
+  }
+
+  set hashAlgorithmName [object invoke \
+      -flags +NonPublic Zeus.Enterprise SelfHashAlgorithmName]
+
+  if {[string length $hashAlgorithmName] == 0} then {
+    set hashAlgorithmName null
+  }
+
+  #
+  # NOTE: Read the library script from the input file and attempt to encrypt
+  #       it using the built-in (private) method.
+  #
+  set data(input) [readFile $fileName(input)]
+  set data(output) $data(input)
+  set error null
+
+  set code [object invoke -flags +NonPublic \
+      Zeus.Components.Private.CryptographyOps Transform \
+      $encoding $password $salt $iterationCount $hashAlgorithmName \
+      true data(output) error]
+
+  if {$code ne "Ok"} then {
+    error $error
+  }
+
+  #
+  # NOTE: Write the encrypted library script to the output file.
+  #
+  writeFile $fileName(output) $data(output)
+
+  #
+  # NOTE: Show that we encrypted it.
+  #
+  puts stdout [appendArgs \
+      "encrypted \"" $fileName(input) "\", wrote \"" $fileName(output) \"]
+
+  #
+  # NOTE: Play nice and cleanup all the variables we created during the
+  #       whole the encryption process.
+  #
+  unset -nocomplain -maybezerostring -purge -- fileName encoding password \
+      salt iterationCount hashAlgorithmName data error; debug collect
+} else {
+  usage ""
+}

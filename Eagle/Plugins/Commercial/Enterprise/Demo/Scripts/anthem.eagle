@@ -1,0 +1,133 @@
+set fg [host color -fg white]
+
+if {0} then {
+  Anthem: A Novel by Ayn Rand
+  ============================================================================
+
+  Author's Foreword
+
+  This story was written in 1937.
+
+  I have edited it for this publication, but have confined the editing to its
+  style; I have reworded some passages and cut out some excessive language. No
+  idea or incident was added or omitted; the theme, content and structure are
+  untouched. The story remains as it was. I have lifted its face, but not its
+  spine or spirit; these did not need lifting.
+
+  Some of those who read the story when it was first written, told me that I
+  was unfair to the ideals of collectivism; this was not, they said, what
+  collectivism preaches or intends; collectivists do not mean or advocate such
+  things; nobody advocates them.
+
+  I shall merely point out that the slogan "Production for use and not for
+  profit" is now accepted by most men as commonplace, and a commonplace
+  stating a proper, desirable goal. If any intelligible meaning can be
+  discerned in that slogan at all, what is it, if not the idea that the motive
+  of a man's work must be the needs of others, not his own need, desire or
+  gain?
+
+  Compulsory labor conscription is now practiced or advocated in every country
+  on earth. What is it based on, if not the idea that the state is best
+  qualified to decide where a man can be useful to others, such usefulness
+  being the only consideration, and that his own aims, desires, or happiness
+  should be ignored as of no importance?
+
+  We have Councils of Vocations, Councils of Eugenics, every possible kind of
+  Council, including a World Council -- and if these do not as yet hold total
+  power over us, is it from lack of intention?
+
+  "Social gains," "social aims," "social objectives" have become the daily
+  bromides of our language. The necessity of a social justification for all
+  activities and all existence is now taken for granted. There is no proposal
+  outrageous enough but what its author can get a respectful hearing and
+  approbation if he claims that in some undefined way it is for "the common
+  good."
+
+  Some might think -- though I don't -- that nine years ago there was some
+  excuse for men not to see the direction in which the world was going. Today,
+  the evidence is so blatant that no excuse can be claimed by anyone any
+  longer. Those who refuse to see it now are neither blind nor innocent.
+
+  The greatest guilt today is that of people who accept collectivism by moral
+  default; the people who seek protection from the necessity of taking a
+  stand, by refusing to admit to themselves the nature of that which they are
+  accepting; the people who support plans specifically designed to achieve
+  serfdom, but hide behind the empty assertion that they are lovers of
+  freedom, with no concrete meaning attached to the word; the people who
+  believe that the content of ideas need not be examined, that principles need
+  not be defined, and that facts can be eliminated by keeping one's eyes
+  shut. They expect, when they find themselves in a world of bloody ruins and
+  concentration camps, to escape moral responsibility by wailing: "But I
+  didn't mean this!"
+
+  Those who want slavery should have the grace to name it by its proper name.
+  They must face the full meaning of that which they are advocating or
+  condoning; the full, exact, specific meaning of collectivism, of its logical
+  implications, of the principles upon which it is based, and of the ultimate
+  consequences to which these principles will lead.
+
+  They must face it, then decide whether this is what they want or not.
+
+  --Ayn Rand.
+  April, 1946
+
+  ----------------------------------------------------------------------------
+  Chapter I (excerpt).
+
+  It is a sin to write this. It is a sin to think words no others think and to
+  put them down upon a paper no others are to see. It is base and evil. It is
+  as if we were speaking alone to no ears but our own. And we know well that
+  there is no transgression blacker than to do or think alone. We have broken
+  the laws. The laws say that men may not write unless the Council of
+  Vocations bid them so. May we be forgiven!
+
+  But this is not the only sin upon us. We have committed a greater crime, and
+  for this crime there is no name. What punishment awaits us if it be
+  discovered we know not, for no such crime has come in the memory of men and
+  there are no laws to provide for it.
+
+  It is dark here. The flame of the candle stands still in the air. Nothing
+  moves in this tunnel save our hand on the paper. We are alone here under the
+  earth. It is a fearful word, alone. The laws say that none among men may be
+  alone, ever and at any time, for this is the great transgression and the
+  root of all evil. But we have broken many laws. And now there is nothing
+  here save our one body, and it is strange to see only two legs stretched on
+  the ground, and on the wall before us the shadow of our one head.
+
+  The walls are cracked and water runs upon them in thin threads without
+  sound, black and glistening as blood. We stole the candle from the larder of
+  the Home of the Street Sweepers. We shall be sentenced to ten years in the
+  Palace of Corrective Detention if it be discovered. But this matters not. It
+  matters only that the light is precious and we should not waste it to write
+  when we need it for that work which is our crime. Nothing matters save the
+  work, our secret, our evil, our precious work. Still, we must also write,
+  for -- may the Council have mercy upon us! -- we wish to speak for once to
+  no ears but our own.
+
+  Our name is Equality 7-2521, as it is written on the iron bracelet which all
+  men wear on their left wrists with their names upon it. We are twenty-one
+  years old. We are six feet tall, and this is a burden, for there are not
+  many men who are six feet tall. Ever have the Teachers and the Leaders
+  pointed to us and frowned and said: "There is evil in your bones, Equality
+  7-2521, for your body has grown beyond the bodies of your brothers." But we
+  cannot change our bones nor our body.
+
+  We were born with a curse. It has always driven us to thoughts which are
+  forbidden. It has always given us wishes which men may not wish. We know
+  that we are evil, but there is no will in us and no power to resist it. This
+  is our wonder and our secret fear, that we know and do not resist.
+
+  We strive to be like all our brother men, for all men must be alike. Over
+  the portals of the Palace of the World Council, there are words cut in the
+  marble, which we repeat to ourselves whenever we are tempted:
+
+  "We are one in all and all in one.
+  There are no men but only the great WE,
+  One, indivisible and forever."
+
+  We repeat this to ourselves, but it helps us not.
+  ----------------------------------------------------------------------------
+}
+
+host color -fg $fg; unset fg
+demo shutdown

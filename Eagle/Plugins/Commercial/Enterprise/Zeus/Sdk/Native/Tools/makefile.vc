@@ -1,0 +1,35 @@
+###############################################################################
+#
+# makefile.vc --
+#
+# Extensible Adaptable Generalized Logic Engine (Eagle)
+#
+# Copyright (c) 2007-2012 by Joe Mistachkin.  All rights reserved.
+#
+# See the file "license.terms" for information on usage and redistribution of
+# this file, and for a DISCLAIMER OF ALL WARRANTIES.
+#
+# RCS: @(#) $Id: $
+#
+###############################################################################
+
+!IF "$(CFG)" == ""
+CFG = Release
+!ENDIF
+
+SRC = ..\bolt.c
+DLL = Bolt.dll
+
+!IF "$(CFG)" == "Debug"
+CFLAGS = /nologo /W3 /LD /MDd /Od /Zi /D_DEBUG=1
+!ELSE
+CFLAGS = /nologo /W3 /LD /MD /O2 /DNDEBUG=1
+!ENDIF
+
+all: $(DLL)
+
+$(DLL): $(SRC)
+	cl $(CFLAGS) /Fe$(DLL) $(SRC)
+
+clean:
+	-del /q Bolt.dll Bolt.lib Bolt.exp *.obj *.pdb 2>nul

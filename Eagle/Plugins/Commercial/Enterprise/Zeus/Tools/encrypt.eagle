@@ -1,0 +1,245 @@
+###############################################################################
+#
+# encrypt.eagle --
+#
+# Extensible Adaptable Generalized Logic Engine (Eagle)
+# Enterprise Edition Script Encryption Tool
+#
+# Copyright (c) 2007-2012 by Joe Mistachkin.  All rights reserved.
+#
+# See the file "license.terms" for information on usage and redistribution of
+# this file, and for a DISCLAIMER OF ALL WARRANTIES.
+#
+# RCS: @(#) $Id: $
+#
+###############################################################################
+
+proc usage { error } {
+  # <help>
+  # This procedure prints the command-line usage summary for the general script
+  # encryption tool and then terminates the process, signaling failure to
+  # whatever invoked it.  It exists as the single entry point for the "you
+  # called me incorrectly" path, and is invoked when the tool is run with
+  # fewer than five or more than eight positional arguments.
+  #
+  # How it works: when the error argument is a non-empty string, it is printed
+  # to stdout first; the usage line is then printed naming the host shell
+  # executable, this script, and the supported positional arguments (required
+  # inFileName, outFileName, password, salt, and iterationCount; optional
+  # hashAlgorithmName, encodingName, and debug).  Finally it calls [exit 1].
+  #
+  # Tricky details: this procedure never returns to its caller -- it always
+  # exits the process with a non-zero (failure) status, so it must only be
+  # used on terminal error paths.  Output goes directly to stdout via [puts]
+  # rather than through any helper procedure.
+  #
+  # Arguments:
+  #   error -- An optional leading error message.  When non-empty it is shown
+  #            before the usage text; pass an empty string to show plain usage.
+  #
+  # Results:
+  #   Does not return; the process exits with status code 1.
+  # </help>
+
+  if {[string length $error] > 0} then {puts stdout $error}
+
+  puts stdout "usage:\
+[file tail [getShellExecutableName]]\
+[file tail [info script]]\
+<inFileName> <outFileName> <password> <salt> <iterationCount>\
+\[hashAlgorithmName\] \[encodingName\] \[debug\]"
+
+  #
+  # NOTE: Indicate to the caller, if any, that we have failed.
+  #
+  exit 1
+}
+
+if {[llength $argv] >= 5 && [llength $argv] <= 8} then {
+  #
+  # NOTE: This tool requires Eagle.
+  #
+  package require Eagle
+
+  #
+  # NOTE: This tool requires the enterprise encryption features.
+  #
+  package require Zeus.Enterprise
+  package require Zeus.Cryptography
+
+  #
+  # NOTE: Set the directory where this script is running from.
+  #
+  set path [file normalize [file dirname [info script]]]
+
+  #
+  # NOTE: Grab the first argument to this tool (the name of the script file
+  #       to encrypt).
+  #
+  set fileName(input) [file normalize [lindex $argv 0]]
+
+  #
+  # NOTE: Grab the second argument to this tool (the name of the file to
+  #       write the encrypted script to).
+  #
+  set fileName(output) [file normalize [lindex $argv 1]]
+
+  #
+  # NOTE: Set the file name of the header used to help build the encrypted
+  #       script file.
+  #
+  set fileName(header) [file join $path header.eagle]
+
+  #
+  # NOTE: Grab the third argument to this tool (the password the encryption
+  #       key will be based on).
+  #
+  set password [lindex $argv 2]
+
+  if {[string length $password] == 0} then {
+    set passwordFileName [file join [pwd] password.eagle]
+
+    puts stdout [appendArgs \
+        "trying for password file \"" $passwordFileName "\"..."]
+
+    source $passwordFileName
+  }
+
+  #
+  # NOTE: Grab the fourth argument to this tool (the salt bytes to use when
+  #       generating the encryption key).
+  #
+  set salt [lindex $argv 3]
+
+  #
+  # NOTE: Grab the fifth argument to this tool (the iteration count to use
+  #       when generating the encryption key).
+  #
+  set iterationCount [lindex $argv 4]
+
+  #
+  # NOTE: Grab the sixth argument to this tool (the hash algorithm name to
+  #       use; otherwise, use the default hash algorithm).
+  #
+  if {[llength $argv] >= 6} then {
+    set hashAlgorithmName [lindex $argv 5]
+  } else {
+    set hashAlgorithmName ""
+  }
+
+  #
+  # NOTE: Grab the seventh argument to this tool (the name of the encoding
+  #       to use; otherwise, use the default encoding).
+  #
+  if {[llength $argv] >= 7} then {
+    set encodingName [lindex $argv 6]
+  } else {
+    set encodingName ""
+  }
+
+  #
+  # NOTE: Grab the eighth argument to this tool (the boolean to indicate
+  #       whether or not we are operating in debug mode).
+  #
+  if {[llength $argv] >= 8} then {
+    set debug [lindex $argv 7]
+  } else {
+    set debug false
+  }
+
+  #
+  # NOTE: Read the decrypted script from the input file.
+  #
+  set data(input) [readFile $fileName(input)]
+
+  #
+  # NOTE: Calculate the hash for the decrypted input data.
+  #
+  set hash(input) [hash normal sha1 $data(input)]
+
+  #
+  # NOTE: Grab (and cache) the new-line for this environment.
+  #
+  set newLine [info newline]
+
+  #
+  # NOTE: Encrypt the script using the provided password, salt, iteration
+  #       count, and hash algorithm name.
+  #
+  set data(encrypted) [encryptScript \
+      $data(input) $encodingName $password $salt $iterationCount \
+      $hashAlgorithmName]
+
+  #
+  # NOTE: Start the output data with the magic signature, the header, and
+  #       the encrypted base64 encoded script.
+  #
+  set data(output) [appendArgs \
+      $zeus(magic) $newLine [readFile $fileName(header)] $data(encrypted)]
+
+  #
+  # NOTE: Calculate the hash for the encrypted base64 encoded script.
+  #
+  set hash(output) [hash normal sha1 $data(encrypted)]
+
+  #
+  # NOTE: Append some summary and diagnostic information to the encrypted
+  #       script data in the form of comments.
+  #
+  set createdBy [appendArgs $::tcl_platform(host) \\ $::tcl_platform(user)]
+  set engine [info engine Name]
+  set packages [list]
+
+  foreach package [package loaded] {
+    if {[string match Zeus.* $package]} then {
+      lappend packages [appendArgs $package " v" [package provide $package]]
+    }
+  }
+
+  append data(output) $newLine # $newLine \
+    "#       algorithm: " [getEncryptionAlgorithmName] $newLine \
+    "#      created by: " $createdBy $newLine \
+    "#      created on: " [clock format [clock seconds] -iso] $newLine \
+    "#    created with: " $engine " v" [package provide $engine] $newLine \
+    "#    created with: " [join $packages ", "] $newLine \
+    "#      input hash: " [string tolower $hash(input)] $newLine \
+    "#     output hash: " [string tolower $hash(output)] $newLine
+
+  #
+  # NOTE: In debug mode only, emit the password, salt, iteration count, and
+  #       hash algorithm name used.
+  #
+  if {$debug} then {
+    append data(output) \
+        "#        password: " $password $newLine \
+        "#            salt: " $salt $newLine \
+        "# iteration count: " $iterationCount $newLine \
+        "#  hash algorithm: " $hashAlgorithmName $newLine
+  }
+
+  #
+  # NOTE: Append the trailing comment and blank lines.
+  #
+  append data(output) # $newLine
+
+  #
+  # NOTE: Write the encrypted script to the output file.
+  #
+  writeFile $fileName(output) $data(output)
+
+  #
+  # NOTE: Show that we encrypted it.
+  #
+  puts stdout [appendArgs \
+      "encrypted \"" $fileName(input) "\", wrote \"" $fileName(output) \"]
+
+  #
+  # NOTE: Play nice and cleanup all the variables we created during the
+  #       whole the encryption process.
+  #
+  unset -nocomplain -maybezerostring -purge -- path fileName password salt \
+      iterationCount hashAlgorithmName encodingName debug newLine data hash \
+      createdBy engine packages; debug collect
+} else {
+  usage ""
+}

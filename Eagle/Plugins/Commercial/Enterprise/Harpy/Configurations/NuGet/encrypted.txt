@@ -1,0 +1,12 @@
+ENCRYPTED: Harpy.v1.eeagle
+GUID: c7925879-0606-442d-9989-b2e12f44d217
+PASSWORD: 5E4F6BCE074E78C0AEB0838F109950BE
+
+EagleShell.exe -preInitialize "set isCertificate false" -preInitialize "set password 5E4F6BCE074E78C0AEB0838F109950BE" -preInitialize "set guid [object create -alias Guid c7925879-0606-442d-9989-b2e12f44d217]" -file "%EAGLE%\Plugins\Commercial\Enterprise\Harpy\Tools\encrypt.eagle" Harpy.v1.eagle
+EagleShell.exe -file "%EAGLE%\Plugins\Commercial\Enterprise\Harpy\Tools\b64sign.eagle" Harpy.v1.eagle
+EagleShell.exe -file "%EAGLE%\Plugins\Commercial\Enterprise\Harpy\Tools\b64sign.eagle" Harpy.v1.eeagle
+
+###############################################################################
+
+package require Harpy.Test
+saltToGuid eViSxwYGLUSZibLhL0TSFw==

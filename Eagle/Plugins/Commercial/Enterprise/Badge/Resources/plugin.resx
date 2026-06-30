@@ -1,0 +1,817 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+ *
+ * plugin.resx -
+ *
+ * Embedded script library and test suite certificates (neutral).
+ *
+ * Copyright (c) 2007-2012 by Joe Mistachkin.  All rights reserved.
+ *
+ * See the file "license.terms" for information on usage and redistribution of
+ * this file, and for a DISCLAIMER OF ALL WARRANTIES.
+ *
+ * RCS: @(#) $Id: $
+ *
+-->
+<root>
+  <!--
+    Microsoft ResX Schema
+
+    Version 2.0
+
+    The primary goals of this format is to allow a simple XML format
+    that is mostly human readable. The generation and parsing of the
+    various data types are done through the TypeConverter classes
+    associated with the data types.
+
+    Example:
+
+    ... ado.net/XML headers & schema ...
+    <resheader name="resmimetype">text/microsoft-resx</resheader>
+    <resheader name="version">2.0</resheader>
+    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+    <data name="Name1"><value>this is my long string</value><comment>this is a comment</comment></data>
+    <data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
+    <data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
+        <value>[base64 mime encoded serialized .NET Framework object]</value>
+    </data>
+    <data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+        <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
+        <comment>This is a comment</comment>
+    </data>
+
+    There are any number of "resheader" rows that contain simple
+    name/value pairs.
+
+    Each data row contains a name, and value. The row also contains a
+    type or mimetype. Type corresponds to a .NET class that support
+    text/value conversion through the TypeConverter architecture.
+    Classes that don't support this are serialized and stored with the
+    mimetype set.
+
+    The mimetype is used for serialized objects, and tells the
+    ResXResourceReader how to depersist the object. This is currently not
+    extensible. For a given mimetype the value must be set accordingly:
+
+    Note - application/x-microsoft.net.object.binary.base64 is the format
+    that the ResXResourceWriter will generate, however the reader can
+    read any of the formats listed below.
+
+    mimetype: application/x-microsoft.net.object.binary.base64
+    value   : The object must be serialized with
+            : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
+            : and then encoded with base64 encoding.
+
+    mimetype: application/x-microsoft.net.object.soap.base64
+    value   : The object must be serialized with
+            : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
+            : and then encoded with base64 encoding.
+
+    mimetype: application/x-microsoft.net.object.bytearray.base64
+    value   : The object must be serialized into a byte array
+            : using a System.ComponentModel.TypeConverter
+            : and then encoded with base64 encoding.
+    -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <!--
+      NOTE: These resource strings are placeholders for diagnostic and testing
+            use only.
+  -->
+  <data name="badgeEmpty" xml:space="preserve">
+    <value></value>
+  </data>
+  <data name="empty" xml:space="preserve">
+    <value></value>
+  </data>
+  <!--
+      NOTE: *WARNING* Be sure to update the the list of files here if any files
+            are added to the core loader package, core library package, or test
+            library package.
+  -->
+  <data name="lib/Loader1.0/loader.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Loader1.0\loader.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Eagle1.0/auxiliary.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Eagle1.0\auxiliary.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Eagle1.0/compat.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Eagle1.0\compat.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Eagle1.0/csharp.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Eagle1.0\csharp.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Eagle1.0/database.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Eagle1.0\database.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Eagle1.0/exec.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Eagle1.0\exec.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Eagle1.0/file1.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Eagle1.0\file1.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Eagle1.0/file2.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Eagle1.0\file2.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Eagle1.0/file2u.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Eagle1.0\file2u.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Eagle1.0/file3.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Eagle1.0\file3.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Eagle1.0/info.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Eagle1.0\info.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Eagle1.0/list.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Eagle1.0\list.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Eagle1.0/object.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Eagle1.0\object.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Eagle1.0/pkgt.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Eagle1.0\pkgt.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Eagle1.0/platform.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Eagle1.0\platform.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Eagle1.0/process.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Eagle1.0\process.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Eagle1.0/runopt.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Eagle1.0\runopt.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Eagle1.0/shim.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Eagle1.0\shim.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Eagle1.0/testlog.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Eagle1.0\testlog.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Eagle1.0/unkobj.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Eagle1.0\unkobj.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Eagle1.0/unzip.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Eagle1.0\unzip.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Eagle1.0/update.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Eagle1.0\update.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Eagle1.0/init.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Eagle1.0\init.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Eagle1.0/embed.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Eagle1.0\embed.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Eagle1.0/safe.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Eagle1.0\safe.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Eagle1.0/shell.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Eagle1.0\shell.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Eagle1.0/test.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Eagle1.0\test.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Eagle1.0/vendor.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Eagle1.0\vendor.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Eagle1.0/word.tcl.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Eagle1.0\word.tcl.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Eagle1.0/pkgIndex.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Eagle1.0\pkgIndex.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Test1.0/all.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Test1.0\all.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Test1.0/constraints.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Test1.0\constraints.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Test1.0/epilogue.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Test1.0\epilogue.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Test1.0/pkgIndex.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Test1.0\pkgIndex.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Test1.0/prologue.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Test1.0\prologue.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Plugin1.0/pkgIndex.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Plugin1.0\pkgIndex.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/all.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\all.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/epilogue.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\epilogue.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/prologue.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\prologue.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <!--
+      NOTE: This resource is designed for use by third-party applications and
+            plugins that wish to consume the whole core script library and/or
+            core script packages as embedded resource files and still be able
+            to verify them.  It should be noted that Harpy does *not* currently
+            support this scenario directly.
+  -->
+  <data name="library.resources.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>library.resources.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="packages.resources.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>packages.resources.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <!--
+      NOTE: *WARNING* Be sure to update the the list of files here if any files
+            are added to the test suite.
+  -->
+  <data name="lib/Tests/aplus.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\aplus.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/append.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\append.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/apply.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\apply.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/array.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\array.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/array2.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\array2.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/bad-subst.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\bad-subst.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/base64.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\base64.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/basic.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\basic.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/benchmark.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\benchmark.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/big-dir.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\big-dir.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/busy.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\busy.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/catch.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\catch.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/commands.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\commands.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/continue.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\continue.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/debug-ops.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\debug-ops.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/debug-try.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\debug-try.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/debug.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\debug.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/debug2.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\debug2.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/debug3.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\debug3.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/delay-out.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\delay-out.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/dict.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\dict.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/empty.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\empty.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/error.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\error.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/error2.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\error2.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/excel.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\excel.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/excel2.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\excel2.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/exec.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\exec.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/expr.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\expr.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/expr2.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\expr2.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/expr3.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\expr3.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/fib.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\fib.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/file-io.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\file-io.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/flush.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\flush.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/foreach.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\foreach.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/format.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\format.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/function.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\function.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/garbage.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\garbage.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/global-upvar.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\global-upvar.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/host.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\host.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/info-level.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\info-level.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/interp-exited.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\interp-exited.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/io.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\io.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/library.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\library.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/library2.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\library2.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/library3.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\library3.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/library4.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\library4.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/list.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\list.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/lmap.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\lmap.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/load.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\load.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/lsearch.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\lsearch.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/lsearch2.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\lsearch2.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/lset.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\lset.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/lsort.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\lsort.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/lsort2.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\lsort2.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/lsort3.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\lsort3.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/namespace-delete.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\namespace-delete.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/namespace-delete2.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\namespace-delete2.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/namespace-inscope.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\namespace-inscope.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/namespace-old.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\namespace-old.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/namespace.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\namespace.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/nested.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\nested.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/null.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\null.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/object-create.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\object-create.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/object-refcount.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\object-refcount.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/object.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\object.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/object10.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\object10.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/object11.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\object11.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/object12.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\object12.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/object13.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\object13.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/object14.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\object14.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/object15.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\object15.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/object2.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\object2.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/object3.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\object3.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/object4.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\object4.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/object5.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\object5.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/object6.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\object6.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/object7.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\object7.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/object8.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\object8.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/object9.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\object9.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/open.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\open.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/package.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\package.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/parser.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\parser.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/parser2.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\parser2.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/parser3.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\parser3.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/parser4.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\parser4.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/parser5.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\parser5.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/perf.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\perf.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/perf2.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\perf2.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/proc-uplevel.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\proc-uplevel.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/proc.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\proc.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/redefine.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\redefine.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/regexp.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\regexp.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/regsub.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\regsub.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/remoting-server.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\remoting-server.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/return.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\return.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/return2.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\return2.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/scope-array.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\scope-array.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/scope-array2.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\scope-array2.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/scope-error.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\scope-error.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/scope-error2.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\scope-error2.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/scope-error3.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\scope-error3.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/scope.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\scope.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/scope2.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\scope2.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/scope3.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\scope3.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/set-element.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\set-element.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/set-nested.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\set-nested.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/set.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\set.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/short-circuit.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\short-circuit.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/socket.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\socket.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/socket2.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\socket2.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/socket3.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\socket3.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/sql.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\sql.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/string-map.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\string-map.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/subst.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\subst.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/switch.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\switch.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/tcl-cancel.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\tcl-cancel.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/tcl-encoding.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\tcl-encoding.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/tcl-errorInfo.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\tcl-errorInfo.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/tcl-load.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\tcl-load.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/tcl-reset-cancel.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\tcl-reset-cancel.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/tcl-reset-cancel2.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\tcl-reset-cancel2.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/tcl-reset-cancel3.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\tcl-reset-cancel3.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/tcl-reset-cancel4.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\tcl-reset-cancel4.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/tcl-set.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\tcl-set.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/tcl-subst.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\tcl-subst.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/temporary-isolated.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\temporary-isolated.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/try.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\try.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/try2.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\try2.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/try3.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\try3.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/try4.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\try4.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/unicode.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\unicode.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/unicode2.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\unicode2.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/uplevel-tcl.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\uplevel-tcl.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/uplevel.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\uplevel.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/uplevel2.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\uplevel2.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/uplevel3.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\uplevel3.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/uplevel3a.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\uplevel3a.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/uplevel4.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\uplevel4.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/uplevel5.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\uplevel5.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/upvar-reverse.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\upvar-reverse.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/upvar-tcl.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\upvar-tcl.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/version.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\version.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/vwait.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\vwait.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/watch-alias.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\watch-alias.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/winforms.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\winforms.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/winforms2.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\winforms2.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/winforms3.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\winforms3.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/winforms4.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\winforms4.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/winforms5.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\winforms5.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/winforms6.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\winforms6.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/winforms7.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\winforms7.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/winforms8.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\winforms8.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/writebox.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\writebox.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/xaml.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\xaml.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/xml.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\xml.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/data/callStack.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\data\callStack.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/data/client.tcl.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\data\client.tcl.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/data/evaluate.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\data\evaluate.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/data/garbage.txt.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\data\garbage.txt.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/data/isolated.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\data\isolated.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/data/read.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\data\read.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/data/read2.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\data\read2.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/data/read3.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\data\read3.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/data/read4.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\data\read4.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/data/script.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\data\script.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/data/settings.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\data\settings.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/data/showArgv.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\data\showArgv.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/data/source.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\data\source.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/data/substitute.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\data\substitute.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/data/tcl_unload.tcl.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\data\tcl_unload.tcl.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/data/testProcs.tcl.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\data\testProcs.tcl.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/data/unbalanced_brace.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\data\unbalanced_brace.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/data/unbalanced_brace2.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\data\unbalanced_brace2.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/data/xaml2.eagle.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\data\xaml2.eagle.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/tcl/format.test.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\tcl\format.test.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/tcl/lmap.test.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\tcl\lmap.test.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/tcl/namespace-old.test.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\tcl\namespace-old.test.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="lib/Tests/tcl/namespace.test.harpy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lib\Tests\tcl\namespace.test.harpy;System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+</root>

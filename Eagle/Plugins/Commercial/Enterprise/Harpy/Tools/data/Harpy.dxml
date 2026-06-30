@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<!DOCTYPE dotfuscator SYSTEM "http://www.preemptive.com/dotfuscator/dtd/dotfuscator_v2.2.dtd">
+<dotfuscator version="2.2">
+  <!--This is application generated code. Do not edit manually.-->
+  <propertylist>
+    <property name="configuration" value="Release" />
+    <property name="version" value="1.0" />
+  </propertylist>
+  <input>
+    <asmlist>
+      <inputassembly>
+        <option>honoroas</option>
+        <option>stripoa</option>
+        <option>library</option>
+        <file dir="${configdir}\..\..\..\..\..\..\bin\${configuration}\lib\Harpy${version}" name="Harpy.dll" />
+      </inputassembly>
+    </asmlist>
+  </input>
+  <output>
+    <file dir="${configdir}\..\..\..\..\..\..\bin\${configuration}\lib\Harpy${version}\Obfuscated" />
+  </output>
+  <renaming>
+    <option>xmlserialization</option>
+    <mapping>
+      <mapoutput overwrite="true">
+        <file dir="${configdir}\..\..\..\..\..\..\bin\${configuration}\lib\Harpy${version}\Obfuscated" name="Harpy.map.xml" />
+      </mapoutput>
+    </mapping>
+  </renaming>
+  <sos mergeruntime="true">
+    <option>disable</option>
+    <option>dontsendtamper</option>
+  </sos>
+  <smartobfuscation>
+    <smartobfuscationreport verbosity="all" overwrite="false" />
+  </smartobfuscation>
+</dotfuscator>

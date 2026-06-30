@@ -1,0 +1,1 @@
+Kind KeyPair Id 91368c4d-b585-4bae-8d38-1322fcffb649 Name EagleEnterprisePluginRootPublic.snk Group "Licensing Root" Description "Used to sign the assembly."

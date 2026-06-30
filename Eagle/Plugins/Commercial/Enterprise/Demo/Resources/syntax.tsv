@@ -1,0 +1,19 @@
+demo about	demo about
+demo active	demo active
+demo basereadline	demo basereadline ?basereadline?
+demo beep	demo beep ?beep?
+demo cancel	demo cancel ?cancel?
+demo certificate	demo certificate
+demo closed	demo closed ?closed?
+demo debuglevel	demo debuglevel ?level?
+demo endofstream	demo endofstream ?endofstream?
+demo isolated	demo isolated
+demo options	demo options
+demo pause	demo pause ?pause?
+demo playmilliseconds	demo playmilliseconds ?milliseconds?
+demo reset	demo reset
+demo shutdown	demo shutdown ?options?
+demo startup	demo startup ?options?
+demo stop	demo stop ?options?
+demo stopmilliseconds	demo stopmilliseconds ?milliseconds?
+demo timeoutmilliseconds	demo timeoutmilliseconds ?milliseconds?

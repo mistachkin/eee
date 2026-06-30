@@ -1,0 +1,169 @@
+###############################################################################
+#
+# enable_support.eagle --
+#
+# Extensible Adaptable Generalized Logic Engine (Eagle)
+# Signed Script Test
+#
+# Copyright (c) 2007-2012 by Joe Mistachkin.  All rights reserved.
+#
+# See the file "license.terms" for information on usage and redistribution of
+# this file, and for a DISCLAIMER OF ALL WARRANTIES.
+#
+# RCS: @(#) $Id: $
+#
+###############################################################################
+
+# <<swapCommands>>
+
+requireComponent maybeEvaluate
+requireComponent writeWithoutFail
+
+###############################################################################
+
+requireVariable pluginType
+
+###############################################################################
+
+maybeEvaluate {$::pluginType in \
+    {Security.Core Licensing.Core Licensing.Standard Licensing.Enterprise}} {
+  requireComponent addRingPublicKey
+  requireComponent applyContextVariables
+  requireComponent changeFeatures
+  requireComponent changeLicensePolicy
+  requireComponent enableExtractAndApply
+  requireComponent evaluateWithCleanup
+  requireComponent haveComponent
+  requireComponent haveIdentifier
+  requireComponent isRestrictedInterpreter
+  requireComponent joinSubPaths
+  requireComponent makeUriRequest
+  requireComponent queueScript
+  requireComponent removeRingPublicKey
+  requireComponent requireIdentifier
+  requireComponent requireLicense
+  requireComponent requireNetwork
+  requireComponent requireVariable
+  requireComponent requireVersion
+  requireComponent restoreContextVariables
+  requireComponent saveContextVariables
+  requireComponent testMode
+
+  #############################################################################
+
+  requireVariable pluginChangeCount
+  requireVariable pluginContext
+  requireVariable pluginPublicKeyToken
+  requireVariable scriptFileId
+  requireVariable scriptFileName
+  requireVariable scriptSubType
+  requireVariable scriptType
+
+  #############################################################################
+
+  requireVersion 0.0.0.0; # NOTE: Lock to version range (0.0.0.0 is "any").
+  failOnError true; # NOTE: Upon error, plugin will fail to load.
+  notBefore 0001-01-01T00:00:00.0000000Z; # Unusable before this date/time.
+  notAfter 9999-12-31T23:59:59.9999999Z; # Unusable after this date/time.
+  saveContextVariables original; # NOTE: Snapshot context variables.
+  enableExtractAndApply false; # NOTE: Disable global state changes.
+
+  evaluateWithCleanup {
+    #
+    # HACK: This script requires the "fileName" script variable to be setup
+    #       before it is evaluated; also, it will set (and hopefully unset)
+    #       the "licenseKey" script variable.
+    #
+    requireIdentifier ::fileName "" "" Variable
+
+    ###########################################################################
+
+    requireNetwork License true; # NOTE: Require online time / revocation.
+    changeFeatures +J; # NOTE: Enable test-mode feature.
+    testMode true; # NOTE: Enable test-mode for plugin.
+
+    ###########################################################################
+
+    maybeEvaluate {$::pluginContext eq "Configuration"} {
+      #
+      # NOTE: Queue a configuration script to be evaluated after this one.
+      #
+      # WARNING: This command will have absolutely no effect unless it is
+      #          executed within a script context that was created by the
+      #          LoadAll method of the configuration subsystem.
+      #
+      queueScript \
+          [makeUriRequest https://urn.to/r/harpy_cfg_script_01] \
+          [makeUriRequest https://urn.to/r/harpy_cfg_signature_01] \
+          harpy_config_01.eagle
+    }
+
+    ###########################################################################
+
+    #
+    # HACK: Since the Kapok test server always uses the primary public key
+    #       token, skip this block if the running plugin does not match it.
+    #
+    maybeEvaluate {$::pluginPublicKeyToken eq "8bf43b4749e46a0b" && \
+        [haveComponent setPassword] && [haveComponent requestLicense] && \
+        [haveComponent requireLicense]} {
+      #
+      # HACK: This uses hard-coded certificate and subscription identifiers
+      #       from the Kapok test suite.  Furthermore, it assumes the Kapok
+      #       test server is available.
+      #
+      setPassword 1b40f0fe-a2fc-4c42-a644-45a851e1c75d "Eagle Development Team"
+      requireLicense [requestLicense 1935f24a-18ee-49d9-9458-555bf2f39ba5]
+    }
+
+    ###########################################################################
+
+    maybeEvaluate {![isRestrictedInterpreter]} {
+      addRingPublicKey {
+        Kind          KeyPair
+        Id            8bc66eda-f7f9-496b-b42a-2760bb4d6dc5
+        Name          TestPublic1.snk
+        Group         "Test Data"
+        Description   "Used only by the test suite, not secure."
+        KeyUsage      LCT
+        KeyExpiration 2028-11-30T00:00:00.0000000Z
+        KeyDomains    eagle.to
+        KeyGroups     0x8bf43b4749e46a0b
+      } {
+        0x00 0x24 0x00 0x00 0x04 0x80 0x00 0x00 0x94 0x00 0x00 0x00 0x06 0x02
+        0x00 0x00 0x00 0x24 0x00 0x00 0x52 0x53 0x41 0x31 0x00 0x04 0x00 0x00
+        0x01 0x00 0x01 0x00 0x0D 0x1B 0x3F 0xE9 0x07 0xC4 0x0E 0xB5 0x14 0xC9
+        0xD2 0x7C 0x21 0xCA 0x52 0xCA 0x1A 0x82 0xEC 0x3D 0xEF 0x58 0x2B 0xF9
+        0x0C 0x8C 0x7E 0x78 0x0C 0x28 0xC3 0xD8 0xE3 0x18 0x33 0x00 0x97 0x97
+        0x0C 0x70 0xC8 0x64 0xA6 0xD8 0xBF 0x7E 0xAE 0x2D 0x32 0x8A 0xA7 0x8A
+        0x31 0x0D 0x50 0x1C 0x3F 0x41 0xE4 0x80 0x6B 0x39 0x40 0x61 0x4C 0x89
+        0x2B 0xA3 0x06 0xB4 0xF9 0xB3 0x9E 0xFC 0x79 0x95 0xB3 0x7D 0x77 0xE9
+        0x7A 0x03 0x44 0xAE 0x85 0x25 0xCB 0x8A 0x20 0x8B 0x6D 0x34 0xBD 0x92
+        0x99 0x31 0x3A 0x83 0xF2 0x09 0xE4 0x4B 0xFC 0x39 0xC9 0xF6 0x16 0xBB
+        0xBB 0x0E 0xD9 0x9C 0xB6 0x02 0xA9 0x10 0xF9 0x99 0xB6 0xB4 0x5A 0xB6
+        0x2A 0xC0 0x53 0x9D 0x70 0xC6
+      } licenseKey; # NOTE: Temporarily add license key pair.
+    }
+
+    evaluateWithCleanup {
+      applyContextVariables; # NOTE: Commit changed global state.
+      requireLicense [joinSubPaths $::fileName] 0x9c6c559394030af1
+    } finally {
+      maybeEvaluate {![isRestrictedInterpreter]} {
+        removeRingPublicKey licenseKey; # NOTE: Remove license key pair.
+      }
+    }
+  } finally {
+    restoreContextVariables original; # NOTE: Rollback to saved snapshot.
+    applyContextVariables; # NOTE: Restore original global state.
+  }
+
+  #############################################################################
+
+  changeFeatures +S; # NOTE: Enable support contract feature.
+  enableExtractAndApply true; # NOTE: Enable global state changes.
+  writeStatus ExtraFeatures SUPPORT; # NOTE: Show extra features.
+} else {
+  writeWithoutFail \
+      "Plugin \"" $::pluginType "\" features are unchanged."
+}

@@ -1,0 +1,154 @@
+###############################################################################
+#
+# openAI_configuration.eagle --
+#
+# Extensible Adaptable Generalized Logic Engine (Eagle)
+# Kapok OpenAI Proxy Server Configuration File
+#
+# Copyright (c) 2007-2012 by Joe Mistachkin.  All rights reserved.
+#
+# See the file "license.terms" for information on usage and redistribution of
+# this file, and for a DISCLAIMER OF ALL WARRANTIES.
+#
+# RCS: @(#) $Id: $
+#
+###############################################################################
+
+apply [list [list] {
+  if {1} then {
+    proc ::successOpenAI_server_sandbox {} {; # EXAMPLE
+      # <help>
+      # This procedure is an EXAMPLE tester hook fired by the OpenAI proxy
+      # server immediately after a successful sandbox evaluation of the
+      # response script.  It exists to demonstrate how a configuration can
+      # observe (and log) intermediate server state without modifying the
+      # server itself; the procedure is defined inside the example block
+      # guarded by the "if 1" so the deployment can disable it.
+      #
+      # How it works: the procedure identifies itself by capturing the
+      # current call stack level via info level, then reaches into the
+      # caller's scope with upvar to expose the script body and the
+      # shouldSignScript flag from openAI_server_chatCompletion.  When
+      # both variables are present, it composes a multi-line message that
+      # reports whether the script will be signed and dumps the script in
+      # a brace-delimited block, and writes it to the Kapok log at highest
+      # priority with ForceFlush so the entry is visible immediately.
+      #
+      # Tricky details: the upvar 1 access depends on running in the
+      # immediate caller of the success hook -- it observes the local
+      # variables of openAI_server_chatCompletion as they existed at the
+      # call site.  The output goes through the Kapok log facility, not
+      # standard output, so it is captured by the same log pipeline used
+      # by the server itself.
+      #
+      # Arguments:
+      #   none.
+      #
+      # Results:
+      #   Returns the empty string; its purpose is the side effect of
+      #   emitting a diagnostic log entry.
+      # </help>
+
+      set level [lindex [info level [info level]] 0]
+
+      upvar 1 script script
+      upvar 1 shouldSignScript shouldSignScript
+
+      if {[info exists script] && \
+          [info exists shouldSignScript]} then {
+        set message [appendArgs \
+            "Will script be signed? " [expr {$shouldSignScript ? \
+            "yes" : "no"}] \n "What is the script? \{\n" $script \
+            \n\}]
+
+        kapok log [appendArgs \
+            $level ": " $message] {+Highest ForceFlush}
+      }
+    }
+  }
+
+  set directory [file dirname [info script]]
+  set pattern cidr_*.eagle
+
+  package require Eagle.Test; # NOTE: For [verifyConfigurationDirectory].
+
+  if {![verifyConfigurationDirectory $directory $pattern]} then {
+    error [appendArgs \
+        "cannot load CIDR configuration files: " $pattern]
+  }
+
+  package require Eagle.OpenAI
+
+  global openAI_allow_cidrs
+  global openAI_deny_cidrs
+
+  package require Eagle.CIDR
+
+  maybeLoadCidrs $directory cidr_deny.eagle openAI_deny_cidrs false false
+  maybeLoadCidrs $directory cidr_allow.eagle openAI_allow_cidrs false false
+
+  package require Harpy.Test; # NOTE: For [tryToLoadKapok].
+
+  tryToLoadKapok; # NOTE: For [kapok].
+
+  set apiKey(1) c196a60c-7eeb-4dce-afd4-7fbbc2dd39f5; # Administrator
+
+  catch {kapok access unban $apiKey(1)}
+  catch {kapok access grant $apiKey(1)}
+  catch {kapok access promote $apiKey(1)}
+  catch {kapok access real $apiKey(1)}
+  catch {kapok access unrestrict $apiKey(1)}
+
+  set apiKey(2) 6b7965ae-2eef-4154-ad1f-a7b989b064de; # Standard
+
+  catch {kapok access unban $apiKey(2)}
+  catch {kapok access grant $apiKey(2)}
+  catch {kapok access demote $apiKey(2)}
+  catch {kapok access real $apiKey(2)}
+  catch {kapok access unrestrict $apiKey(2)}
+
+  set apiKey(3) 4620f75f-480e-400c-ae9d-81b43f5c4565; # Standard, RuleSet
+
+  catch {kapok access unban $apiKey(3)}
+  catch {kapok access grant $apiKey(3)}
+  catch {kapok access demote $apiKey(3)}
+  catch {kapok access real $apiKey(3)}
+
+  catch {kapok access restrict $apiKey(3) {{
+    id 1 type Include kind Command mode
+    {Include Exact} regExOptions None
+    patterns clock
+  }}}
+
+  set apiKey(4) e0b4e81d-05c6-480a-b271-d5e826522740; # Test
+
+  catch {kapok access unban $apiKey(4)}
+  catch {kapok access grant $apiKey(4)}
+  catch {kapok access demote $apiKey(4)}
+  catch {kapok access fake $apiKey(4)}
+  catch {kapok access unrestrict $apiKey(4)}
+
+  set apiKey(5) a0b5ba6b-2357-46a2-8912-4ff869339997; # BANNED
+
+  catch {kapok access ban $apiKey(5)}
+  catch {kapok access revoke $apiKey(5)}
+  catch {kapok access demote $apiKey(5)}
+  catch {kapok access real $apiKey(5)}
+  catch {kapok access unrestrict $apiKey(5)}
+
+  set apiKey(6) f5201931-1fc0-0001-2e03-a935e5cf9c6b; # DESKTOP-N5Q9D24
+
+  catch {kapok access unban $apiKey(6)}
+  catch {kapok access grant $apiKey(6)}
+  catch {kapok access promote $apiKey(6)}
+  catch {kapok access real $apiKey(6)}
+  catch {kapok access unrestrict $apiKey(6)}
+
+  set apiKey(7) 01f874af-112a-c4ea-62f2-24ec022c8436; # LACHRYMOSE
+
+  catch {kapok access unban $apiKey(7)}
+  catch {kapok access grant $apiKey(7)}
+  catch {kapok access promote $apiKey(7)}
+  catch {kapok access real $apiKey(7)}
+  catch {kapok access unrestrict $apiKey(7)}
+}]

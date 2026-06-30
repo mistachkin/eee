@@ -1,0 +1,896 @@
+0
+
+1
+-flags +NoPoliciesOnFallback
+2
+-flags +FallbackOnUnsafe
+3
+-flags +FallbackOnNoPolicy
+4
+-flags +FallbackOnNeutral
+5
+-flags +FallbackOnDenied
+6
+-flags +FallbackOnFailure
+7
+-flags {+NoPoliciesOnFallback FallbackOnUnsafe}
+8
+-flags {+NoPoliciesOnFallback FallbackOnNoPolicy}
+9
+-flags {+NoPoliciesOnFallback FallbackOnNeutral}
+10
+-flags {+NoPoliciesOnFallback FallbackOnDenied}
+11
+-flags {+NoPoliciesOnFallback FallbackOnFailure}
+12
+-flags {+FallbackOnUnsafe FallbackOnNoPolicy}
+13
+-flags {+FallbackOnUnsafe FallbackOnNeutral}
+14
+-flags {+FallbackOnUnsafe FallbackOnDenied}
+15
+-flags {+FallbackOnUnsafe FallbackOnFailure}
+16
+-flags {+FallbackOnNoPolicy FallbackOnNeutral}
+17
+-flags {+FallbackOnNoPolicy FallbackOnDenied}
+18
+-flags {+FallbackOnNoPolicy FallbackOnFailure}
+19
+-flags {+FallbackOnNeutral FallbackOnDenied}
+20
+-flags {+FallbackOnNeutral FallbackOnFailure}
+21
+-flags {+FallbackOnDenied FallbackOnFailure}
+22
+-flags {+NoPoliciesOnFallback FallbackOnUnsafe FallbackOnNoPolicy}
+23
+-flags {+NoPoliciesOnFallback FallbackOnUnsafe FallbackOnNeutral}
+24
+-flags {+NoPoliciesOnFallback FallbackOnUnsafe FallbackOnDenied}
+25
+-flags {+NoPoliciesOnFallback FallbackOnUnsafe FallbackOnFailure}
+26
+-flags {+NoPoliciesOnFallback FallbackOnNoPolicy FallbackOnNeutral}
+27
+-flags {+NoPoliciesOnFallback FallbackOnNoPolicy FallbackOnDenied}
+28
+-flags {+NoPoliciesOnFallback FallbackOnNoPolicy FallbackOnFailure}
+29
+-flags {+NoPoliciesOnFallback FallbackOnNeutral FallbackOnDenied}
+30
+-flags {+NoPoliciesOnFallback FallbackOnNeutral FallbackOnFailure}
+31
+-flags {+NoPoliciesOnFallback FallbackOnDenied FallbackOnFailure}
+32
+-flags {+FallbackOnUnsafe FallbackOnNoPolicy FallbackOnNeutral}
+33
+-flags {+FallbackOnUnsafe FallbackOnNoPolicy FallbackOnDenied}
+34
+-flags {+FallbackOnUnsafe FallbackOnNoPolicy FallbackOnFailure}
+35
+-flags {+FallbackOnUnsafe FallbackOnNeutral FallbackOnDenied}
+36
+-flags {+FallbackOnUnsafe FallbackOnNeutral FallbackOnFailure}
+37
+-flags {+FallbackOnUnsafe FallbackOnDenied FallbackOnFailure}
+38
+-flags {+FallbackOnNoPolicy FallbackOnNeutral FallbackOnDenied}
+39
+-flags {+FallbackOnNoPolicy FallbackOnNeutral FallbackOnFailure}
+40
+-flags {+FallbackOnNoPolicy FallbackOnDenied FallbackOnFailure}
+41
+-flags {+FallbackOnNeutral FallbackOnDenied FallbackOnFailure}
+42
+-flags {+NoPoliciesOnFallback FallbackOnUnsafe FallbackOnNoPolicy FallbackOnNeutral}
+43
+-flags {+NoPoliciesOnFallback FallbackOnUnsafe FallbackOnNoPolicy FallbackOnDenied}
+44
+-flags {+NoPoliciesOnFallback FallbackOnUnsafe FallbackOnNoPolicy FallbackOnFailure}
+45
+-flags {+NoPoliciesOnFallback FallbackOnUnsafe FallbackOnNeutral FallbackOnDenied}
+46
+-flags {+NoPoliciesOnFallback FallbackOnUnsafe FallbackOnNeutral FallbackOnFailure}
+47
+-flags {+NoPoliciesOnFallback FallbackOnUnsafe FallbackOnDenied FallbackOnFailure}
+48
+-flags {+NoPoliciesOnFallback FallbackOnNoPolicy FallbackOnNeutral FallbackOnDenied}
+49
+-flags {+NoPoliciesOnFallback FallbackOnNoPolicy FallbackOnNeutral FallbackOnFailure}
+50
+-flags {+NoPoliciesOnFallback FallbackOnNoPolicy FallbackOnDenied FallbackOnFailure}
+51
+-flags {+NoPoliciesOnFallback FallbackOnNeutral FallbackOnDenied FallbackOnFailure}
+52
+-flags {+FallbackOnUnsafe FallbackOnNoPolicy FallbackOnNeutral FallbackOnDenied}
+53
+-flags {+FallbackOnUnsafe FallbackOnNoPolicy FallbackOnNeutral FallbackOnFailure}
+54
+-flags {+FallbackOnUnsafe FallbackOnNoPolicy FallbackOnDenied FallbackOnFailure}
+55
+-flags {+FallbackOnUnsafe FallbackOnNeutral FallbackOnDenied FallbackOnFailure}
+56
+-flags {+FallbackOnNoPolicy FallbackOnNeutral FallbackOnDenied FallbackOnFailure}
+57
+-flags {+NoPoliciesOnFallback FallbackOnUnsafe FallbackOnNoPolicy FallbackOnNeutral FallbackOnDenied}
+58
+-flags {+NoPoliciesOnFallback FallbackOnUnsafe FallbackOnNoPolicy FallbackOnNeutral FallbackOnFailure}
+59
+-flags {+NoPoliciesOnFallback FallbackOnUnsafe FallbackOnNoPolicy FallbackOnDenied FallbackOnFailure}
+60
+-flags {+NoPoliciesOnFallback FallbackOnUnsafe FallbackOnNeutral FallbackOnDenied FallbackOnFailure}
+61
+-flags {+NoPoliciesOnFallback FallbackOnNoPolicy FallbackOnNeutral FallbackOnDenied FallbackOnFailure}
+62
+-flags {+FallbackOnUnsafe FallbackOnNoPolicy FallbackOnNeutral FallbackOnDenied FallbackOnFailure}
+63
+-flags {+NoPoliciesOnFallback FallbackOnUnsafe FallbackOnNoPolicy FallbackOnNeutral FallbackOnDenied FallbackOnFailure}
+0 0 0 goodScript 1 {script policy is not set to trust signed only}
+0 1 0 goodFile 1 {file policy is not set to trust signed only}
+0 2 0 badScript 1 {script policy is not set to trust signed only}
+0 3 0 badFile 1 {file policy is not set to trust signed only}
+0 4 1 goodScript 1 {script policy is not set to trust signed only}
+0 5 1 goodFile 1 {file policy is not set to trust signed only}
+0 6 1 badScript 1 {script policy is not set to trust signed only}
+0 7 1 badFile 1 {file policy is not set to trust signed only}
+0 8 2 goodScript 1 {script policy is not set to trust signed only}
+0 9 2 goodFile 1 {file policy is not set to trust signed only}
+0 10 2 badScript 1 {script policy is not set to trust signed only}
+0 11 2 badFile 1 {file policy is not set to trust signed only}
+0 12 3 goodScript 0 {safe = True}
+0 13 3 goodFile 0 {safe = True}
+0 14 3 badScript 0 {safe = True}
+0 15 3 badFile 1 <error(3)>
+0 16 4 goodScript 1 {script policy is not set to trust signed only}
+0 17 4 goodFile 1 {file policy is not set to trust signed only}
+0 18 4 badScript 1 {script policy is not set to trust signed only}
+0 19 4 badFile 1 {file policy is not set to trust signed only}
+0 20 5 goodScript 1 {script policy is not set to trust signed only}
+0 21 5 goodFile 1 {file policy is not set to trust signed only}
+0 22 5 badScript 1 {script policy is not set to trust signed only}
+0 23 5 badFile 1 {file policy is not set to trust signed only}
+0 24 6 goodScript 1 {script policy is not set to trust signed only}
+0 25 6 goodFile 1 {file policy is not set to trust signed only}
+0 26 6 badScript 1 {script policy is not set to trust signed only}
+0 27 6 badFile 1 {file policy is not set to trust signed only}
+0 28 7 goodScript 1 {script policy is not set to trust signed only}
+0 29 7 goodFile 1 {file policy is not set to trust signed only}
+0 30 7 badScript 1 {script policy is not set to trust signed only}
+0 31 7 badFile 1 {file policy is not set to trust signed only}
+0 32 8 goodScript 0 {safe = True}
+0 33 8 goodFile 0 {safe = True}
+0 34 8 badScript 0 {safe = True}
+0 35 8 badFile 0 {safe = True}
+0 36 9 goodScript 1 {script policy is not set to trust signed only}
+0 37 9 goodFile 1 {file policy is not set to trust signed only}
+0 38 9 badScript 1 {script policy is not set to trust signed only}
+0 39 9 badFile 1 {file policy is not set to trust signed only}
+0 40 10 goodScript 1 {script policy is not set to trust signed only}
+0 41 10 goodFile 1 {file policy is not set to trust signed only}
+0 42 10 badScript 1 {script policy is not set to trust signed only}
+0 43 10 badFile 1 {file policy is not set to trust signed only}
+0 44 11 goodScript 1 {script policy is not set to trust signed only}
+0 45 11 goodFile 1 {file policy is not set to trust signed only}
+0 46 11 badScript 1 {script policy is not set to trust signed only}
+0 47 11 badFile 1 {file policy is not set to trust signed only}
+0 48 12 goodScript 0 {safe = True}
+0 49 12 goodFile 0 {safe = True}
+0 50 12 badScript 0 {safe = True}
+0 51 12 badFile 1 <error(3)>
+0 52 13 goodScript 1 {script policy is not set to trust signed only}
+0 53 13 goodFile 1 {file policy is not set to trust signed only}
+0 54 13 badScript 1 {script policy is not set to trust signed only}
+0 55 13 badFile 1 {file policy is not set to trust signed only}
+0 56 14 goodScript 1 {script policy is not set to trust signed only}
+0 57 14 goodFile 1 {file policy is not set to trust signed only}
+0 58 14 badScript 1 {script policy is not set to trust signed only}
+0 59 14 badFile 1 {file policy is not set to trust signed only}
+0 60 15 goodScript 1 {script policy is not set to trust signed only}
+0 61 15 goodFile 1 {file policy is not set to trust signed only}
+0 62 15 badScript 1 {script policy is not set to trust signed only}
+0 63 15 badFile 1 {file policy is not set to trust signed only}
+0 64 16 goodScript 0 {safe = True}
+0 65 16 goodFile 0 {safe = True}
+0 66 16 badScript 0 {safe = True}
+0 67 16 badFile 1 <error(3)>
+0 68 17 goodScript 0 {safe = True}
+0 69 17 goodFile 0 {safe = True}
+0 70 17 badScript 0 {safe = True}
+0 71 17 badFile 1 <error(3)>
+0 72 18 goodScript 0 {safe = True}
+0 73 18 goodFile 0 {safe = True}
+0 74 18 badScript 0 {safe = True}
+0 75 18 badFile 1 <error(3)>
+0 76 19 goodScript 1 {script policy is not set to trust signed only}
+0 77 19 goodFile 1 {file policy is not set to trust signed only}
+0 78 19 badScript 1 {script policy is not set to trust signed only}
+0 79 19 badFile 1 {file policy is not set to trust signed only}
+0 80 20 goodScript 1 {script policy is not set to trust signed only}
+0 81 20 goodFile 1 {file policy is not set to trust signed only}
+0 82 20 badScript 1 {script policy is not set to trust signed only}
+0 83 20 badFile 1 {file policy is not set to trust signed only}
+0 84 21 goodScript 1 {script policy is not set to trust signed only}
+0 85 21 goodFile 1 {file policy is not set to trust signed only}
+0 86 21 badScript 1 {script policy is not set to trust signed only}
+0 87 21 badFile 1 {file policy is not set to trust signed only}
+0 88 22 goodScript 0 {safe = True}
+0 89 22 goodFile 0 {safe = True}
+0 90 22 badScript 0 {safe = True}
+0 91 22 badFile 0 {safe = True}
+0 92 23 goodScript 1 {script policy is not set to trust signed only}
+0 93 23 goodFile 1 {file policy is not set to trust signed only}
+0 94 23 badScript 1 {script policy is not set to trust signed only}
+0 95 23 badFile 1 {file policy is not set to trust signed only}
+0 96 24 goodScript 1 {script policy is not set to trust signed only}
+0 97 24 goodFile 1 {file policy is not set to trust signed only}
+0 98 24 badScript 1 {script policy is not set to trust signed only}
+0 99 24 badFile 1 {file policy is not set to trust signed only}
+0 100 25 goodScript 1 {script policy is not set to trust signed only}
+0 101 25 goodFile 1 {file policy is not set to trust signed only}
+0 102 25 badScript 1 {script policy is not set to trust signed only}
+0 103 25 badFile 1 {file policy is not set to trust signed only}
+0 104 26 goodScript 0 {safe = True}
+0 105 26 goodFile 0 {safe = True}
+0 106 26 badScript 0 {safe = True}
+0 107 26 badFile 0 {safe = True}
+0 108 27 goodScript 0 {safe = True}
+0 109 27 goodFile 0 {safe = True}
+0 110 27 badScript 0 {safe = True}
+0 111 27 badFile 0 {safe = True}
+0 112 28 goodScript 0 {safe = True}
+0 113 28 goodFile 0 {safe = True}
+0 114 28 badScript 0 {safe = True}
+0 115 28 badFile 0 {safe = True}
+0 116 29 goodScript 1 {script policy is not set to trust signed only}
+0 117 29 goodFile 1 {file policy is not set to trust signed only}
+0 118 29 badScript 1 {script policy is not set to trust signed only}
+0 119 29 badFile 1 {file policy is not set to trust signed only}
+0 120 30 goodScript 1 {script policy is not set to trust signed only}
+0 121 30 goodFile 1 {file policy is not set to trust signed only}
+0 122 30 badScript 1 {script policy is not set to trust signed only}
+0 123 30 badFile 1 {file policy is not set to trust signed only}
+0 124 31 goodScript 1 {script policy is not set to trust signed only}
+0 125 31 goodFile 1 {file policy is not set to trust signed only}
+0 126 31 badScript 1 {script policy is not set to trust signed only}
+0 127 31 badFile 1 {file policy is not set to trust signed only}
+0 128 32 goodScript 0 {safe = True}
+0 129 32 goodFile 0 {safe = True}
+0 130 32 badScript 0 {safe = True}
+0 131 32 badFile 1 <error(3)>
+0 132 33 goodScript 0 {safe = True}
+0 133 33 goodFile 0 {safe = True}
+0 134 33 badScript 0 {safe = True}
+0 135 33 badFile 1 <error(3)>
+0 136 34 goodScript 0 {safe = True}
+0 137 34 goodFile 0 {safe = True}
+0 138 34 badScript 0 {safe = True}
+0 139 34 badFile 1 <error(3)>
+0 140 35 goodScript 1 {script policy is not set to trust signed only}
+0 141 35 goodFile 1 {file policy is not set to trust signed only}
+0 142 35 badScript 1 {script policy is not set to trust signed only}
+0 143 35 badFile 1 {file policy is not set to trust signed only}
+0 144 36 goodScript 1 {script policy is not set to trust signed only}
+0 145 36 goodFile 1 {file policy is not set to trust signed only}
+0 146 36 badScript 1 {script policy is not set to trust signed only}
+0 147 36 badFile 1 {file policy is not set to trust signed only}
+0 148 37 goodScript 1 {script policy is not set to trust signed only}
+0 149 37 goodFile 1 {file policy is not set to trust signed only}
+0 150 37 badScript 1 {script policy is not set to trust signed only}
+0 151 37 badFile 1 {file policy is not set to trust signed only}
+0 152 38 goodScript 0 {safe = True}
+0 153 38 goodFile 0 {safe = True}
+0 154 38 badScript 0 {safe = True}
+0 155 38 badFile 1 <error(3)>
+0 156 39 goodScript 0 {safe = True}
+0 157 39 goodFile 0 {safe = True}
+0 158 39 badScript 0 {safe = True}
+0 159 39 badFile 1 <error(3)>
+0 160 40 goodScript 0 {safe = True}
+0 161 40 goodFile 0 {safe = True}
+0 162 40 badScript 0 {safe = True}
+0 163 40 badFile 1 <error(3)>
+0 164 41 goodScript 1 {script policy is not set to trust signed only}
+0 165 41 goodFile 1 {file policy is not set to trust signed only}
+0 166 41 badScript 1 {script policy is not set to trust signed only}
+0 167 41 badFile 1 {file policy is not set to trust signed only}
+0 168 42 goodScript 0 {safe = True}
+0 169 42 goodFile 0 {safe = True}
+0 170 42 badScript 0 {safe = True}
+0 171 42 badFile 0 {safe = True}
+0 172 43 goodScript 0 {safe = True}
+0 173 43 goodFile 0 {safe = True}
+0 174 43 badScript 0 {safe = True}
+0 175 43 badFile 0 {safe = True}
+0 176 44 goodScript 0 {safe = True}
+0 177 44 goodFile 0 {safe = True}
+0 178 44 badScript 0 {safe = True}
+0 179 44 badFile 0 {safe = True}
+0 180 45 goodScript 1 {script policy is not set to trust signed only}
+0 181 45 goodFile 1 {file policy is not set to trust signed only}
+0 182 45 badScript 1 {script policy is not set to trust signed only}
+0 183 45 badFile 1 {file policy is not set to trust signed only}
+0 184 46 goodScript 1 {script policy is not set to trust signed only}
+0 185 46 goodFile 1 {file policy is not set to trust signed only}
+0 186 46 badScript 1 {script policy is not set to trust signed only}
+0 187 46 badFile 1 {file policy is not set to trust signed only}
+0 188 47 goodScript 1 {script policy is not set to trust signed only}
+0 189 47 goodFile 1 {file policy is not set to trust signed only}
+0 190 47 badScript 1 {script policy is not set to trust signed only}
+0 191 47 badFile 1 {file policy is not set to trust signed only}
+0 192 48 goodScript 0 {safe = True}
+0 193 48 goodFile 0 {safe = True}
+0 194 48 badScript 0 {safe = True}
+0 195 48 badFile 0 {safe = True}
+0 196 49 goodScript 0 {safe = True}
+0 197 49 goodFile 0 {safe = True}
+0 198 49 badScript 0 {safe = True}
+0 199 49 badFile 0 {safe = True}
+0 200 50 goodScript 0 {safe = True}
+0 201 50 goodFile 0 {safe = True}
+0 202 50 badScript 0 {safe = True}
+0 203 50 badFile 0 {safe = True}
+0 204 51 goodScript 1 {script policy is not set to trust signed only}
+0 205 51 goodFile 1 {file policy is not set to trust signed only}
+0 206 51 badScript 1 {script policy is not set to trust signed only}
+0 207 51 badFile 1 {file policy is not set to trust signed only}
+0 208 52 goodScript 0 {safe = True}
+0 209 52 goodFile 0 {safe = True}
+0 210 52 badScript 0 {safe = True}
+0 211 52 badFile 1 <error(3)>
+0 212 53 goodScript 0 {safe = True}
+0 213 53 goodFile 0 {safe = True}
+0 214 53 badScript 0 {safe = True}
+0 215 53 badFile 1 <error(3)>
+0 216 54 goodScript 0 {safe = True}
+0 217 54 goodFile 0 {safe = True}
+0 218 54 badScript 0 {safe = True}
+0 219 54 badFile 1 <error(3)>
+0 220 55 goodScript 1 {script policy is not set to trust signed only}
+0 221 55 goodFile 1 {file policy is not set to trust signed only}
+0 222 55 badScript 1 {script policy is not set to trust signed only}
+0 223 55 badFile 1 {file policy is not set to trust signed only}
+0 224 56 goodScript 0 {safe = True}
+0 225 56 goodFile 0 {safe = True}
+0 226 56 badScript 0 {safe = True}
+0 227 56 badFile 1 <error(3)>
+0 228 57 goodScript 0 {safe = True}
+0 229 57 goodFile 0 {safe = True}
+0 230 57 badScript 0 {safe = True}
+0 231 57 badFile 0 {safe = True}
+0 232 58 goodScript 0 {safe = True}
+0 233 58 goodFile 0 {safe = True}
+0 234 58 badScript 0 {safe = True}
+0 235 58 badFile 0 {safe = True}
+0 236 59 goodScript 0 {safe = True}
+0 237 59 goodFile 0 {safe = True}
+0 238 59 badScript 0 {safe = True}
+0 239 59 badFile 0 {safe = True}
+0 240 60 goodScript 1 {script policy is not set to trust signed only}
+0 241 60 goodFile 1 {file policy is not set to trust signed only}
+0 242 60 badScript 1 {script policy is not set to trust signed only}
+0 243 60 badFile 1 {file policy is not set to trust signed only}
+0 244 61 goodScript 0 {safe = True}
+0 245 61 goodFile 0 {safe = True}
+0 246 61 badScript 0 {safe = True}
+0 247 61 badFile 0 {safe = True}
+0 248 62 goodScript 0 {safe = True}
+0 249 62 goodFile 0 {safe = True}
+0 250 62 badScript 0 {safe = True}
+0 251 62 badFile 1 <error(3)>
+0 252 63 goodScript 0 {safe = True}
+0 253 63 goodFile 0 {safe = True}
+0 254 63 badScript 0 {safe = True}
+0 255 63 badFile 0 {safe = True}
+1 256 0 goodScript 0 {safe = False}
+1 257 0 goodFile 0 {safe = False}
+1 258 0 badScript 1 <error(1)>
+1 259 0 badFile 1 <error(2)>
+1 260 1 goodScript 0 {safe = False}
+1 261 1 goodFile 0 {safe = False}
+1 262 1 badScript 1 <error(1)>
+1 263 1 badFile 1 <error(2)>
+1 264 2 goodScript 0 {safe = False}
+1 265 2 goodFile 0 {safe = False}
+1 266 2 badScript 1 <error(1)>
+1 267 2 badFile 1 <error(2)>
+1 268 3 goodScript 0 {safe = False}
+1 269 3 goodFile 0 {safe = False}
+1 270 3 badScript 1 <error(1)>
+1 271 3 badFile 1 <error(2)>
+1 272 4 goodScript 0 {safe = False}
+1 273 4 goodFile 0 {safe = False}
+1 274 4 badScript 1 <error(1)>
+1 275 4 badFile 1 <error(2)>
+1 276 5 goodScript 0 {safe = False}
+1 277 5 goodFile 0 {safe = False}
+1 278 5 badScript 0 {safe = True}
+1 279 5 badFile 1 <error(3)>
+1 280 6 goodScript 0 {safe = False}
+1 281 6 goodFile 0 {safe = False}
+1 282 6 badScript 1 <error(1)>
+1 283 6 badFile 1 <error(2)>
+1 284 7 goodScript 0 {safe = False}
+1 285 7 goodFile 0 {safe = False}
+1 286 7 badScript 1 <error(1)>
+1 287 7 badFile 1 <error(2)>
+1 288 8 goodScript 0 {safe = False}
+1 289 8 goodFile 0 {safe = False}
+1 290 8 badScript 1 <error(1)>
+1 291 8 badFile 1 <error(2)>
+1 292 9 goodScript 0 {safe = False}
+1 293 9 goodFile 0 {safe = False}
+1 294 9 badScript 1 <error(1)>
+1 295 9 badFile 1 <error(2)>
+1 296 10 goodScript 0 {safe = False}
+1 297 10 goodFile 0 {safe = False}
+1 298 10 badScript 0 {safe = True}
+1 299 10 badFile 0 {safe = True}
+1 300 11 goodScript 0 {safe = False}
+1 301 11 goodFile 0 {safe = False}
+1 302 11 badScript 1 <error(1)>
+1 303 11 badFile 1 <error(2)>
+1 304 12 goodScript 0 {safe = False}
+1 305 12 goodFile 0 {safe = False}
+1 306 12 badScript 1 <error(1)>
+1 307 12 badFile 1 <error(2)>
+1 308 13 goodScript 0 {safe = False}
+1 309 13 goodFile 0 {safe = False}
+1 310 13 badScript 1 <error(1)>
+1 311 13 badFile 1 <error(2)>
+1 312 14 goodScript 0 {safe = False}
+1 313 14 goodFile 0 {safe = False}
+1 314 14 badScript 0 {safe = True}
+1 315 14 badFile 1 <error(3)>
+1 316 15 goodScript 0 {safe = False}
+1 317 15 goodFile 0 {safe = False}
+1 318 15 badScript 1 <error(1)>
+1 319 15 badFile 1 <error(2)>
+1 320 16 goodScript 0 {safe = False}
+1 321 16 goodFile 0 {safe = False}
+1 322 16 badScript 1 <error(1)>
+1 323 16 badFile 1 <error(2)>
+1 324 17 goodScript 0 {safe = False}
+1 325 17 goodFile 0 {safe = False}
+1 326 17 badScript 0 {safe = True}
+1 327 17 badFile 1 <error(3)>
+1 328 18 goodScript 0 {safe = False}
+1 329 18 goodFile 0 {safe = False}
+1 330 18 badScript 1 <error(1)>
+1 331 18 badFile 1 <error(2)>
+1 332 19 goodScript 0 {safe = False}
+1 333 19 goodFile 0 {safe = False}
+1 334 19 badScript 0 {safe = True}
+1 335 19 badFile 1 <error(3)>
+1 336 20 goodScript 0 {safe = False}
+1 337 20 goodFile 0 {safe = False}
+1 338 20 badScript 1 <error(1)>
+1 339 20 badFile 1 <error(2)>
+1 340 21 goodScript 0 {safe = False}
+1 341 21 goodFile 0 {safe = False}
+1 342 21 badScript 0 {safe = True}
+1 343 21 badFile 1 <error(3)>
+1 344 22 goodScript 0 {safe = False}
+1 345 22 goodFile 0 {safe = False}
+1 346 22 badScript 1 <error(1)>
+1 347 22 badFile 1 <error(2)>
+1 348 23 goodScript 0 {safe = False}
+1 349 23 goodFile 0 {safe = False}
+1 350 23 badScript 1 <error(1)>
+1 351 23 badFile 1 <error(2)>
+1 352 24 goodScript 0 {safe = False}
+1 353 24 goodFile 0 {safe = False}
+1 354 24 badScript 0 {safe = True}
+1 355 24 badFile 0 {safe = True}
+1 356 25 goodScript 0 {safe = False}
+1 357 25 goodFile 0 {safe = False}
+1 358 25 badScript 1 <error(1)>
+1 359 25 badFile 1 <error(2)>
+1 360 26 goodScript 0 {safe = False}
+1 361 26 goodFile 0 {safe = False}
+1 362 26 badScript 1 <error(1)>
+1 363 26 badFile 1 <error(2)>
+1 364 27 goodScript 0 {safe = False}
+1 365 27 goodFile 0 {safe = False}
+1 366 27 badScript 0 {safe = True}
+1 367 27 badFile 0 {safe = True}
+1 368 28 goodScript 0 {safe = False}
+1 369 28 goodFile 0 {safe = False}
+1 370 28 badScript 1 <error(1)>
+1 371 28 badFile 1 <error(2)>
+1 372 29 goodScript 0 {safe = False}
+1 373 29 goodFile 0 {safe = False}
+1 374 29 badScript 0 {safe = True}
+1 375 29 badFile 0 {safe = True}
+1 376 30 goodScript 0 {safe = False}
+1 377 30 goodFile 0 {safe = False}
+1 378 30 badScript 1 <error(1)>
+1 379 30 badFile 1 <error(2)>
+1 380 31 goodScript 0 {safe = False}
+1 381 31 goodFile 0 {safe = False}
+1 382 31 badScript 0 {safe = True}
+1 383 31 badFile 0 {safe = True}
+1 384 32 goodScript 0 {safe = False}
+1 385 32 goodFile 0 {safe = False}
+1 386 32 badScript 1 <error(1)>
+1 387 32 badFile 1 <error(2)>
+1 388 33 goodScript 0 {safe = False}
+1 389 33 goodFile 0 {safe = False}
+1 390 33 badScript 0 {safe = True}
+1 391 33 badFile 1 <error(3)>
+1 392 34 goodScript 0 {safe = False}
+1 393 34 goodFile 0 {safe = False}
+1 394 34 badScript 1 <error(1)>
+1 395 34 badFile 1 <error(2)>
+1 396 35 goodScript 0 {safe = False}
+1 397 35 goodFile 0 {safe = False}
+1 398 35 badScript 0 {safe = True}
+1 399 35 badFile 1 <error(3)>
+1 400 36 goodScript 0 {safe = False}
+1 401 36 goodFile 0 {safe = False}
+1 402 36 badScript 1 <error(1)>
+1 403 36 badFile 1 <error(2)>
+1 404 37 goodScript 0 {safe = False}
+1 405 37 goodFile 0 {safe = False}
+1 406 37 badScript 0 {safe = True}
+1 407 37 badFile 1 <error(3)>
+1 408 38 goodScript 0 {safe = False}
+1 409 38 goodFile 0 {safe = False}
+1 410 38 badScript 0 {safe = True}
+1 411 38 badFile 1 <error(3)>
+1 412 39 goodScript 0 {safe = False}
+1 413 39 goodFile 0 {safe = False}
+1 414 39 badScript 1 <error(1)>
+1 415 39 badFile 1 <error(2)>
+1 416 40 goodScript 0 {safe = False}
+1 417 40 goodFile 0 {safe = False}
+1 418 40 badScript 0 {safe = True}
+1 419 40 badFile 1 <error(3)>
+1 420 41 goodScript 0 {safe = False}
+1 421 41 goodFile 0 {safe = False}
+1 422 41 badScript 0 {safe = True}
+1 423 41 badFile 1 <error(3)>
+1 424 42 goodScript 0 {safe = False}
+1 425 42 goodFile 0 {safe = False}
+1 426 42 badScript 1 <error(1)>
+1 427 42 badFile 1 <error(2)>
+1 428 43 goodScript 0 {safe = False}
+1 429 43 goodFile 0 {safe = False}
+1 430 43 badScript 0 {safe = True}
+1 431 43 badFile 0 {safe = True}
+1 432 44 goodScript 0 {safe = False}
+1 433 44 goodFile 0 {safe = False}
+1 434 44 badScript 1 <error(1)>
+1 435 44 badFile 1 <error(2)>
+1 436 45 goodScript 0 {safe = False}
+1 437 45 goodFile 0 {safe = False}
+1 438 45 badScript 0 {safe = True}
+1 439 45 badFile 0 {safe = True}
+1 440 46 goodScript 0 {safe = False}
+1 441 46 goodFile 0 {safe = False}
+1 442 46 badScript 1 <error(1)>
+1 443 46 badFile 1 <error(2)>
+1 444 47 goodScript 0 {safe = False}
+1 445 47 goodFile 0 {safe = False}
+1 446 47 badScript 0 {safe = True}
+1 447 47 badFile 0 {safe = True}
+1 448 48 goodScript 0 {safe = False}
+1 449 48 goodFile 0 {safe = False}
+1 450 48 badScript 0 {safe = True}
+1 451 48 badFile 0 {safe = True}
+1 452 49 goodScript 0 {safe = False}
+1 453 49 goodFile 0 {safe = False}
+1 454 49 badScript 1 <error(1)>
+1 455 49 badFile 1 <error(2)>
+1 456 50 goodScript 0 {safe = False}
+1 457 50 goodFile 0 {safe = False}
+1 458 50 badScript 0 {safe = True}
+1 459 50 badFile 0 {safe = True}
+1 460 51 goodScript 0 {safe = False}
+1 461 51 goodFile 0 {safe = False}
+1 462 51 badScript 0 {safe = True}
+1 463 51 badFile 0 {safe = True}
+1 464 52 goodScript 0 {safe = False}
+1 465 52 goodFile 0 {safe = False}
+1 466 52 badScript 0 {safe = True}
+1 467 52 badFile 1 <error(3)>
+1 468 53 goodScript 0 {safe = False}
+1 469 53 goodFile 0 {safe = False}
+1 470 53 badScript 1 <error(1)>
+1 471 53 badFile 1 <error(2)>
+1 472 54 goodScript 0 {safe = False}
+1 473 54 goodFile 0 {safe = False}
+1 474 54 badScript 0 {safe = True}
+1 475 54 badFile 1 <error(3)>
+1 476 55 goodScript 0 {safe = False}
+1 477 55 goodFile 0 {safe = False}
+1 478 55 badScript 0 {safe = True}
+1 479 55 badFile 1 <error(3)>
+1 480 56 goodScript 0 {safe = False}
+1 481 56 goodFile 0 {safe = False}
+1 482 56 badScript 0 {safe = True}
+1 483 56 badFile 1 <error(3)>
+1 484 57 goodScript 0 {safe = False}
+1 485 57 goodFile 0 {safe = False}
+1 486 57 badScript 0 {safe = True}
+1 487 57 badFile 0 {safe = True}
+1 488 58 goodScript 0 {safe = False}
+1 489 58 goodFile 0 {safe = False}
+1 490 58 badScript 1 <error(1)>
+1 491 58 badFile 1 <error(2)>
+1 492 59 goodScript 0 {safe = False}
+1 493 59 goodFile 0 {safe = False}
+1 494 59 badScript 0 {safe = True}
+1 495 59 badFile 0 {safe = True}
+1 496 60 goodScript 0 {safe = False}
+1 497 60 goodFile 0 {safe = False}
+1 498 60 badScript 0 {safe = True}
+1 499 60 badFile 0 {safe = True}
+1 500 61 goodScript 0 {safe = False}
+1 501 61 goodFile 0 {safe = False}
+1 502 61 badScript 0 {safe = True}
+1 503 61 badFile 0 {safe = True}
+1 504 62 goodScript 0 {safe = False}
+1 505 62 goodFile 0 {safe = False}
+1 506 62 badScript 0 {safe = True}
+1 507 62 badFile 1 <error(3)>
+1 508 63 goodScript 0 {safe = False}
+1 509 63 goodFile 0 {safe = False}
+1 510 63 badScript 0 {safe = True}
+1 511 63 badFile 0 {safe = True}
+2 512 0 goodScript 1 {script policy is not set to trust signed only}
+2 513 0 goodFile 1 {file policy is not set to trust signed only}
+2 514 0 badScript 1 {script policy is not set to trust signed only}
+2 515 0 badFile 1 {file policy is not set to trust signed only}
+2 516 1 goodScript 1 {script policy is not set to trust signed only}
+2 517 1 goodFile 1 {file policy is not set to trust signed only}
+2 518 1 badScript 1 {script policy is not set to trust signed only}
+2 519 1 badFile 1 {file policy is not set to trust signed only}
+2 520 2 goodScript 1 {script policy is not set to trust signed only}
+2 521 2 goodFile 1 {file policy is not set to trust signed only}
+2 522 2 badScript 1 {script policy is not set to trust signed only}
+2 523 2 badFile 1 {file policy is not set to trust signed only}
+2 524 3 goodScript 0 {safe = True}
+2 525 3 goodFile 0 {safe = True}
+2 526 3 badScript 0 {safe = True}
+2 527 3 badFile 1 <error(3)>
+2 528 4 goodScript 1 {script policy is not set to trust signed only}
+2 529 4 goodFile 1 {file policy is not set to trust signed only}
+2 530 4 badScript 1 {script policy is not set to trust signed only}
+2 531 4 badFile 1 {file policy is not set to trust signed only}
+2 532 5 goodScript 1 {script policy is not set to trust signed only}
+2 533 5 goodFile 1 {file policy is not set to trust signed only}
+2 534 5 badScript 1 {script policy is not set to trust signed only}
+2 535 5 badFile 1 {file policy is not set to trust signed only}
+2 536 6 goodScript 1 {script policy is not set to trust signed only}
+2 537 6 goodFile 1 {file policy is not set to trust signed only}
+2 538 6 badScript 1 {script policy is not set to trust signed only}
+2 539 6 badFile 1 {file policy is not set to trust signed only}
+2 540 7 goodScript 1 {script policy is not set to trust signed only}
+2 541 7 goodFile 1 {file policy is not set to trust signed only}
+2 542 7 badScript 1 {script policy is not set to trust signed only}
+2 543 7 badFile 1 {file policy is not set to trust signed only}
+2 544 8 goodScript 0 {safe = True}
+2 545 8 goodFile 0 {safe = True}
+2 546 8 badScript 0 {safe = True}
+2 547 8 badFile 0 {safe = True}
+2 548 9 goodScript 1 {script policy is not set to trust signed only}
+2 549 9 goodFile 1 {file policy is not set to trust signed only}
+2 550 9 badScript 1 {script policy is not set to trust signed only}
+2 551 9 badFile 1 {file policy is not set to trust signed only}
+2 552 10 goodScript 1 {script policy is not set to trust signed only}
+2 553 10 goodFile 1 {file policy is not set to trust signed only}
+2 554 10 badScript 1 {script policy is not set to trust signed only}
+2 555 10 badFile 1 {file policy is not set to trust signed only}
+2 556 11 goodScript 1 {script policy is not set to trust signed only}
+2 557 11 goodFile 1 {file policy is not set to trust signed only}
+2 558 11 badScript 1 {script policy is not set to trust signed only}
+2 559 11 badFile 1 {file policy is not set to trust signed only}
+2 560 12 goodScript 0 {safe = True}
+2 561 12 goodFile 0 {safe = True}
+2 562 12 badScript 0 {safe = True}
+2 563 12 badFile 1 <error(3)>
+2 564 13 goodScript 1 {script policy is not set to trust signed only}
+2 565 13 goodFile 1 {file policy is not set to trust signed only}
+2 566 13 badScript 1 {script policy is not set to trust signed only}
+2 567 13 badFile 1 {file policy is not set to trust signed only}
+2 568 14 goodScript 1 {script policy is not set to trust signed only}
+2 569 14 goodFile 1 {file policy is not set to trust signed only}
+2 570 14 badScript 1 {script policy is not set to trust signed only}
+2 571 14 badFile 1 {file policy is not set to trust signed only}
+2 572 15 goodScript 1 {script policy is not set to trust signed only}
+2 573 15 goodFile 1 {file policy is not set to trust signed only}
+2 574 15 badScript 1 {script policy is not set to trust signed only}
+2 575 15 badFile 1 {file policy is not set to trust signed only}
+2 576 16 goodScript 0 {safe = True}
+2 577 16 goodFile 0 {safe = True}
+2 578 16 badScript 0 {safe = True}
+2 579 16 badFile 1 <error(3)>
+2 580 17 goodScript 0 {safe = True}
+2 581 17 goodFile 0 {safe = True}
+2 582 17 badScript 0 {safe = True}
+2 583 17 badFile 1 <error(3)>
+2 584 18 goodScript 0 {safe = True}
+2 585 18 goodFile 0 {safe = True}
+2 586 18 badScript 0 {safe = True}
+2 587 18 badFile 1 <error(3)>
+2 588 19 goodScript 1 {script policy is not set to trust signed only}
+2 589 19 goodFile 1 {file policy is not set to trust signed only}
+2 590 19 badScript 1 {script policy is not set to trust signed only}
+2 591 19 badFile 1 {file policy is not set to trust signed only}
+2 592 20 goodScript 1 {script policy is not set to trust signed only}
+2 593 20 goodFile 1 {file policy is not set to trust signed only}
+2 594 20 badScript 1 {script policy is not set to trust signed only}
+2 595 20 badFile 1 {file policy is not set to trust signed only}
+2 596 21 goodScript 1 {script policy is not set to trust signed only}
+2 597 21 goodFile 1 {file policy is not set to trust signed only}
+2 598 21 badScript 1 {script policy is not set to trust signed only}
+2 599 21 badFile 1 {file policy is not set to trust signed only}
+2 600 22 goodScript 0 {safe = True}
+2 601 22 goodFile 0 {safe = True}
+2 602 22 badScript 0 {safe = True}
+2 603 22 badFile 0 {safe = True}
+2 604 23 goodScript 1 {script policy is not set to trust signed only}
+2 605 23 goodFile 1 {file policy is not set to trust signed only}
+2 606 23 badScript 1 {script policy is not set to trust signed only}
+2 607 23 badFile 1 {file policy is not set to trust signed only}
+2 608 24 goodScript 1 {script policy is not set to trust signed only}
+2 609 24 goodFile 1 {file policy is not set to trust signed only}
+2 610 24 badScript 1 {script policy is not set to trust signed only}
+2 611 24 badFile 1 {file policy is not set to trust signed only}
+2 612 25 goodScript 1 {script policy is not set to trust signed only}
+2 613 25 goodFile 1 {file policy is not set to trust signed only}
+2 614 25 badScript 1 {script policy is not set to trust signed only}
+2 615 25 badFile 1 {file policy is not set to trust signed only}
+2 616 26 goodScript 0 {safe = True}
+2 617 26 goodFile 0 {safe = True}
+2 618 26 badScript 0 {safe = True}
+2 619 26 badFile 0 {safe = True}
+2 620 27 goodScript 0 {safe = True}
+2 621 27 goodFile 0 {safe = True}
+2 622 27 badScript 0 {safe = True}
+2 623 27 badFile 0 {safe = True}
+2 624 28 goodScript 0 {safe = True}
+2 625 28 goodFile 0 {safe = True}
+2 626 28 badScript 0 {safe = True}
+2 627 28 badFile 0 {safe = True}
+2 628 29 goodScript 1 {script policy is not set to trust signed only}
+2 629 29 goodFile 1 {file policy is not set to trust signed only}
+2 630 29 badScript 1 {script policy is not set to trust signed only}
+2 631 29 badFile 1 {file policy is not set to trust signed only}
+2 632 30 goodScript 1 {script policy is not set to trust signed only}
+2 633 30 goodFile 1 {file policy is not set to trust signed only}
+2 634 30 badScript 1 {script policy is not set to trust signed only}
+2 635 30 badFile 1 {file policy is not set to trust signed only}
+2 636 31 goodScript 1 {script policy is not set to trust signed only}
+2 637 31 goodFile 1 {file policy is not set to trust signed only}
+2 638 31 badScript 1 {script policy is not set to trust signed only}
+2 639 31 badFile 1 {file policy is not set to trust signed only}
+2 640 32 goodScript 0 {safe = True}
+2 641 32 goodFile 0 {safe = True}
+2 642 32 badScript 0 {safe = True}
+2 643 32 badFile 1 <error(3)>
+2 644 33 goodScript 0 {safe = True}
+2 645 33 goodFile 0 {safe = True}
+2 646 33 badScript 0 {safe = True}
+2 647 33 badFile 1 <error(3)>
+2 648 34 goodScript 0 {safe = True}
+2 649 34 goodFile 0 {safe = True}
+2 650 34 badScript 0 {safe = True}
+2 651 34 badFile 1 <error(3)>
+2 652 35 goodScript 1 {script policy is not set to trust signed only}
+2 653 35 goodFile 1 {file policy is not set to trust signed only}
+2 654 35 badScript 1 {script policy is not set to trust signed only}
+2 655 35 badFile 1 {file policy is not set to trust signed only}
+2 656 36 goodScript 1 {script policy is not set to trust signed only}
+2 657 36 goodFile 1 {file policy is not set to trust signed only}
+2 658 36 badScript 1 {script policy is not set to trust signed only}
+2 659 36 badFile 1 {file policy is not set to trust signed only}
+2 660 37 goodScript 1 {script policy is not set to trust signed only}
+2 661 37 goodFile 1 {file policy is not set to trust signed only}
+2 662 37 badScript 1 {script policy is not set to trust signed only}
+2 663 37 badFile 1 {file policy is not set to trust signed only}
+2 664 38 goodScript 0 {safe = True}
+2 665 38 goodFile 0 {safe = True}
+2 666 38 badScript 0 {safe = True}
+2 667 38 badFile 1 <error(3)>
+2 668 39 goodScript 0 {safe = True}
+2 669 39 goodFile 0 {safe = True}
+2 670 39 badScript 0 {safe = True}
+2 671 39 badFile 1 <error(3)>
+2 672 40 goodScript 0 {safe = True}
+2 673 40 goodFile 0 {safe = True}
+2 674 40 badScript 0 {safe = True}
+2 675 40 badFile 1 <error(3)>
+2 676 41 goodScript 1 {script policy is not set to trust signed only}
+2 677 41 goodFile 1 {file policy is not set to trust signed only}
+2 678 41 badScript 1 {script policy is not set to trust signed only}
+2 679 41 badFile 1 {file policy is not set to trust signed only}
+2 680 42 goodScript 0 {safe = True}
+2 681 42 goodFile 0 {safe = True}
+2 682 42 badScript 0 {safe = True}
+2 683 42 badFile 0 {safe = True}
+2 684 43 goodScript 0 {safe = True}
+2 685 43 goodFile 0 {safe = True}
+2 686 43 badScript 0 {safe = True}
+2 687 43 badFile 0 {safe = True}
+2 688 44 goodScript 0 {safe = True}
+2 689 44 goodFile 0 {safe = True}
+2 690 44 badScript 0 {safe = True}
+2 691 44 badFile 0 {safe = True}
+2 692 45 goodScript 1 {script policy is not set to trust signed only}
+2 693 45 goodFile 1 {file policy is not set to trust signed only}
+2 694 45 badScript 1 {script policy is not set to trust signed only}
+2 695 45 badFile 1 {file policy is not set to trust signed only}
+2 696 46 goodScript 1 {script policy is not set to trust signed only}
+2 697 46 goodFile 1 {file policy is not set to trust signed only}
+2 698 46 badScript 1 {script policy is not set to trust signed only}
+2 699 46 badFile 1 {file policy is not set to trust signed only}
+2 700 47 goodScript 1 {script policy is not set to trust signed only}
+2 701 47 goodFile 1 {file policy is not set to trust signed only}
+2 702 47 badScript 1 {script policy is not set to trust signed only}
+2 703 47 badFile 1 {file policy is not set to trust signed only}
+2 704 48 goodScript 0 {safe = True}
+2 705 48 goodFile 0 {safe = True}
+2 706 48 badScript 0 {safe = True}
+2 707 48 badFile 0 {safe = True}
+2 708 49 goodScript 0 {safe = True}
+2 709 49 goodFile 0 {safe = True}
+2 710 49 badScript 0 {safe = True}
+2 711 49 badFile 0 {safe = True}
+2 712 50 goodScript 0 {safe = True}
+2 713 50 goodFile 0 {safe = True}
+2 714 50 badScript 0 {safe = True}
+2 715 50 badFile 0 {safe = True}
+2 716 51 goodScript 1 {script policy is not set to trust signed only}
+2 717 51 goodFile 1 {file policy is not set to trust signed only}
+2 718 51 badScript 1 {script policy is not set to trust signed only}
+2 719 51 badFile 1 {file policy is not set to trust signed only}
+2 720 52 goodScript 0 {safe = True}
+2 721 52 goodFile 0 {safe = True}
+2 722 52 badScript 0 {safe = True}
+2 723 52 badFile 1 <error(3)>
+2 724 53 goodScript 0 {safe = True}
+2 725 53 goodFile 0 {safe = True}
+2 726 53 badScript 0 {safe = True}
+2 727 53 badFile 1 <error(3)>
+2 728 54 goodScript 0 {safe = True}
+2 729 54 goodFile 0 {safe = True}
+2 730 54 badScript 0 {safe = True}
+2 731 54 badFile 1 <error(3)>
+2 732 55 goodScript 1 {script policy is not set to trust signed only}
+2 733 55 goodFile 1 {file policy is not set to trust signed only}
+2 734 55 badScript 1 {script policy is not set to trust signed only}
+2 735 55 badFile 1 {file policy is not set to trust signed only}
+2 736 56 goodScript 0 {safe = True}
+2 737 56 goodFile 0 {safe = True}
+2 738 56 badScript 0 {safe = True}
+2 739 56 badFile 1 <error(3)>
+2 740 57 goodScript 0 {safe = True}
+2 741 57 goodFile 0 {safe = True}
+2 742 57 badScript 0 {safe = True}
+2 743 57 badFile 0 {safe = True}
+2 744 58 goodScript 0 {safe = True}
+2 745 58 goodFile 0 {safe = True}
+2 746 58 badScript 0 {safe = True}
+2 747 58 badFile 0 {safe = True}
+2 748 59 goodScript 0 {safe = True}
+2 749 59 goodFile 0 {safe = True}
+2 750 59 badScript 0 {safe = True}
+2 751 59 badFile 0 {safe = True}
+2 752 60 goodScript 1 {script policy is not set to trust signed only}
+2 753 60 goodFile 1 {file policy is not set to trust signed only}
+2 754 60 badScript 1 {script policy is not set to trust signed only}
+2 755 60 badFile 1 {file policy is not set to trust signed only}
+2 756 61 goodScript 0 {safe = True}
+2 757 61 goodFile 0 {safe = True}
+2 758 61 badScript 0 {safe = True}
+2 759 61 badFile 0 {safe = True}
+2 760 62 goodScript 0 {safe = True}
+2 761 62 goodFile 0 {safe = True}
+2 762 62 badScript 0 {safe = True}
+2 763 62 badFile 1 <error(3)>
+2 764 63 goodScript 0 {safe = True}
+2 765 63 goodFile 0 {safe = True}
+2 766 63 badScript 0 {safe = True}
+2 767 63 badFile 0 {safe = True}

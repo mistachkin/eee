@@ -1,0 +1,139 @@
+###############################################################################
+#
+# encrypt.eagle --
+#
+# Extensible Adaptable Generalized Logic Engine (Eagle)
+# Enterprise Edition License Encryption Tool
+#
+# Copyright (c) 2007-2012 by Joe Mistachkin.  All rights reserved.
+#
+# See the file "license.terms" for information on usage and redistribution of
+# this file, and for a DISCLAIMER OF ALL WARRANTIES.
+#
+# RCS: @(#) $Id: $
+#
+###############################################################################
+
+proc usage { {error ""} } {
+  # <help>
+  # This procedure prints the command-line usage summary for the license
+  # encryption tool and then terminates the process, signaling failure to
+  # whatever invoked it.  It exists as the single entry point for the "you
+  # called me incorrectly" path, and is invoked when the tool is run with the
+  # wrong number of positional arguments.
+  #
+  # How it works: when the error argument is a non-empty string it is written
+  # to standard output first; the usage line is then printed, naming the host
+  # shell executable and this script followed by the required positional
+  # argument (fileName).  Finally it calls [exit 1].
+  #
+  # Tricky details: this procedure never returns to its caller -- it always
+  # exits the process with a non-zero (failure) status, so it must only be
+  # used on terminal error paths.  The error argument is optional and defaults
+  # to the empty string for callers that just want the bare usage text.
+  #
+  # Arguments:
+  #   error -- An optional leading error message.  When non-empty it is shown
+  #            before the usage text; defaults to the empty string.
+  #
+  # Results:
+  #   Does not return; the process exits with status code 1.
+  # </help>
+
+  if {[string length $error] > 0} then {puts stdout $error}
+
+  puts stdout "usage:\
+[file tail [getShellExecutableName]]\
+[file tail [info script]] <fileName>"
+
+  exit 1
+}
+
+if {[llength $argv] == 1} then {
+  package require Eagle
+  package require Licensing.Enterprise
+
+  if {![info exists isCertificate]} then {
+    set isCertificate true; # TODO: Good default?
+  }
+
+  if {![info exists showPassword]} then {
+    set showPassword [expr {!$isCertificate}]
+  }
+
+  if {![info exists showGuid]} then {
+    set showGuid [expr {!$isCertificate}]
+  }
+
+  set fileName [lindex $argv 0]
+
+  if {$isCertificate} then {
+    set encryptedFileName [appendArgs [file rootname $fileName] .exml]
+  } else {
+    set encryptedFileName [appendArgs [file rootname $fileName] .eeagle]
+  }
+
+  set data [object invoke \
+      -create System.IO.File ReadAllBytes $fileName]
+
+  set newPassword false
+  set newGuid false
+
+  if {$isCertificate} then {
+    set certificate [certificate import -alias $fileName]
+
+    if {![info exists password]} then {
+      set password [$certificate EntityName]
+    }
+
+    if {![info exists guid]} then {
+      set guid [$certificate -create -alias Id]
+    }
+  } else {
+    if {![info exists password]} then {
+      set password [format %lX%lX [expr {random()}] [expr {random()}]]
+      set newPassword true
+    }
+
+    if {![info exists guid]} then {
+      set guid [object invoke -create -alias Guid NewGuid]
+      set newGuid true
+    }
+  }
+
+  set salt [$guid -create ToByteArray]
+  set triplet [cryptography encrypt3 -alias $data $password $salt]
+
+  set data [$triplet -create Y]
+  set salt [object invoke Convert ToBase64String $salt]
+
+  set data [string map [list \r\n \n] [object invoke \
+      Convert ToBase64String $data InsertLineBreaks]]
+
+  writeFile $encryptedFileName [string trim \
+      [subst -nocommands -nobackslashes {
+! EncryptedData: v1.0
+! symmetricAlgorithmName: Rijndael
+! salt: $salt
+
+$data
+  }]]
+
+  host result Ok [appendArgs \
+      "ENCRYPTED: " [file tail $encryptedFileName] \n]
+
+  if {$newGuid || $showGuid} then {
+    host result Continue [appendArgs "GUID: " [$guid ToString] \n]
+  }
+
+  if {$newPassword || $showPassword} then {
+    host result Continue [appendArgs "PASSWORD: " $password \n]
+  }
+
+  unset -nocomplain -maybezerostring -purge -- \
+      isCertificate showPassword showGuid fileName \
+      encryptedFileName data newPassword newGuid \
+      certificate password guid salt triplet
+} else {
+  usage
+}

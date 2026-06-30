@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package>
+  <metadata>
+    <id>Harpy.CLRv2</id>
+    <title>Eagle Enterprise Edition: Harpy Plugin (CLRv2)</title>
+    <version>1.0.X.X</version>
+    <authors>Eagle Development Team</authors>
+    <description>
+      Public key infrastructure-based software license enforcement.
+      Supports the creation, verification, and renewal of both license certificates and script certificates.
+      Also supports verification and evaluation of signed scripts, via the aforementioned script certificates.
+    </description>
+    <language>en-US</language>
+    <projectUrl>https://urn.to/r/eagle</projectUrl>
+    <iconUrl>https://eagle.to/images/eagle128.png</iconUrl>
+    <licenseUrl>https://eagle.to/enterprise/license.html</licenseUrl>
+    <requireLicenseAcceptance>true</requireLicenseAcceptance>
+    <tags>certificate eagle enforcement keypair licensing pki</tags>
+    <copyright>Copyright &#x00A9; 2007-2012 by Joe Mistachkin.  All rights reserved.</copyright>
+    <dependencies>
+      <group targetFramework="net20">
+        <dependency id="Eagle.CLRv2.Core" version="[1.0.X.X,1.0.X.99999]" />
+      </group>
+    </dependencies>
+    <references />
+  </metadata>
+  <files>
+    <file src="lib\Harpy1.0\Harpy.dll" target="build\net20\lib\Harpy1.0" />
+    <file src="lib\Harpy1.0\keyRing.General.demo.eagle" target="build\net20\lib\Harpy1.0" />
+    <file src="lib\Harpy1.0\keyRing.General.demo.eagle.harpy" target="build\net20\lib\Harpy1.0" />
+    <file src="lib\Harpy1.0\keyRing.one.eagle" target="build\net20\lib\Harpy1.0" />
+    <file src="lib\Harpy1.0\keyRing.one.eagle.harpy" target="build\net20\lib\Harpy1.0" />
+    <file src="lib\Harpy1.0\keyRing.zero.eagle" target="build\net20\lib\Harpy1.0" />
+    <file src="lib\Harpy1.0\keyRing.zero.eagle.harpy" target="build\net20\lib\Harpy1.0" />
+    <file src="lib\Harpy1.0\pkgIndex.eagle" target="build\net20\lib\Harpy1.0\pkgIndex_8bf43b4749e46a0b.eagle" />
+    <file src="lib\Harpy1.0\pkgIndex.eagle.harpy" target="build\net20\lib\Harpy1.0\pkgIndex_8bf43b4749e46a0b.eagle.harpy" />
+    <file src="lib\Harpy1.0\test.eagle" target="build\net20\lib\Harpy1.0" />
+    <file src="lib\Harpy1.0\test.eagle.harpy" target="build\net20\lib\Harpy1.0" />
+    <file src="lib\Harpy1.0\trial-certificate.xml" target="build\net20\lib\Harpy1.0\Certificates" />
+    <file src="lib\Harpy1.0\Configurations\NuGet\Harpy.v1.eeagle" target="build\net20\lib\Harpy1.0\Configurations\Harpy.Debugger.v1.eeagle" />
+    <file src="lib\Harpy1.0\Configurations\NuGet\Harpy.v1.eeagle.b64sig" target="build\net20\lib\Harpy1.0\Configurations\Harpy.Debugger.v1.eeagle.b64sig" />
+    <file src="lib\Badge1.0\Badge.dll" target="build\net20\lib\Badge1.0" />
+    <file src="lib\Badge1.0\pkgIndex.eagle" target="build\net20\lib\Badge1.0\pkgIndex_8bf43b4749e46a0b.eagle" />
+    <file src="lib\Badge1.0\pkgIndex.eagle.harpy" target="build\net20\lib\Badge1.0\pkgIndex_8bf43b4749e46a0b.eagle.harpy" />
+    <file src="lib\Badge1.0\trial-certificate.xml" target="build\net20\lib\Badge1.0\Certificates" />
+    <file src="build\Harpy.NuGet.targets" target="build\net20\Harpy.CLRv2.targets" />
+  </files>
+</package>

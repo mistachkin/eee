@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package>
+  <metadata>
+    <id>Harpy</id>
+    <title>Eagle Enterprise Edition: Harpy Plugin</title>
+    <version>1.0.X.X</version>
+    <authors>Eagle Development Team</authors>
+    <description>
+      Public key infrastructure-based software license enforcement.
+      Supports the creation, verification, and renewal of both license certificates and script certificates.
+      Also supports verification and evaluation of signed scripts, via the aforementioned script certificates.
+    </description>
+    <language>en-US</language>
+    <projectUrl>https://urn.to/r/eagle</projectUrl>
+    <iconUrl>https://eagle.to/images/eagle128.png</iconUrl>
+    <licenseUrl>https://eagle.to/enterprise/license.html</licenseUrl>
+    <requireLicenseAcceptance>true</requireLicenseAcceptance>
+    <tags>certificate eagle enforcement keypair licensing pki</tags>
+    <copyright>Copyright &#x00A9; 2007-2012 by Joe Mistachkin.  All rights reserved.</copyright>
+    <dependencies>
+      <group targetFramework="net20">
+        <dependency id="Harpy.CLRv2" version="[1.0.X.X,1.0.X.99999]" />
+      </group>
+      <group targetFramework="net40">
+        <dependency id="Harpy.CLRv4" version="[1.0.X.X,1.0.X.99999]" />
+      </group>
+      <group targetFramework="netstandard2.0">
+        <dependency id="Harpy.DotNet.Standard.2.0" version="[1.0.X.X,1.0.X.99999]" />
+      </group>
+      <group targetFramework="netstandard2.1">
+        <dependency id="Harpy.DotNet.Standard.2.1" version="[1.0.X.X,1.0.X.99999]" />
+      </group>
+    </dependencies>
+    <references />
+  </metadata>
+  <files />
+</package>

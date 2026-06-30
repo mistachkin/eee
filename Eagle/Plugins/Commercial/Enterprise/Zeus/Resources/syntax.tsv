@@ -1,0 +1,14 @@
+zeus about	zeus about
+zeus callback	zeus callback ?options? arg ?arg ...?
+zeus certificate	zeus certificate
+zeus clone	zeus clone provider
+zeus create	zeus create
+zeus derive	zeus derive ?options? salt password ?password ...?
+zeus hook	zeus hook ?options?
+zeus isolated	zeus isolated
+zeus options	zeus options
+zeus pi	zeus pi digit ?count?
+zeus proc	zeus proc ?provider?
+zeus register	zeus register ?options? ?arguments? body
+zeus selftest	zeus selftest
+zeus unregister	zeus unregister registration

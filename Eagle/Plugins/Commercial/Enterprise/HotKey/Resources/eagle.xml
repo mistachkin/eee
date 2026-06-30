@@ -1,0 +1,190 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ScintillaNET>
+  <Language Name="eagle">
+    <Indentation TabWidth="2" UseTabs="False" />
+    <Lexer LexerName="tcl">
+      <!-- Eagle Tcl Commands (Was "TCL Keywords") -->
+      <Keywords List="0">
+        after append apply array
+        bgerror break
+        catch cd clock close concat continue
+        dict
+        else elseif encoding eof error eval exec exit expr
+        fblocked fconfigure fcopy file finally flush for foreach format
+        fpclassify
+        gets glob global
+        if incr info interp
+        join
+        lappend lassign lindex linsert list llength lmap load lrange lrepeat
+        lreplace lreverse lsearch lset lsort
+        namespace
+        open
+        package pid proc puts pwd
+        read regexp regsub rename return
+        seek set socket source split string subst switch
+        tell then time try
+        unload unset update uplevel upvar
+        variable
+        vwait
+        while
+      </Keywords>
+      <!-- Eagle Specific Commands (Was "TK Keywords") -->
+      <Keywords List="1">
+        Eagle_Nop
+        base64
+        callback
+        debug do downlevel
+        getf guid
+        hash host
+        invoke
+        kill
+        lget library lremove
+        napply nop nproc
+        object
+        parse
+        scope setf sql
+        tcl test1 test2 throw time truncate
+        unsetf uri
+        version
+        xml
+      </Keywords>
+      <!-- Eagle Script Library Procedures (Was "iTCL Keywords") -->
+      <Keywords List="2">
+        addRuntimeOption addToPath appendArgs appendFile appendLogFile
+        appendSharedFile appendSharedLogFile
+        canGetManagedType canUseComSpecDir checkForEngine checkForPlugin
+        checkForUpdate combineFlags compileCSharp compileViaCSharpCodeProvider
+        compileViaDotNetCoreCSharp compilerParameterToArguments
+        copyFilesRecursive csharpLog
+        determineDotNetStandardVersion
+        doesCompileCSharpWork
+        downloadAndExtractNativeTclKitDll
+        downloadAndExtractNativeTclTkDlls
+        downloadAndExtractPackageClientToolset
+        downloadAndExtractSecurityToolset downloadAndExtractUpdate
+        downloadExampleScript downloadPackageIndexScript
+        escapeUpdateNotes evalAsync evaluateInRemoteSandbox execShell
+        exportAndImportPackageCommands extractCSharpErrors
+        extractCSharpWarnings extractZipArchive
+        fetchUpdate filter filterForGlob fileDirNameForFind
+        fileNormalizeForGlob fileTailForFind findDirectories
+        findDirectoriesRecursive findFiles findFilesRecursive
+        findViaComSpecDir findViaGlob forceScanOfPackages
+        formatCompilerArgument
+        getAuxiliaryBaseUri getBasePath getBogusPackageName getColumnValue
+        getCompileInfo getCSharpCompilerOptions getCSharpTestProgram
+        getDefaultValue getDictionaryValue getDirResultPath
+        getDotNetCoreCSharpCommandArgs getDotNetCoreSdkPath
+        getDotNetStandardReferencePath getDownloadBaseUri
+        getEnvironmentVariable getExternalIpAddress getFetchUpdateArgs
+        getHostSize getLengthModifier getOwnerForProcess getPackageInstallPath
+        getPlatformInfo getPluginFlags getPluginName getPluginPath getProcesses
+        getReturnType getRowColumnValue getRuntimeCommandLine getScriptBaseUri
+        getShellExecutableName getStringFromObjectHandle getUpdateBaseUri
+        getUpdateData getUpdateFileName getUpdatePathAndQuery
+        getUpdateScriptData
+        hasRuntimeOption haveColumnValue haveGaruda haveRowColumnValue
+        isAdministrator isBasicType isDotNetCore isEagle isInteractive
+        isKnownDotNetCoreVersion isMacOS isManagedType isMono
+        isNonNullObjectHandle isObjectHandle isSameFileName isTclThread
+        isUpdateInstalled isWindows
+        lappendArgs ldifference listExampleScripts listRuntimeOptions
+        loadGarudaForUseByEagle loadPackageClientToolset loadScripts lshuffle
+        makeAsciiChannel makeBinaryChannel makeLogChannel makeProcedureFast
+        makeUnicodeBinaryChannel makeUnicodeChannel makeUpdateId
+        makeUtf8Channel makeUtf8BinaryChannel makeVariableFast map
+        markUpdateInstalled matchEngineCulture matchEngineName
+        matchEnginePublicKeyToken matchUpdateCulture matchUpdateName
+        matchUpdatePublicKeyToken maybeAppendPathResult maybeGetExitCode
+        maybeLoadScripts
+        parray pdict performGlob
+        populateDotNetStandardReferenceDirectories populateTypesForComSpecDir
+        populateTypesForGlob pwdForDirResultPath
+        readAsciiFile readFile readSharedFile readUnicodeBinaryFile
+        readUnicodeFile readUtf8File readUtf8BinaryFile reduce
+        regexpEscapeAll removeFromPath removeRuntimeOption
+        requestLicenseCertificate runDotNetCSharpCommand runUpdateAndExit
+        setupPackageToolsetVars setupUnzipVars
+        shouldPreferTheNetStandardVersion sourceWithInfo
+        tcl::tm::UnknownHandler tclLog tclLogForCommand tclPkgUnknown
+        tcl_endOfWord tcl_startOfNextWord tcl_startOfPreviousWord
+        tcl_wordBreakAfter tcl_wordBreakBefore test toggleRuntimeOption tqlog
+        tqputs tryParseDotNetCoreVersion
+        unescapeUpdateNotes unknown unknownObjectInvoke unzipMustBeInstalled
+        vwaitLocked
+        waitForProcesses writeAsciiFile writeFile writeUnicodeBinaryFile
+        writeUnicodeFile writeUtf8File writeUtf8BinaryFile
+      </Keywords>
+      <!-- Eagle Tcl Variables (Was "tkCommands") -->
+      <Keywords List="3">
+        argc argv argv0 auto_index auto_path env errorCode errorInfo
+        tcl_interactive tcl_library tcl_nonwordchars tcl_patchLevel
+        tcl_platform tcl_precision tcl_rcFileName tcl_version tcl_wordchars
+      </Keywords>
+      <!-- Not Implemented (Was "expand") -->
+      <Keywords List="4" />
+      <!-- Eagle Specific Variables (Was "user1") -->
+      <Keywords List="5">
+        auto_source_path
+        eagle_debugger eagle_paths eagle_platform eagle_shell eagle_tests
+        null tcl_interactiveLoops tcl_shellLibrary whatIfArgc whatIfArgv
+      </Keywords>
+      <!-- Eagle Specific Test Variables (Was "user2") -->
+      <Keywords List="6">
+        base_path bin_file bin_path
+        core_bin_path core_lib_path
+        key_path
+        lib_path
+        native_lib_path no
+        root_path
+        test_all_path test_base_cops test_base_cops_multipliers
+        test_break_on_leak test_channel test_configuration test_constraints
+        test_cops test_data_path test_database test_database_subst
+        test_database_table test_database_type test_exit_on_complete
+        test_extra_paths test_file test_flags test_home_path test_host
+        test_hosts test_join_timeout test_listed_leaks test_log test_log_id
+        test_log_path test_log_queue test_log_sentry test_long_timeout
+        test_machine test_mdas test_name_prefix test_package_path test_path
+        test_platform test_port test_puts_state test_random_order
+        test_repository_checkout test_repository_file test_repository_tags
+        test_repository_url test_run_bucket test_run_id test_script
+        test_settings_path test_statistics test_stop_on_failure
+        test_stop_on_leak test_stress_count test_suffix test_suite
+        test_suite_errors test_suite_file test_suite_running test_tclsh
+        test_tclsh_raw test_tclsh_verbose test_threshold test_timeout
+        test_timestamp test_uncounted_leaks test_verbose test_visual_studio
+        test_volume test_wait test_well_known test_wix
+      </Keywords>
+      <!-- Tcl/Eagle Expression Functions (Was "user3") -->
+      <Keywords List="7">
+        abs acos asin atan atan2
+        bool
+        ceil cos cosh
+        datetime decimal double
+        e entier epsilon exp
+        flags floor fmod
+        hypot
+        int isfinite isinf isnan isnormal issubnormal isunordered
+        log log10 log2 logx
+        max min
+        nop
+        pi pow
+        rand random randstr round round2 round3
+        sign sin sinh sqrt srand
+        tan tanh timespan truncate typeof
+        wide
+      </Keywords>
+      <!-- Tcl/Eagle Expression Constants (Was "user4") -->
+      <Keywords List="8">
+        eq
+        false
+        ge gt
+        in
+        le lt
+        ne ni
+        true
+      </Keywords>
+    </Lexer>
+    <!-- %Styles% -->
+  </Language>
+</ScintillaNET>

@@ -1,0 +1,57 @@
+<!--
+ *
+ * Kapok.Builds.targets -
+ *
+ * WARNING: Contains more evil MSBuild hacks than your doctor recommended.
+ *
+ * Copyright (c) 2007-2012 by Joe Mistachkin.  All rights reserved.
+ *
+ * See the file "license.terms" for information on usage and redistribution of
+ * this file, and for a DISCLAIMER OF ALL WARRANTIES.
+ *
+ * RCS: @(#) $Id: $
+ *
+-->
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!--
+  ******************************************************************************
+  **                          Load Per-User Settings                          **
+  ******************************************************************************
+  -->
+
+  <!--
+      NOTE: If the per-user settings file exists, import it now.  The contained
+            settings, if any, will override the default ones provided below.
+  -->
+  <Import Condition="'$(KapokDir)' != '' And
+                     !HasTrailingSlash('$(KapokDir)') And
+                     Exists('$(KapokDir)\Targets\Kapok.Builds.targets.user')"
+          Project="$(KapokDir)\Targets\Kapok.Builds.targets.user" />
+
+  <!--
+  ******************************************************************************
+  **                            Kapok Build Types                             **
+  ******************************************************************************
+  -->
+
+  <!--
+      NOTE: This is an "official release" build configuration.  This includes
+            the certificate and key pair management commands, policies for the
+            evaluation of signed scripts, and everything else.  As always, the
+            resulting assembly is obfuscated.
+
+      TODO: If any of the names for this build type change, make sure to update
+            the "Kapok.targets" file as well.
+  -->
+  <PropertyGroup Condition="'$(AssemblyName)' == 'Kapok' And
+                            ('$(KapokBuildType)' == 'Default' Or
+                             '$(KapokBuildType)' == 'DefaultSdk' Or
+                             '$(KapokBuildType)' == 'Enterprise' Or
+                             '$(KapokBuildType)' == 'EnterpriseSdk' Or
+                             '$(KapokBuildType)' == 'Standard' Or
+                             '$(KapokBuildType)' == 'StandardSdk' Or
+                             '$(KapokBuildType)' == 'Full' Or
+                             '$(KapokBuildType)' == 'FullSdk')">
+    <Obfuscate3 Condition="'$(Obfuscate3)' == ''">true</Obfuscate3>
+  </PropertyGroup>
+</Project>

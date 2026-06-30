@@ -1,0 +1,1425 @@
+###############################################################################
+#
+# sign.eagle --
+#
+# Extensible Adaptable Generalized Logic Engine (Eagle)
+# Enterprise Edition Signing Tool
+#
+# Copyright (c) 2007-2012 by Joe Mistachkin.  All rights reserved.
+#
+# See the file "license.terms" for information on usage and redistribution of
+# this file, and for a DISCLAIMER OF ALL WARRANTIES.
+#
+# RCS: @(#) $Id: $
+#
+###############################################################################
+
+proc usage { error } {
+  # <help>
+  # This procedure prints the command-line usage summary for the signing tool
+  # and then terminates the process, signaling failure to whatever invoked it.
+  # It exists as the single entry point for the "you called me incorrectly"
+  # path, and is invoked when the tool is run with the wrong number of
+  # positional arguments.
+  #
+  # How it works: when the error argument is a non-empty string it is emitted
+  # first (via [emitOutput]); the usage line is then printed, naming the host
+  # shell executable and this script followed by the supported positional
+  # arguments (fileName plus the optional vendor, embed, duration, entityType,
+  # encoding, publicKeyFile, privateKeyFile, importFirst, quantity, id, and
+  # timeStamp).  Finally it calls [exit 1].
+  #
+  # Tricky details: this procedure never returns to its caller -- it always
+  # exits the process with a non-zero (failure) status, so it must only be
+  # used on terminal error paths.
+  #
+  # Arguments:
+  #   error -- An optional leading error message.  When non-empty it is shown
+  #            before the usage text; pass an empty string to show plain usage.
+  #
+  # Results:
+  #   Does not return; the process exits with status code 1.
+  # </help>
+
+  if {[string length $error] > 0} then {emitOutput $error}
+
+  emitOutput "usage:\
+[file tail [getShellExecutableName]]\
+[file tail [info script]] <fileName> \[vendor\] \[embed\]\
+\[duration\] \[entityType\] \[encoding\] \[publicKeyFile\]\
+\[privateKeyFile\] \[importFirst\] \[quantity\] \[id\]\
+\[timeStamp\]"
+
+  #
+  # NOTE: Indicate to the caller, if any, that we have failed.
+  #
+  exit 1
+}
+
+proc maybeInvokeHook { type phase } {
+  # <help>
+  # This procedure invokes an optional, user-supplied hook procedure for a
+  # named phase of the signing process, but only if such a hook has been
+  # defined.  It exists to provide controlled extension points so that custom
+  # logic can run at well-defined moments (after argument parsing, after the
+  # certificate object is created, after its properties are set, and at
+  # completion) without modifying the tool itself.
+  #
+  # How it works: it derives the hook command name by appending "_hook" to the
+  # type argument.  If a command by that name currently exists, it is called
+  # with the phase argument inside a [catch]: on success an informational
+  # notice is emitted (showing the result, or a placeholder when empty); on
+  # failure a warning is emitted.  Either way, execution continues.
+  #
+  # Tricky and security details: hook failures are deliberately NON-fatal --
+  # they are only warned about, so a broken or malicious hook will not by
+  # itself stop the signing operation.  Because the hook is located by name,
+  # defining a "<type>_hook" procedure (for example through the loaded
+  # sign.settings.eagle configuration file) is an effective way to inject
+  # arbitrary behavior into the signing flow; this is powerful and should only
+  # be used with trusted configuration.
+  #
+  # Arguments:
+  #   type  -- The hook category.  This tool uses "certificate".  The hook
+  #            procedure must be named "<type>_hook".
+  #   phase -- A phase label that is passed through to the hook (this tool uses
+  #            phase0 through phase3 at successive points in the process).
+  #
+  # Results:
+  #   Returns the empty string.  Any meaningful effect is the side effect of
+  #   the invoked hook; a notice or warning is emitted describing the outcome.
+  # </help>
+
+  set name [appendArgs $type _hook]
+
+  if {[llength [info commands $name]] > 0} then {
+    if {[catch {$name $phase} result] == 0} then {
+      if {[string length $result] == 0} then {set result <none>}
+      emitNotice [appendArgs $name " hook ok: " $result]
+    } else {
+      if {[string length $result] == 0} then {set result <none>}
+      emitWarning [appendArgs $name " hook error: " $result]
+    }
+  }
+}
+
+proc emitOutput { message } {
+  # <help>
+  # This procedure writes a message to standard output.  It is the tool's
+  # primary user-facing output channel, used for progress and result text.
+  #
+  # How it works: it trims surrounding whitespace from the message and writes
+  # it to the stdout channel.  The write is wrapped in a [catch] so that an
+  # unwritable or closed stdout channel never aborts the signing operation.
+  #
+  # Arguments:
+  #   message -- The text to print; leading and trailing whitespace is removed.
+  #
+  # Results:
+  #   Returns the empty string; its purpose is the side effect of printing.
+  # </help>
+
+  set message [string trim $message]
+  catch {puts stdout $message}
+}
+
+proc emitNotice { message } {
+  # <help>
+  # This procedure emits an informational notice through the Eagle host,
+  # rather than to plain standard output.  It exists so that notices (and the
+  # warnings built on top of it) are routed through the host's result
+  # presentation, which may format or color "Ok" results distinctly.
+  #
+  # How it works: it trims the message and calls [host result Ok] with the
+  # message followed by a newline, wrapped in a [catch] so a missing or
+  # uncooperative host never aborts the operation.
+  #
+  # Arguments:
+  #   message -- The notice text; leading and trailing whitespace is removed.
+  #
+  # Results:
+  #   Returns the empty string; its purpose is the side effect of displaying
+  #   the notice via the host.
+  # </help>
+
+  set message [string trim $message]
+  catch {host result Ok [appendArgs $message \n]}
+}
+
+proc emitWarning { message } {
+  # <help>
+  # This procedure reports a warning through two channels: the host notice
+  # display and the Tcl log.  It exists so that non-fatal problems are both
+  # shown to an interactive user and recorded for later inspection, without
+  # halting the signing process.
+  #
+  # How it works: it first emits the message as a host notice (via
+  # [emitNotice]), then trims it and writes it to the Tcl log (via [tclLog])
+  # inside a [catch] so a logging failure is harmless.
+  #
+  # Arguments:
+  #   message -- The warning text; leading and trailing whitespace is removed
+  #              before logging.
+  #
+  # Results:
+  #   Returns the empty string; its purpose is the side effect of displaying
+  #   and logging the warning.
+  # </help>
+
+  emitNotice $message
+  set message [string trim $message]
+  catch {tclLog $message}
+}
+
+proc emitError { message } {
+  # <help>
+  # This procedure reports a fatal error and then raises it, aborting the
+  # signing operation.  It is the tool's single failure path for unrecoverable
+  # conditions, and is used for every signing, verification, export, and
+  # warning-injection failure so that any such failure stops the tool rather
+  # than allowing it to proceed and produce an unsigned or invalid result.
+  #
+  # How it works: it first surfaces the message as a warning (via
+  # [emitWarning], so it is both displayed and logged), then trims the message
+  # and raises it with [error].
+  #
+  # Tricky and security details: this procedure does NOT return normally -- it
+  # always raises.  Routing all signature/verification failures through here is
+  # what makes the tool fail-closed: a failed [certificate sign],
+  # [certificate verify], or [certificate export] aborts immediately and no
+  # certificate is written or trusted.
+  #
+  # Arguments:
+  #   message -- The error text; leading and trailing whitespace is removed.
+  #
+  # Results:
+  #   Does not return; raises a script error with the given message.
+  # </help>
+
+  emitWarning $message
+  set message [string trim $message]
+  error $message
+}
+
+proc maybeForceHashAlgorithm { certificate keyPair } {
+  # <help>
+  # This procedure forces the certificate's hash algorithm to SHA1 when, and
+  # only when, the signing key pair is of a type that requires it.  It exists
+  # because some key pair types -- notably DSA (version 1) -- only support a
+  # specific hash algorithm, so signing with the default algorithm would fail
+  # or produce an unusable signature.
+  #
+  # How it works: it confirms the key pair handle is non-null, that the key
+  # pair object exposes a KeyPairType metadata member, and that the reported
+  # type is "DSA"; if all hold, it sets the certificate object's HashAlgorithm
+  # property to SHA1.  For any other key type it does nothing, leaving the
+  # certificate's stronger default hash algorithm in place.
+  #
+  # Tricky and security details: this is a compatibility accommodation, not a
+  # security choice -- SHA1 is cryptographically weak, but it is mandated by
+  # the DSA v1 key type.  The narrowing condition is important: only DSA keys
+  # are downgraded to SHA1; RSA and other key types keep their default
+  # (stronger) hash algorithm.
+  #
+  # Arguments:
+  #   certificate -- The certificate object handle whose hash algorithm may be
+  #                  adjusted.
+  #   keyPair     -- The signing key pair handle.  May be null (for example
+  #                  when only a public key is available), in which case the
+  #                  procedure does nothing.
+  #
+  # Results:
+  #   Returns the empty string; its only effect is possibly setting the
+  #   certificate's hash algorithm to SHA1.
+  # </help>
+
+  #
+  # HACK: Some key pair types, e.g. DSA v1, require hard-coded
+  #       hash algorithms, e.g. SHA1.  Do that now, if needed.
+  #
+  if {[isNonNullObjectHandle $keyPair] && \
+      [lsearch -exact -- [keypair metadata] KeyPairType] != -1 && \
+      [$keyPair KeyPairType] eq "DSA"} then {
+    $certificate HashAlgorithm SHA1
+  }
+}
+
+proc isScriptFile { fileName } {
+  # <help>
+  # This procedure decides whether a file should be treated as a signable
+  # Eagle or Tcl script.  Its answer drives two decisions in the tool: the
+  # default certificate entity type (Script) and whether embedded-certificate
+  # signing is even applicable (only script files can carry an embedded
+  # certificate).
+  #
+  # How it works: it classifies by file extension.  A fixed set of script
+  # extensions returns true: the Eagle and Tcl script extensions, the Tk
+  # extension, the test extension, the rule-set extension, and the
+  # encoded-Eagle and encoded-Tcl extensions.  For an XML extension it does
+  # content sniffing instead -- it reads the file and returns true only if the
+  # Eagle script namespace URI appears anywhere in the data.  Anything else
+  # returns false.
+  #
+  # Tricky details: the extension match is exact and case-sensitive.  XML files
+  # are deliberately NOT trusted by extension alone; the whole file is read and
+  # checked for the script namespace URI, so an arbitrary .xml data file is not
+  # misclassified as a script.
+  #
+  # Arguments:
+  #   fileName -- The path of the file to classify.
+  #
+  # Results:
+  #   Returns true if the file is considered a script, false otherwise.
+  # </help>
+
+  switch -exact -- [file extension $fileName] {
+    .eeagle -
+    .etcl -
+    .tcl -
+    .tk -
+    .test -
+    .ruleSet -
+    .eagle {
+      return true
+    }
+    .xml {
+      set uri [object invoke Eagle._Constants.Xml ScriptNamespaceUri]
+      set data [readFile $fileName]
+
+      if {[string first $uri $data] != -1} then {
+        return true
+      }
+    }
+  }
+
+  return false
+}
+
+proc isKeyRingFile { fileName } {
+  # <help>
+  # This procedure decides whether a file is an Eagle key ring script.  Its
+  # answer is security-relevant: the tool uses it to assign the KeyRing
+  # certificate entity type and, crucially, to prefer the enterprise TRUST
+  # ROOT private key when signing a key ring (rather than the ordinary script
+  # key).  Key rings establish which signing identities are trusted, so they
+  # are themselves signed by the most privileged key.
+  #
+  # How it works: it requires the file extension to be the Eagle script
+  # extension, and the root file name (the tail without extension) to be
+  # exactly "keyRing" or to begin with "keyRing".  Both conditions must hold.
+  #
+  # Tricky details: the name test is by convention only -- it recognizes the
+  # standard key ring naming pattern; it does not parse or validate the file's
+  # contents.  The extension comparison is exact and case-sensitive.
+  #
+  # Arguments:
+  #   fileName -- The path of the file to classify.
+  #
+  # Results:
+  #   Returns true if the file appears to be a key ring script by extension and
+  #   name, false otherwise.
+  # </help>
+
+  if {[file extension $fileName] ne ".eagle"} then {
+    return false
+  }
+
+  set rootName [file rootname [file tail $fileName]]
+
+  if {$rootName eq "keyRing" || \
+      [string match "keyRing*" $rootName]} then {
+    return true
+  }
+
+  return false
+}
+
+proc checkAndMatchKeyFile { varName {keyFile ""} {quiet false} } {
+  # <help>
+  # This procedure validates a candidate strong-name key file whose path is
+  # taken from a named environment variable, and optionally confirms that its
+  # public key token matches that of another key file.  It exists to drive the
+  # tool's automatic key-selection cascade: when the private and public key
+  # files are not given explicitly on the command line, the tool tries a
+  # sequence of well-known environment variables (the enterprise trust root,
+  # script, personal, and general keys) and uses this procedure to pick the
+  # first one that is present and valid.
+  #
+  # How it works: it looks up the environment variable named by varName and
+  # then checks, in order, that the variable exists, that its value is
+  # non-empty, that the named file exists, and that the file is actually a
+  # usable key (probed with [keypair token], which must yield a non-empty
+  # token).  When a keyFile argument is supplied, it additionally requires
+  # that the two files share the same public key token (via
+  # [matchKeyFileTokens]).  Each failed condition produces a specific
+  # diagnostic message unless quiet is requested.
+  #
+  # Tricky and security details: this is the gate that keeps the selected
+  # public key consistent with the selected private key.  Signing with one
+  # identity but pairing it with a non-matching public key would cause the
+  # immediate verify-after-sign sanity check to fail (and, more importantly,
+  # would mean the artifact is not what the operator intended).  Note that
+  # this only validates a key's PRESENCE, FORMAT, and TOKEN MATCH -- it does
+  # not and cannot assess whether the private key is genuinely secret or
+  # whether the identity is authorized; that trust comes from controlling the
+  # key files and the environment.  Every failure path returns false.
+  #
+  # Arguments:
+  #   varName -- The name of the environment variable expected to hold the key
+  #              file path.
+  #   keyFile -- Optional path of a second key file whose public key token the
+  #              candidate must match; an empty string (the default) skips the
+  #              match check.
+  #   quiet   -- When true, suppresses the per-failure diagnostic output; the
+  #              default is false.
+  #
+  # Results:
+  #   Returns true if the environment variable names an existing, valid key
+  #   file (and, when keyFile is given, one whose public key token matches);
+  #   otherwise returns false.
+  # </help>
+
+  global env
+
+  if {[info exists env($varName)]} then {
+    set fileName $env($varName)
+
+    if {[string length $fileName] > 0} then {
+      if {[file exists $fileName]} then {
+        if {[catch {keypair token $fileName} token] == 0 && \
+            [string length $token] > 0} then {
+          if {[string length $keyFile] == 0 || \
+              [matchKeyFileTokens $fileName $keyFile]} then {
+            return true
+          } else {
+            if {!$quiet} then {
+              emitOutput [appendArgs \
+                  "file \"" $fileName \
+                  "\" mismatches public key token from file \"" \
+                  $keyFile \"]
+            }
+          }
+        } else {
+          if {!$quiet} then {
+            emitOutput [appendArgs \
+                "file \"" $fileName "\" is probably not a key file"]
+          }
+        }
+      } else {
+        if {!$quiet} then {
+          emitOutput [appendArgs \
+              "file \"" $fileName "\" does not exist"]
+        }
+      }
+    } else {
+      if {!$quiet} then {
+        emitOutput [appendArgs \
+            "environment variable \"" $varName "\" has no value"]
+      }
+    }
+  } else {
+    if {!$quiet} then {
+      emitOutput [appendArgs \
+          "environment variable \"" $varName "\" was not found"]
+    }
+  }
+
+  return false
+}
+
+proc matchKeyFileTokens { keyFile1 keyFile2 } {
+  # <help>
+  # This procedure reports whether two key files represent the same signing
+  # identity, by comparing their public key tokens for equality.  It exists so
+  # the tool can confirm that a chosen public key file truly corresponds to a
+  # chosen private key file before they are used together to sign and then
+  # verify an artifact.
+  #
+  # How it works: it requires both file names to be non-empty and both files
+  # to exist.  It then extracts each file's public key token with
+  # [keypair token] and returns true only when both tokens are non-empty and
+  # equal.
+  #
+  # Tricky and security details: the comparison is on the public key TOKEN --
+  # the short, standard strong-name fingerprint derived from the public key --
+  # not on the full key material.  This is the conventional strong-name
+  # identity check and is sufficient to confirm a public/private pair belong
+  # together.  The procedure is strictly fail-closed: a missing file, an
+  # unreadable or invalid key, or an empty token on either side yields false
+  # (it never assumes a match).
+  #
+  # Arguments:
+  #   keyFile1 -- The path of the first key file.
+  #   keyFile2 -- The path of the second key file.
+  #
+  # Results:
+  #   Returns true only if both files exist and yield identical non-empty
+  #   public key tokens; otherwise returns false.
+  # </help>
+
+  if {[string length $keyFile1] == 0 || \
+      [string length $keyFile2] == 0} then {
+    return false
+  }
+
+  if {![file exists $keyFile1] || ![file exists $keyFile2]} then {
+    return false
+  }
+
+  if {[catch {
+    keypair token $keyFile1
+  } token1] != 0 || [string length $token1] == 0} then {
+    return false
+  }
+
+  if {[string length $token1] == 0} then {
+    return false
+  }
+
+  if {[catch {
+    keypair token $keyFile2
+  } token2] != 0 || [string length $token2] == 0} then {
+    return false
+  }
+
+  if {[string length $token2] == 0} then {
+    return false
+  }
+
+  return [expr {$token1 eq $token2}]
+}
+
+proc readEntityValue { fileName } {
+  # <help>
+  # This procedure reads and returns the entire contents of a file for use as
+  # a certificate's "entity value".  It exists for the embedded-certificate
+  # signing path: when a certificate is embedded into the very script it
+  # covers, the certificate must carry the exact bytes of that script so the
+  # script policy callback can later compare what it is about to run against
+  # what was signed.
+  #
+  # How it works: it is a thin, intention-revealing wrapper over [readFile]
+  # that returns the raw file content.
+  #
+  # Tricky and security details: the returned content becomes the certificate
+  # EntityValue that is covered by the signature.  The tool clears that value
+  # (sets it to null) before exporting the certificate, so the (potentially
+  # large) entity bytes are signed but not persisted inside the external
+  # certificate file.
+  #
+  # Arguments:
+  #   fileName -- The path of the file whose contents become the entity value.
+  #
+  # Results:
+  #   Returns the full contents of the file.
+  # </help>
+
+  return [readFile $fileName]
+}
+
+proc removeEmbeddedCertificate { fileName } {
+  # <help>
+  # This procedure removes a previously embedded certificate block from a
+  # script file, editing the file in place.  It exists because a script that
+  # already carries an embedded certificate must have that old block stripped
+  # before it is re-signed; otherwise the new signature would cover the prior
+  # certificate text in addition to the real script content, and the embedded
+  # block would accumulate across signings.
+  #
+  # How it works: it reads the file and searches for the start of the embedded
+  # block.  It first looks for the prefix marker preceded by the standard
+  # spacing; if that is not found it falls back to searching from the end of
+  # the file for the bare prefix marker.  When a start is found, it locates the
+  # corresponding suffix marker after it and deletes the entire inclusive
+  # range (prefix through suffix) before rewriting the file; it then reports
+  # that a block was removed.
+  #
+  # Tricky and security details: detection relies entirely on the textual
+  # prefix and suffix marker strings (the CERTIFICATE-1.0 begin/end comment
+  # markers stored in the global embedPrefix and embedSuffix variables, with
+  # spacing from embedSpacing).  If those markers were altered or damaged, the
+  # old block might not be removed -- but in that case the subsequent
+  # sign-and-verify step is expected to fail rather than silently produce a
+  # bad artifact.  If no block is present the file is left untouched.
+  #
+  # Arguments:
+  #   fileName -- The path of the script file to clean.
+  #
+  # Results:
+  #   Returns the empty string; its effect is the side effect of rewriting the
+  #   file with the embedded certificate block removed, when one is found.
+  # </help>
+
+  set prefixWithSpacing [appendArgs $::embedSpacing $::embedPrefix]
+
+  set data [readFile $fileName]
+  set beginIndex [string first $prefixWithSpacing $data]
+
+  if {$beginIndex == -1} then {
+    set prefixWithSpacing $::embedPrefix
+    set beginIndex [string last $prefixWithSpacing $data]
+  }
+
+  if {$beginIndex != -1} then {
+    set endIndex [string first $::embedSuffix $data \
+        [expr {$beginIndex + [string length $prefixWithSpacing]}]]
+
+    if {$endIndex != -1} then {
+      writeFile $fileName [string replace $data $beginIndex \
+          [expr {$endIndex + [string length $::embedSuffix]}]]
+
+      emitOutput [appendArgs \
+          "removed embedded certificate from file \"" $fileName \"]
+    }
+  }
+}
+
+###############################################################################
+#************************ MAIN PROGRAM (THEORY OF OPERATION) ******************
+###############################################################################
+#
+# Everything above this point is procedure definitions; everything below is the
+# actual signing program.  It is guarded so that it only runs when the tool was
+# invoked with between one and twelve positional arguments; otherwise the
+# trailing [else] branch shows [usage] and exits.
+#
+# What it produces: a Harpy certificate that attests to a particular file,
+# written out either as a detached "<fileName>.harpy" file or as a comment
+# block embedded at the end of a script file.  This tool is the PRODUCER side
+# of the trust chain that the package client toolset and the Eagle script
+# security policy later CONSUME -- the certificates created here are exactly
+# what those components verify before they will trust or run a downloaded
+# script.  For that reason the program is written to be fail-closed (see the
+# verify-after-sign steps in the signing branches).
+#
+# The twelve positional arguments, in order, are:
+#
+#    1. fileName       -- the file to sign (the only required argument).
+#    2. vendor         -- optional certificate vendor string.
+#    3. embed          -- embed the certificate into the script file?
+#    4. duration       -- validity duration; -1 means "forever".
+#    5. entityType     -- KeyRing, Script, File, or Any (inferred when omitted).
+#    6. encoding       -- signature encoding; "null" selects the default.
+#    7. publicKeyFile  -- public key used to VERIFY (auto-selected if absent).
+#    8. privateKeyFile -- private key used to SIGN (auto-selected if absent).
+#    9. importFirst    -- re-sign an existing certificate instead of a new one?
+#   10. quantity       -- limited use count; -1 means "unlimited".
+#   11. id             -- explicit unique Id; empty means "generate one".
+#   12. timeStamp      -- explicit UTC timestamp; empty means "now".
+#
+# The program proceeds through the phases marked by the banners below:
+#
+#   PHASE 1  Require the packages this tool depends upon.
+#   PHASE 2  Parse and default the twelve positional arguments.
+#   PHASE 3  Resolve the signing key pair (the most security-sensitive step).
+#   PHASE 4  Load optional configuration and open the key pair.
+#   PHASE 5  Decide whether embedding applies; strip any prior embedded cert.
+#   PHASE 6  Sign -- one of two branches (re-sign a ".harpy", or sign fresh).
+#   PHASE 7  Export the certificate, annotate it, and bootstrap key rings.
+#   PHASE 8  Optionally embed into the script, report, and clean up.
+#
+###############################################################################
+
+if {[llength $argv] >= 1 && [llength $argv] <= 12} then {
+  #############################################################################
+  # PHASE 1: REQUIRED PACKAGES
+  #
+  # The tool is built on Eagle (the engine and commands such as [keypair] and
+  # [certificate]), Eagle.Test (only for the [getTemporaryPath] helper used by
+  # the embedded path), and Licensing.Enterprise -- the Harpy enterprise
+  # licensing features that implement certificate creation and verification.
+  # All three must load or the tool cannot proceed.
+  #############################################################################
+
+  #
+  # NOTE: This tool requires Eagle.
+  #
+  package require Eagle
+
+  #
+  # NOTE: Needed for the [getTemporaryPath] script procedure.
+  #
+  package require Eagle.Test
+
+  #
+  # NOTE: This tool requires the enterprise license features.
+  #
+  package require Licensing.Enterprise
+
+  #############################################################################
+  # PHASE 2: ARGUMENT PARSING AND DEFAULTS
+  #
+  # Each positional argument is read if present, otherwise a sensible default
+  # is chosen.  Two of the defaults are computed rather than constant: the
+  # entityType is INFERRED from the file (a key ring script, a script/legacy
+  # ".harpy", or an arbitrary data file) when not given, and the timestamp,
+  # when given, is parsed from a strict round-trip UTC format and forced to
+  # the UTC kind.  Note that "quiet" and the tool base "path" are also
+  # established here (the latter is where the optional settings file is later
+  # sought).  The "quiet_set"/"path_set" flags record whether this phase
+  # created those variables so the cleanup phase can unset only what it owns.
+  #############################################################################
+
+  #
+  # NOTE: Should emitting of extra diagnostics be skipped?
+  #
+  if {![info exists quiet]} then {
+    set quiet false
+    set quiet_set true
+  }
+
+  #
+  # NOTE: If the tool base path does not already exist, set it
+  #       to the directory where this script is running from.
+  #
+  if {![info exists path]} then {
+    set path [file normalize [file dirname [info script]]]
+    set path_set true
+  }
+
+  #
+  # NOTE: Grab the first argument to this tool (the name of the
+  #       data file to sign).
+  #
+  set fileName [file normalize [lindex $argv 0]]
+
+  #
+  # NOTE: Grab the second argument to this tool (the name of the
+  #       certificate vendor).
+  #
+  if {[llength $argv] >= 2} then {
+    set vendor [lindex $argv 1]
+  } else {
+    set vendor ""
+  }
+
+  #
+  # NOTE: Grab the third argument to this tool (the embed flag).
+  #
+  if {[llength $argv] >= 3} then {
+    set embed [lindex $argv 2]
+  } else {
+    set embed false; # TODO: Good default?
+  }
+
+  #
+  # NOTE: Grab the fourth argument to this tool (the valid duration
+  #       of the certificate).
+  #
+  if {[llength $argv] >= 4} then {
+    set duration [lindex $argv 3]
+  } else {
+    set duration -1; # NOTE: Forever.
+  }
+
+  #
+  # NOTE: Grab the fifth argument to this tool (the entity type
+  #       of the certificate).
+  #
+  if {[llength $argv] >= 5} then {
+    #
+    # NOTE: Use the specified entity type verbatim.
+    #
+    set entityType [lindex $argv 4]
+  } elseif {[isKeyRingFile $fileName]} then {
+    #
+    # NOTE: This should be a signed key ring script.
+    #
+    set entityType KeyRing; # NOTE: Could also be "Any".
+  } elseif {[isScriptFile $fileName] || \
+            [file extension $fileName] eq ".harpy"} then {
+    #
+    # NOTE: *LEGACY* This should be a signed script.
+    #
+    set entityType Script; # NOTE: Could also be "Any".
+  } else {
+    #
+    # NOTE: This is an arbitrary data file of some kind.
+    #
+    set entityType File; # NOTE: Could also be "Any".
+  }
+
+  #
+  # NOTE: Figure out which encoding to use.
+  #
+  if {[llength $argv] >= 6} then {
+    #
+    # NOTE: Use the specified encoding verbatim.
+    #
+    set encoding [lindex $argv 5]
+  } else {
+    #
+    # NOTE: Use the default encoding.
+    #
+    set encoding null
+  }
+
+  #############################################################################
+  # PHASE 3: RESOLVE THE SIGNING KEY PAIR  (most security-sensitive phase)
+  #
+  # This phase selects the PRIVATE key (used to sign) and the PUBLIC key (used
+  # to verify).  It is the heart of the tool's security posture: the identity
+  # baked into every certificate produced here is determined entirely by which
+  # private key is chosen, and the integrity of the verify-after-sign check
+  # depends on the public key actually matching that private key.
+  #
+  # The private key is resolved FIRST, on purpose, so that the public key can
+  # then be chosen to match it.  Both follow the same precedence:
+  #
+  #   1. an explicit command-line argument (highest priority); else
+  #   2. a cascade of well-known environment variables, tried in DESCENDING
+  #      privilege -- trust root, then script, then personal, then general --
+  #      where [checkAndMatchKeyFile] both confirms the file is a valid key and
+  #      (for the public key) requires its public-key token to match the
+  #      already-chosen private key via [matchKeyFileTokens]; else
+  #   3. the key shipped under the "Eagle" installation's Keys directory; else
+  #   4. a bare default file name in the current directory (which may not even
+  #      exist, in which case opening it in PHASE 4 will fail loudly).
+  #
+  # A subtle but important detail: when the file being signed is a KEY RING,
+  # the private-key cascade prefers the enterprise TRUST ROOT key, because a
+  # key ring defines which identities are trusted and must therefore be signed
+  # by the most privileged identity.
+  #############################################################################
+
+  #
+  # NOTE: Figure out the file name for the private strong name key
+  #       file that will be used to sign the data file.  Now, this
+  #       is checked first so the selected public key can be based
+  #       on it.
+  #
+  if {[llength $argv] >= 8} then {
+    #
+    # NOTE: Use the private key file name supplied on the command
+    #       line.
+    #
+    set privateKeyFile [string trim [lindex $argv 7]]
+  } elseif {[isKeyRingFile $fileName] && [checkAndMatchKeyFile \
+      EagleEnterpriseTrustRootPrivateKey "" $quiet]} then {
+    set privateKeyFile $env(EagleEnterpriseTrustRootPrivateKey)
+  } elseif {[checkAndMatchKeyFile \
+      EagleEnterpriseScriptPrivateKey "" $quiet]} then {
+    set privateKeyFile $env(EagleEnterpriseScriptPrivateKey)
+  } elseif {[checkAndMatchKeyFile \
+      EagleEnterprisePersonalPrivateKey "" $quiet]} then {
+    set privateKeyFile $env(EagleEnterprisePersonalPrivateKey)
+  } elseif {[checkAndMatchKeyFile \
+      EagleEnterprisePrivateKey "" $quiet]} then {
+    set privateKeyFile $env(EagleEnterprisePrivateKey)
+  } elseif {[info exists env(Eagle)]} then {
+    set privateKeyFile [file join \
+        $env(Eagle) Keys EagleEnterprisePluginRootPrivate.snk]
+  } else {
+    #
+    # NOTE: Default to "EagleEnterprisePluginRootPrivate.snk" in the
+    #       current directory (which may not actually exist).
+    #
+    set privateKeyFile EagleEnterprisePluginRootPrivate.snk
+  }
+
+  #
+  # NOTE: Figure out the file name for the public strong name key
+  #       file that will be used to verify the data file.
+  #
+  if {[llength $argv] >= 7} then {
+    #
+    # NOTE: Use the public key file name supplied on the command
+    #       line.
+    #
+    set publicKeyFile [string trim [lindex $argv 6]]
+  } elseif {[checkAndMatchKeyFile \
+      EagleEnterpriseTrustRootPublicKey $privateKeyFile $quiet]} then {
+    set publicKeyFile $env(EagleEnterpriseTrustRootPublicKey)
+  } elseif {[checkAndMatchKeyFile \
+      EagleEnterpriseScriptPublicKey $privateKeyFile $quiet]} then {
+    set publicKeyFile $env(EagleEnterpriseScriptPublicKey)
+  } elseif {[checkAndMatchKeyFile \
+      EagleEnterprisePersonalPublicKey $privateKeyFile $quiet]} then {
+    set publicKeyFile $env(EagleEnterprisePersonalPublicKey)
+  } elseif {[checkAndMatchKeyFile \
+      EagleEnterprisePublicKey $privateKeyFile $quiet]} then {
+    set publicKeyFile $env(EagleEnterprisePublicKey)
+  } elseif {[info exists env(Eagle)]} then {
+    set publicKeyFile [file join \
+        $env(Eagle) Keys EagleEnterprisePluginRootPublic.snk]
+  } else {
+    #
+    # NOTE: Default to "EagleEnterprisePluginRootPublic.snk" in the
+    #       current directory (which may not actually exist).
+    #
+    set publicKeyFile EagleEnterprisePluginRootPublic.snk
+  }
+
+  #
+  # NOTE: Do we want to import the existing certificate first?
+  #
+  if {[llength $argv] >= 9} then {
+    set importFirst [lindex $argv 8]
+  } else {
+    set importFirst false; # TODO: Good default?
+  }
+
+  #
+  # NOTE: Do we want to limit the number of uses (quantity)?
+  #
+  if {[llength $argv] >= 10} then {
+    set quantity [lindex $argv 9]
+  } else {
+    set quantity -1; # NOTE: Unlimited.
+  }
+
+  #
+  # NOTE: Do we want to manually override the unique Id?
+  #
+  if {[llength $argv] >= 11} then {
+    set id [lindex $argv 10]
+  } else {
+    set id ""; # NOTE: Guid.NewGuid (?)
+  }
+
+  #
+  # NOTE: Do we want to manually override the timestamp?
+  #
+  if {[llength $argv] >= 12} then {
+    set timeStamp [object invoke \
+        -create -alias DateTime ParseExact \
+        [lindex $argv 11] yyyy-MM-ddTHH:mm:ss.fffffffK \
+        null {AdjustToUniversal AssumeUniversal}]
+
+    set timeStamp [object invoke \
+        -create DateTime SpecifyKind $timeStamp Utc]
+  } else {
+    set timeStamp ""; # NOTE: DateTime.UtcNow (?)
+  }
+
+  #############################################################################
+  # PHASE 4: CONFIGURATION, EMBEDDING MARKERS, AND OPENING THE KEY PAIR
+  #
+  # An optional "sign.settings.eagle" file in the tool path is sourced here, so
+  # it can override any variable established above (including key choices and
+  # the hooks consulted later); it is therefore trusted configuration and must
+  # be protected accordingly.  The embedded-certificate prefix and suffix
+  # marker strings are defined next (they must stay in agreement with the
+  # marker search in [removeEmbeddedCertificate] and the block builder in
+  # PHASE 8).  Finally the public key is opened for verification and the
+  # private key is opened with its private portion for signing; a failure to
+  # open either key aborts the tool here, before anything is signed.
+  #############################################################################
+
+  #
+  # NOTE: If the configuration file exists, load it now.
+  #
+  set configFileName [file join $path sign.settings.eagle]
+  if {[file exists $configFileName]} then {source $configFileName}
+
+  #
+  # NOTE: The spacing to use before the embedded certificate.  This
+  #       must match up with the number of blank lines used with the
+  #       [linsert] command used to help produce the final embedded
+  #       certificate string (below).
+  #
+  set embedSpacing [info newline]
+
+  #
+  # NOTE: Setup the prefix and suffix strings used for embedded
+  #       certificates.
+  #
+  set embedPrefix "# <<CERTIFICATE-1.0>>"
+  set embedSuffix "# <</CERTIFICATE-1.0>>"
+
+  #
+  # NOTE: Grab the public key we need to verify that our signing
+  #       process worked correctly.
+  #
+  set publicKey [keypair open \
+      -alias -public $publicKeyFile]
+
+  #
+  # NOTE: Grab the private key we need to actually create the
+  #       detached certificate for the data file.
+  #
+  set privateKey [keypair open \
+      -alias -public -private $privateKeyFile]
+
+  #############################################################################
+  # PHASE 5: PREPARE FOR SIGNING (embedding decision, strip prior certificate)
+  #
+  # Embedding is only possible for script files, so "shouldEmbed" is the AND of
+  # the requested embed flag and [isScriptFile].  When embedding, any
+  # certificate already embedded in the script must be removed BEFORE signing,
+  # so that the new signature covers the original script content and the
+  # embedded blocks do not accumulate across repeated signings (this can be
+  # suppressed via the no(removeEmbeddedCertificate) override).  The
+  # "certificate phase0" hook fires here, immediately after all arguments have
+  # been parsed and processed.
+  #############################################################################
+
+  #
+  # NOTE: Has embedded certificate handling been requested?
+  #       If so, make sure we can actually do it.
+  #
+  if {$embed && [isScriptFile $fileName]} then {
+    set shouldEmbed true
+  } else {
+    set shouldEmbed false
+  }
+
+  #
+  # HOOK: After all arguments have been parsed and processed.
+  #
+  maybeInvokeHook certificate phase0
+
+  #
+  # NOTE: The existing embedded certificate, if any, must be
+  #       removed prior to signing the (script?) file.
+  #
+  if {$shouldEmbed && \
+      ![info exists no(removeEmbeddedCertificate)]} then {
+    removeEmbeddedCertificate $fileName
+  }
+
+  #############################################################################
+  # PHASE 6: SIGN  (one of two mutually exclusive branches)
+  #
+  # BRANCH A -- re-sign an existing certificate (when "harpyIsSpecial" is true
+  # and the input itself is a ".harpy" file).  The existing certificate is
+  # imported, its timestamp is refreshed, and it is re-signed in place with the
+  # private key; the Id is intentionally left as-is.  This is how a license
+  # certificate is renewed without changing its identity.
+  #
+  # BRANCH B -- create and sign a FRESH certificate for a script, key ring, or
+  # data file.  A blank certificate object is created (or the existing detached
+  # certificate is imported when "importFirst" is set), its policy-relevant
+  # properties are set (vendor, duration, entity type, and -- when a positive
+  # quantity is given -- a limited-use restriction), and then it is signed.
+  # Branch B itself splits in two:
+  #
+  #   * EMBEDDED   -- the script's bytes are placed in the certificate's entity
+  #                   value so the script policy callback can later see exactly
+  #                   what was signed, and the certificate is signed with the
+  #                   embedded hash flags.
+  #   * DETACHED   -- the file on disk is signed directly with [signfile],
+  #                   producing a separate "<fileName>.harpy" certificate.
+  #
+  # In BOTH branches, and BOTH sub-branches, the freshly created signature is
+  # immediately re-verified with the matching public key; any failure to sign
+  # OR to verify is routed through [emitError], which aborts the tool.  That
+  # verify-after-sign step is what makes this program fail-closed: it never
+  # emits a certificate it could not itself validate.  The "certificate phase1"
+  # (post object creation) and "certificate phase2" (post property setup) hooks
+  # fire at the corresponding points within these branches.
+  #############################################################################
+
+  #
+  # NOTE: By default, when a ".harpy" file itself is passed to this
+  #       signing tool, treat it specially, i.e. simply update its
+  #       timestamp and (re-)sign it.
+  #
+  if {![info exists harpyIsSpecial]} then {
+    set harpyIsSpecial true
+  }
+
+  #
+  # NOTE: If the file is an XML file, assume it is a license
+  #       certificate that we need to manually re-sign.
+  #
+  if {$harpyIsSpecial && [file extension $fileName] eq ".harpy"} then {
+    #
+    # NOTE: Set the file type for error messages.
+    #
+    set fileType "certificate file"
+
+    #
+    # NOTE: In this case, the certificate file to export is the same
+    #       as the input file name.
+    #
+    set certificateFile $fileName
+
+    #
+    # NOTE: Import the license certificate.
+    #
+    set certificate [certificate import $fileName]
+    maybeForceHashAlgorithm $certificate $privateKey
+
+    #
+    # HOOK: Post-certificate object creation (import).
+    #
+    maybeInvokeHook certificate phase1
+
+    #
+    # NOTE: Attempt to re-sign the license certificate file.  Skip
+    #       setting the Id as it should already be set correctly.
+    #
+    if {[certificate sign -encoding $encoding \
+            -settimestamp -maybesettimestamp $timeStamp \
+            -setkey $certificate $privateKey] ne "SignedOk"} then {
+      emitError [appendArgs \
+          "failed to create updated signature for " $fileType \
+          " \"" $fileName \"]
+    }
+
+    #
+    # NOTE: Attempt to re-verify the license certificate file.
+    #
+    if {[certificate verify -encoding $encoding $certificate \
+            $publicKey] ne "VerifiedOk"} then {
+      emitError [appendArgs \
+          "failed to verify signature for " $fileType " \"" $fileName \"]
+    }
+  } else {
+    #
+    # NOTE: Set the file type for error messages.
+    #
+    if {[isKeyRingFile $fileName]} then {
+      set fileType "key ring file"
+    } elseif {[isScriptFile $fileName]} then {
+      set fileType "script file"
+    } else {
+      set fileType "data file"
+    }
+
+    #
+    # NOTE: Build the name of the certificate file name (i.e. the
+    #       file where the detached certificate information will be
+    #       placed) based on the data file name.
+    #
+    set certificateFile [appendArgs $fileName .harpy]
+
+    #
+    # NOTE: Create an empty certificate object.
+    #
+    if {$importFirst} then {
+      set certificate [certificate import -alias $certificateFile]
+    } else {
+      set certificate [object create -alias \
+          Licensing.Components.Public.Certificate]
+    }
+
+    maybeForceHashAlgorithm $certificate $privateKey
+
+    #
+    # HOOK: Post-certificate object creation (create).
+    #
+    maybeInvokeHook certificate phase1
+
+    #
+    # NOTE: If the certificate vendor is available, set it.
+    #
+    if {[string length $vendor] > 0} then {
+      $certificate Vendor $vendor
+    }
+
+    #
+    # NOTE: Always set the duration for new certificates since the
+    #       policy code now checks for this.  By default, non-license
+    #       certificates are valid forever.
+    #
+    $certificate Duration $duration
+
+    #
+    # NOTE: Always set the entity type for new certificates since
+    #       the policy code now checks for this.  By default,
+    #       non-license certificates are set to the "Script" entity
+    #       type.
+    #
+    $certificate EntityType $entityType
+
+    #
+    # NOTE: Maybe set the quantity for new certificates since the
+    #       policy code now checks for this.  By default, non-license
+    #       certificates have unlimited uses.
+    #
+    if {$quantity > 0} then {
+      $certificate Quantity $quantity
+      $certificate Restrictions L; # LimitedQuantity
+    }
+
+    #
+    # NOTE: When embedding, special handling is required when signing
+    #       the certificate.
+    #
+    if {$shouldEmbed} then {
+      #
+      # NOTE: Set the entity value to the file contents that will, at
+      #       some point, be seen by the script policy callback.
+      #
+      $certificate EntityValue [readEntityValue $fileName]
+
+      #
+      # HOOK: Post-certificate property setup (embedded).
+      #
+      maybeInvokeHook certificate phase2
+
+      #
+      # NOTE: Attempt to sign the embedded file certificate and place
+      #       the Id, timestamp, public key token, and signature bytes
+      #       into the certificate we created above.
+      #
+      if {$importFirst} then {
+        if {[certificate sign -encoding $encoding \
+                -setkey -hashflags {+Basic Embedded} $certificate \
+                $privateKey] ne "SignedOk"} then {
+          emitError [appendArgs \
+              "failed to create updated embedded signature for " \
+              $fileType " \"" $fileName \"]
+        }
+      } else {
+        if {[certificate sign -encoding $encoding \
+                -setid -maybesetid $id -settimestamp \
+                -maybesettimestamp $timeStamp -setkey \
+                -hashflags {+Basic Embedded} $certificate \
+                $privateKey] ne "SignedOk"} then {
+          emitError [appendArgs \
+              "failed to create embedded signature for " $fileType \
+              " \"" $fileName \"]
+        }
+      }
+
+      #
+      # NOTE: Sanity check that the embedded file certificate we just
+      #       created validates properly.
+      #
+      if {[certificate verify -encoding $encoding \
+              -hashflags {+Basic Embedded} $certificate \
+              $publicKey] ne "VerifiedOk"} then {
+        emitError [appendArgs \
+            "failed to verify embedded signature for " $fileType \
+            " \"" $fileName \"]
+      }
+    } else {
+      #
+      # HOOK: Post-certificate property setup (non-embedded).
+      #
+      maybeInvokeHook certificate phase2
+
+      #
+      # NOTE: Attempt to sign the data file and place the Id, timestamp,
+      #       public key token, and signature bytes into the blank
+      #       certificate we created above.
+      #
+      if {$importFirst} then {
+        if {[certificate signfile -encoding $encoding \
+                -setkey $certificate $privateKey \
+                $fileName] ne "SignedOk"} then {
+          emitError [appendArgs \
+              "failed to create updated signature for " $fileType \
+              " \"" $fileName \"]
+        }
+      } else {
+        if {[certificate signfile -encoding $encoding \
+                -setid -maybesetid $id -settimestamp \
+                -maybesettimestamp $timeStamp -setkey \
+                $certificate $privateKey \
+                $fileName] ne "SignedOk"} then {
+          emitError [appendArgs \
+              "failed to create signature for " $fileType \
+              " \"" $fileName \"]
+        }
+      }
+
+      #
+      # NOTE: Sanity check that the data file certificate we just
+      #       created validates properly.
+      #
+      if {[certificate verifyfile -encoding $encoding \
+              $certificate $publicKey $fileName] ne "VerifiedOk"} then {
+        emitError [appendArgs \
+            "failed to verify signature for " $fileType \
+            " \"" $fileName \"]
+      }
+    }
+  }
+
+  #############################################################################
+  # PHASE 7: EXPORT, ANNOTATE, AND BOOTSTRAP KEY RINGS
+  #
+  # The signed certificate is now written out.  For the embedded case the
+  # export target is redirected to a throwaway temporary file (named with the
+  # process id) and the large entity value is cleared so it is not persisted in
+  # the exported text; the real embedding happens in PHASE 8.  Any stale
+  # certificate file is deleted, the certificate is exported, and a standard
+  # warning comment carrying a hash of the signed file is added (defaulting to
+  # SHA1 for compatibility with existing Eagle repositories).
+  #
+  # The key-ring bootstrap step that follows is a correctness fix: because the
+  # subsequent spacing reformat does a [package require] (which may [source] an
+  # external file), the default bootstrap key rings are cleared and re-merged
+  # first, but ONLY when script security is currently enabled, so that the
+  # external load is itself subject to the expected trust checks.
+  #############################################################################
+
+  #
+  # NOTE: When embedding, do not modify the external certificate
+  #       file.  Also, do not save out the entity value we set.
+  #
+  if {$shouldEmbed} then {
+    set certificateFile [file join [getTemporaryPath] \
+        [appendArgs [file tail $fileName] . [pid] .embed]]
+
+    $certificate EntityValue null
+  }
+
+  #
+  # NOTE: Delete any previous [and possibly stale] data file
+  #       certificate.
+  #
+  catch {file delete -force $certificateFile}
+
+  #
+  # NOTE: Export the data file certificate to disk.
+  #
+  if {[certificate export $certificate $certificateFile] \
+          ne "ExportedOk"} then {
+    emitError [appendArgs \
+        "failed to export signature for " $fileType " \"" $fileName \"]
+  }
+
+  #
+  # NOTE: Add the standard XML comment to the file, including a hash of
+  #       the script file being signed.  For ease of use with existing
+  #       Eagle repositories, the SHA1 hash algorithm is used here, if
+  #       one has not been explicitly set already.
+  #
+  if {![info exists hashAlgorithmName]} then {
+    set hashAlgorithmName SHA1
+  }
+
+  if {[certificate warning -type Script -hashalgorithm \
+      $hashAlgorithmName -- $certificateFile] ne "WarningOk"} then {
+    emitError [appendArgs \
+        "failed to add warning for " $fileType " \"" $fileName \"]
+  }
+
+  #
+  # BUGFIX: Since we are going to [source] an external file (i.e. via
+  #         [package require]), make sure the default (bootstrap) key
+  #         rings are loaded first, but only if we are running with
+  #         script security enabled.  Technically, this should not be
+  #         required if script security was enabled through a typical
+  #         mechanism, e.g. [source enableSecurity], etc.
+  #
+  if {[security ""]} then {
+    keyring clear; keyring bootstrap
+    emitWarning "cleared key rings and merged all bootstrap key rings"
+  }
+
+  #
+  # HACK: Reformat some of the spacing in the certificate file to make
+  #       it easier to read.
+  #
+  package require Harpy.Test; reformatCertificateSpacing $certificateFile
+
+  #############################################################################
+  # PHASE 8: REPORT, EMBED INTO SCRIPT, AND CLEAN UP
+  #
+  # A success line is reported (distinguishing a fresh signing from an
+  # "importFirst" re-signing).  Then, when embedding, the exported temporary
+  # certificate is read, its line endings are normalized, each line is turned
+  # into a comment, the begin/end marker lines are added (with one leading
+  # blank line), and the whole block is appended to the script file using
+  # native line endings -- this is the counterpart to the marker-based removal
+  # in PHASE 5.  The "certificate phase3" completion hook fires, the temporary
+  # embedded certificate file is deleted, and finally every variable this
+  # program created is unset (including "path"/"quiet" only when this run was
+  # the one that created them, per the *_set flags from PHASE 2), leaving the
+  # interpreter clean for any caller that sourced this tool.
+  #############################################################################
+
+  #
+  # NOTE: Show that we signed it.
+  #
+  if {$importFirst} then {
+    emitOutput [appendArgs \
+        "re-signed " $fileType " \"" $fileName "\" (as \"" $entityType \
+        "\") using encoding \"" $encoding "\" with key " [keypair token \
+        $privateKeyFile]]
+  } else {
+    emitOutput [appendArgs \
+        "signed " $fileType " \"" $fileName "\" (as \"" $entityType \
+        "\") using encoding \"" $encoding "\" with key " [keypair token \
+        $privateKeyFile]]
+  }
+
+  #
+  # NOTE: Do we need to embed the certificate at the end of the script
+  #       file?
+  #
+  if {$shouldEmbed} then {
+    #
+    # NOTE: Make sure any carriage-returns are removed as they impact
+    #       the line splitting algorithm being used.
+    #
+    set data [readFile $certificateFile]
+    set data [string map [list [info newline] \n] $data]
+
+    #
+    # NOTE: Start out with the embedding prefix on a line by itself.
+    #
+    set lines [list $embedPrefix]
+
+    #
+    # NOTE: Add a comment character and a space to the start of each
+    #       line, including any blank lines.
+    #
+    foreach line [split $data \n] {
+      lappend lines [string trim [appendArgs "# " $line]]
+    }
+
+    #
+    # NOTE: Finish off with the embedding suffix.  Also, add one extra
+    #       blank line just before the start of the embedding prefix.
+    #
+    lappend lines $embedSuffix; set lines [linsert $lines 0 ""]
+
+    #
+    # NOTE: Append the entire embedded certificate block to the script
+    #       file itself, forcing the line-endings to be native for the
+    #       platform.
+    #
+    appendFile $fileName [join $lines [info newline]]
+
+    #
+    # NOTE: Show that we embedded it.
+    #
+    emitOutput [appendArgs \
+        "added embedded certificate to " $fileType " \"" $fileName \"]
+  }
+
+  #
+  # HOOK: Script completion.
+  #
+  maybeInvokeHook certificate phase3
+
+  #
+  # NOTE: Cleanup the external embedded certificate file, if any.
+  #
+  if {$shouldEmbed} then {
+    catch {file delete -force $certificateFile}
+  }
+
+  #
+  # NOTE: Play nice and cleanup all the variables we created during the
+  #       whole the signing process.
+  #
+  unset -nocomplain fileName vendor embed duration entityType encoding \
+      privateKeyFile publicKeyFile importFirst quantity id timeStamp \
+      configFileName embedSpacing embedPrefix embedSuffix publicKey \
+      privateKey shouldEmbed harpyIsSpecial fileType certificateFile \
+      certificate hashAlgorithmName data lines line
+
+  if {[info exists path_set]} then {
+    unset -nocomplain path path_set
+  }
+
+  if {[info exists quiet_set]} then {
+    unset -nocomplain quiet quiet_set
+  }
+} else {
+  #
+  # NOTE: The argument-count guard above failed (zero arguments, or more than
+  #       twelve), so the invocation is malformed.  Show the usage summary with
+  #       no leading error message; [usage] then terminates the process with a
+  #       non-zero exit status.
+  #
+  usage ""
+}

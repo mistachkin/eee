@@ -1,0 +1,53 @@
+hotkey about	hotkey about
+hotkey add	hotkey add keys flags text
+hotkey anykeys	hotkey anykeys ?modifiers? ?virtualKey? ?idVarName?
+hotkey autoload	hotkey autoload
+hotkey busy	hotkey busy ?busy? ?idOrTitle?
+hotkey certificate	hotkey certificate
+hotkey clear	hotkey clear ?unregisterOnly? ?force?
+hotkey clearlog	hotkey clearlog
+hotkey click	hotkey click formPattern componentName ?rawFormOnly? ?exactOnly? ?asynchronous?
+hotkey copylog	hotkey copylog
+hotkey count	hotkey count ?registered?
+hotkey directory	hotkey directory
+hotkey edit	hotkey edit id ?idVarName? ?advanced? ?template?
+hotkey evaluate	hotkey evaluate id
+hotkey find	hotkey find ?options?
+hotkey formid	hotkey formid
+hotkey formlist	hotkey formlist
+hotkey formwait	hotkey formwait id milliseconds
+hotkey get	hotkey get id ?full?
+hotkey isolated	hotkey isolated
+hotkey list	hotkey list
+hotkey load	hotkey load script ?strictCount? ?strictRegister?
+hotkey lock	hotkey lock
+hotkey log	hotkey log text
+hotkey logging	hotkey logging ?enabled?
+hotkey messagebox	hotkey messagebox ?options?
+hotkey onhook	hotkey onhook ?options?
+hotkey options	hotkey options
+hotkey pendingcancel	hotkey pendingcancel
+hotkey previouseventdata	hotkey previouseventdata
+hotkey ready	hotkey ready
+hotkey register	hotkey register id
+hotkey remove	hotkey remove id
+hotkey resource	hotkey resource name
+hotkey result	hotkey result id
+hotkey root	hotkey root ?directory?
+hotkey save	hotkey save ?strict?
+hotkey script	hotkey script ?options? text
+hotkey secret	hotkey secret ?options? text
+hotkey selectdirectory	hotkey selectdirectory ?options?
+hotkey selectfile	hotkey selectfile ?options?
+hotkey selectitem	hotkey selectitem ?options? list
+hotkey selectkeys	hotkey selectkeys ?modifiers? ?virtualKey? ?idVarName?
+hotkey set	hotkey set id hotKey
+hotkey shutdown	hotkey shutdown
+hotkey startup	hotkey startup
+hotkey status	hotkey status
+hotkey template	hotkey template ?options?
+hotkey title	hotkey title ?text?
+hotkey unregister	hotkey unregister id
+hotkey view	hotkey view ?idVarName? ?advanced?
+hotkey wait	hotkey wait milliseconds
+hotkey yesno	hotkey yesno ?options? text

@@ -1,0 +1,229 @@
+###############################################################################
+#
+# remote-storage-manager.eagle --
+#
+# Extensible Adaptable Generalized Logic Engine (Eagle)
+# Harpy Remote Storage Manager
+#
+# Copyright (c) 2007-2012 by Joe Mistachkin.  All rights reserved.
+#
+# See the file "license.terms" for information on usage and redistribution of
+# this file, and for a DISCLAIMER OF ALL WARRANTIES.
+#
+# RCS: @(#) $Id: $
+#
+###############################################################################
+
+namespace eval ::Harpy::StorageManager::Remote {
+  proc setup { enable {apiKey ""} } {
+    # <help>
+    # This procedure links or unlinks the global ::network_storage variable
+    # to a remote network configuration service, the back end the remote
+    # storage manager actually reads from and writes to.  It exists so the
+    # remote backend can defer establishing that link until the first
+    # request, and tear it down again afterwards, without leaving a live
+    # network binding around between requests.
+    #
+    # How it works: the apiKey is resolved first.  When the caller supplies
+    # an empty string, the value of the NETCFG_API_KEY environment variable
+    # is used; if that variable is also missing, an error is raised because
+    # the remote service cannot be contacted without an authentication key.
+    # When enable is true and ::network_storage does not yet exist, the
+    # interpreter's default encoding is captured, a base URI is selected
+    # (either the override variable ::remoteNetCfgBaseUri or
+    # [getAuxiliaryBaseUri] with "/var" appended), and a NetworkVariable
+    # object is created to bridge a local variable name to a remote variable
+    # value.  Its AddVariable method binds the global ::network_storage
+    # variable to that bridge; success and failure are reported through
+    # [host result].  When enable is false and ::network_storage exists, it
+    # is removed with [unset -remove] and a garbage collection is forced.
+    # The "already linked" and "not linked" idempotent cases each report a
+    # neutral status without changing anything.
+    #
+    # Tricky and security details: the API key is a credential -- this
+    # procedure deliberately reads it from the process environment when no
+    # explicit value is given, so it can stay out of script source.
+    # NETCFG_API_KEY must not be exposed in logs or shared shells.  The
+    # remote variable bridge uses the BeforeVariable trace flag, which means
+    # every read and write of ::network_storage transparently issues a
+    # corresponding network operation -- callers should not assume cheap
+    # in-memory semantics for that variable.
+    #
+    # Arguments:
+    #   enable -- True to establish the remote link, false to tear it down.
+    #   apiKey -- Optional explicit API key; the empty string (the default)
+    #             falls back to the NETCFG_API_KEY environment variable.
+    #
+    # Results:
+    #   Returns the empty string; its effect is the side effect on
+    #   ::network_storage and on the host's result channel; raises an error
+    #   when no API key is available.
+    # </help>
+
+    if {[string length $apiKey] == 0} then {
+      if {[info exists ::env(NETCFG_API_KEY)]} then {
+        set apiKey $::env(NETCFG_API_KEY)
+      } else {
+        error "the NETCFG_API_KEY environment variable is not set"
+      }
+    }
+
+    if {$enable} then {
+      if {![info exists ::network_storage]} then {
+        set encoding [object invoke Interpreter DefaultEncoding]
+
+        if {[info exists ::remoteNetCfgBaseUri]} then {
+          set baseUri $::remoteNetCfgBaseUri
+        } else {
+          set baseUri [appendArgs [getAuxiliaryBaseUri] /var]
+        }
+
+        set networkVariable [object invoke -alias \
+            NetworkVariable Create null null null $baseUri null null \
+            $encoding null $apiKey null null null varName varValue \
+            BeforeVariable]
+
+        set result null
+        set code [$networkVariable AddVariable "" ::network_storage result]
+
+        if {$code eq "Ok"} then {
+          host result Ok [appendArgs \
+              "Remote network configuration now linked with base URI \"" \
+              $baseUri \".\n]
+        } else {
+          host result Error [appendArgs \
+              "Cannot link to remote network configuration: " \
+              [getStringFromObjectHandle $result] \n]
+        }
+      } else {
+        host result Return "Remote network configuration already linked.\n"
+      }
+    } else {
+      if {[info exists ::network_storage]} then {
+        if {[catch {
+          unset -remove -- ::network_storage; debug collect
+        } result] == 0} then {
+          host result Ok "Remote network configuration now unlinked.\n"
+        } else {
+          host result Error [appendArgs \
+              "Cannot unlink from remote network configuration: " \
+              $result \n]
+        }
+      } else {
+        host result Return "Remote network configuration not linked.\n"
+      }
+    }
+  }
+
+  proc processRequest { args } {
+    # <help>
+    # This procedure is the remote storage manager's single entry point:
+    # the core Harpy licensing code reaches it through the global
+    # "::storageManager" alias and asks it to read, write, delete, or list a
+    # storage entry against the remote network configuration service.  It
+    # exists so the remote backend can service those four methods through a
+    # transparently networked Tcl array.
+    #
+    # How it works: it establishes the remote link via [setup true], then
+    # uses two nested [try] blocks so cleanup is guaranteed.  Inside the
+    # outer [try] it emits a "REMOTE_BEFORE" trace via [logRequest] (with a
+    # "REMOTE_AFTER" counterpart in the outer [finally]).  Inside the inner
+    # [try] it extracts the "method" entry from the request dictionary and
+    # dispatches: read returns the current value of
+    # ::network_storage(qualifiedName); write assigns the supplied value to
+    # that array element; delete unsets the array element; list returns
+    # [filterList] applied to the names of all elements of ::network_storage
+    # (which restricts the list to this machine and test run).  Any other
+    # method value raises an error naming the offending method.  The outer
+    # [finally] tears the link down again via [setup false].
+    #
+    # Tricky details: each touch of ::network_storage(qualifiedName) is in
+    # reality a remote operation, because the variable carries a
+    # BeforeVariable trace installed by [setup].  This means the dispatch
+    # body is doing network I/O at each branch, and any network failure
+    # surfaces as a script error that the outer [finally] still cleans up
+    # after.  The qualified name comes from [getName], which prefixes the
+    # caller-supplied logical name with the machine Id (and the test run Id
+    # when available) -- this is what gives the shared remote store its
+    # per-machine and per-test-run isolation.  The double [finally]
+    # structure ensures the REMOTE_AFTER trace is emitted even when the
+    # inner block errors, and that the link is torn down even when the
+    # REMOTE_AFTER trace itself errors.
+    #
+    # Arguments:
+    #   args -- The flattened request dictionary supplied by the core
+    #           licensing code; must contain a "method" key whose value is
+    #           one of read, write, delete, or list, plus the keys those
+    #           methods require ("name", "value", "machineId", and so on).
+    #
+    # Results:
+    #   Returns the requested value for read, the written value for write,
+    #   the result of the unset for delete, and the filtered list of
+    #   logical names for list; raises an error for an unsupported method,
+    #   a missing element on read or delete, or any underlying network
+    #   failure.
+    # </help>
+
+    setup true
+
+    try {
+      eval logRequest result REMOTE_BEFORE $args
+
+      try {
+        set method [getDictionaryValue $args method]
+
+        switch -exact -- $method {
+          read {
+            set name [eval getName $args]
+
+            return [set result \
+                $::network_storage($name)]
+          }
+          write {
+            set name [eval getName $args]
+
+            return [set result \
+                [set ::network_storage($name) \
+                [getDictionaryValue $args value]]]
+          }
+          delete {
+            set name [eval getName $args]
+
+            return [set result \
+                [unset ::network_storage($name)]]
+          }
+          list {
+            return [set result \
+                [eval filterList [list [array \
+                names ::network_storage]] $args]]
+          }
+          default {
+            error [set result [appendArgs \
+                "unsupported storage method \"" \
+                $method \"]]
+          }
+        }
+      } finally {
+        eval logRequest result REMOTE_AFTER $args
+      }
+    } finally {
+      setup false
+    }
+  }
+
+  package require Harpy.StorageManager.Shared 1.0
+
+  namespace eval ::Harpy::StorageManager::Remote {
+    namespace import ::Harpy::StorageManager::Shared::*
+  }
+
+  namespace export processRequest
+
+  namespace eval :: {
+    namespace import -force ::Harpy::StorageManager::Remote::*
+  }
+
+  interp alias {} storageManager {} processRequest
+
+  package provide Harpy.StorageManager.Remote 1.0
+}

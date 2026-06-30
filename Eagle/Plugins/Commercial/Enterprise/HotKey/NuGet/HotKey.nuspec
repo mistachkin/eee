@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package>
+  <metadata>
+    <id>HotKey</id>
+    <title>Eagle Enterprise Edition: HotKey Plugin</title>
+    <version>1.0.X.X</version>
+    <authors>Eagle Development Team</authors>
+    <description>
+      Fully programmable, system-wide hot-key management system.
+      Each hot-key can trigger a script, which can do almost anything.
+    </description>
+    <language>en-US</language>
+    <projectUrl>https://urn.to/r/eagle</projectUrl>
+    <iconUrl>https://eagle.to/images/eagle128.png</iconUrl>
+    <licenseUrl>https://eagle.to/enterprise/license.html</licenseUrl>
+    <requireLicenseAcceptance>true</requireLicenseAcceptance>
+    <tags>automation eagle global hotkey script system tcl/tk winforms</tags>
+    <copyright>Copyright &#x00A9; 2007-2012 by Joe Mistachkin.  All rights reserved.</copyright>
+    <dependencies>
+      <group>
+        <dependency id="Eagle.CLRv4.Core" version="[1.0.X.X,1.0.X.99999]" />
+        <dependency id="Harpy.CLRv4" version="[1.0.X.X,1.0.X.99999]" />
+      </group>
+    </dependencies>
+    <references />
+  </metadata>
+  <files>
+    <file src="lib\HotKey1.0\HotKey.dll" target="build\net40\lib\HotKey1.0" />
+    <file src="lib\HotKey1.0\Interop.wshom.dll" target="build\net40\lib\HotKey1.0" />
+    <file src="lib\HotKey1.0\SciLexer.dll" target="build\net40\lib\HotKey1.0" />
+    <file src="lib\HotKey1.0\SciLexer64.dll" target="build\net40\lib\HotKey1.0" />
+    <file src="lib\HotKey1.0\SciLexerARM.dll" target="build\net40\lib\HotKey1.0" />
+    <file src="lib\HotKey1.0\ScintillaNET.dll" target="build\net40\lib\HotKey1.0" />
+    <file src="lib\HotKey1.0\pkgIndex.eagle" target="build\net40\lib\HotKey1.0\pkgIndex_1265135207d01249.eagle" />
+    <file src="lib\HotKey1.0\pkgIndex.eagle.harpy" target="build\net40\lib\HotKey1.0\pkgIndex_1265135207d01249.eagle.harpy" />
+    <file src="lib\HotKey1.0\trial-certificate.xml" target="build\net40\lib\HotKey1.0\Certificates" />
+    <file src="lib\HotKey1.0\Templates\**" target="build\net40\lib\HotKey1.0\Templates" />
+    <file src="build\HotKey.NuGet.targets" target="build\net40\HotKey.targets" />
+  </files>
+</package>

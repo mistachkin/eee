@@ -1,0 +1,15 @@
+badge about	badge about
+badge certificate	badge certificate
+badge clearstrings	badge clearstrings
+badge enable	badge enable ?enabled?
+badge getstring	badge getstring name
+badge isolated	badge isolated
+badge liststrings	badge liststrings
+badge names	badge names
+badge nullstring	badge nullstring name
+badge options	badge options
+badge removestring	badge removestring name
+badge renullstring	badge renullstring name
+badge resetstring	badge resetstring name
+badge setstring	badge setstring name
+badge test	badge test name

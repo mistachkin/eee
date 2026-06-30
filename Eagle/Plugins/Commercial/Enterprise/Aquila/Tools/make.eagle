@@ -1,0 +1,591 @@
+###############################################################################
+#
+# make.eagle --
+#
+# Extensible Adaptable Generalized Logic Engine (Eagle)
+# Enterprise Edition Plugin Generation Tool
+#
+# Copyright (c) 2007-2012 by Joe Mistachkin.  All rights reserved.
+#
+# See the file "license.terms" for information on usage and redistribution of
+# this file, and for a DISCLAIMER OF ALL WARRANTIES.
+#
+# RCS: @(#) $Id: $
+#
+###############################################################################
+
+proc usage { error } {
+  # <help>
+  # This procedure prints the command-line usage summary for the Aquila plugin
+  # generation tool and then terminates the process, signaling failure to
+  # whatever invoked it.  It exists as the single entry point for the "you
+  # called me incorrectly" path, and is invoked when the tool is run with the
+  # wrong number of positional arguments.
+  #
+  # How it works: when the error argument is a non-empty string it is written
+  # to standard output first; the usage line is then printed, naming the host
+  # shell executable and this script followed by the supported positional
+  # arguments (templateDirectory, libraryDirectory, outputDirectory, and the
+  # optional projectName).  Finally it calls [exit 1].
+  #
+  # Tricky details: this procedure never returns to its caller -- it always
+  # exits the process with a non-zero (failure) status, so it must only be
+  # used on terminal error paths.
+  #
+  # Arguments:
+  #   error -- An optional leading error message.  When non-empty it is shown
+  #            before the usage text; pass an empty string to show plain usage.
+  #
+  # Results:
+  #   Does not return; the process exits with status code 1.
+  # </help>
+
+  if {[string length $error] > 0} then {puts stdout $error}
+
+  puts stdout "usage:\
+[file tail [getShellExecutableName]]\
+[file tail [info script]] <templateDirectory> <libraryDirectory>\
+<outputDirectory> \[projectName\]"
+
+  #
+  # NOTE: Indicate to the caller, if any, that we have failed.
+  #
+  exit 1
+}
+
+proc getLibraryDataElements { fileNames } {
+  # <help>
+  # This procedure builds the body of XML <data> elements that are spliced into
+  # the generated plugin's "library.resx" template.  Each element wires up an
+  # external script-library file as a string-typed managed resource so the
+  # plugin assembly can locate and load that file at runtime.
+  #
+  # How it works: it iterates over the supplied list of file names and, for
+  # each one, appends a <data> open tag (naming the file and declaring it a
+  # System.Resources.ResXFileRef), a nested <value> element whose content is
+  # the native-form relative path under the "lib" directory together with the
+  # fully qualified System.String type reference and the Windows-1252 encoding
+  # hint, and a closing tag.  Each appended line is terminated with a carriage
+  # return and line feed pair so the resulting XML fragment matches the CRLF
+  # convention of the surrounding template.
+  #
+  # Tricky details: paths are emitted via [file nativename] and rooted under
+  # ".." so the resulting reference is relative to the location where the .resx
+  # file lives.  The mscorlib version, public key token, and codepage are
+  # hard-coded; they must remain consistent with the runtime that loads the
+  # generated plugin.
+  #
+  # Arguments:
+  #   fileNames -- The list of relative library file names to declare as ResX
+  #                file references.
+  #
+  # Results:
+  #   Returns the concatenated XML fragment containing one <data> element per
+  #   input file name.
+  # </help>
+
+  set result ""
+
+  foreach fileName $fileNames {
+    append result "  <data name=\"" $fileName \
+        "\" type=\"System.Resources.ResXFileRef, System.Windows.Forms\">\r\n"
+    append result "    <value>" [file nativename [file join .. lib $fileName]]
+    append result ";System.String, mscorlib, Version=2.0.0.0, Culture=neutral,\
+                   PublicKeyToken=b77a5c561934e089;Windows-1252</value>\r\n"
+    append result "  </data>\r\n"
+  }
+
+  return $result
+}
+
+proc getTargetsBanner { text } {
+  # <help>
+  # This procedure formats a short label into a fixed-width banner suitable for
+  # embedding inside an MSBuild .targets file (or any similar generated source
+  # that uses a uniformly aligned comment banner).  It exists so the generated
+  # plugin's build files all carry visually consistent section headers,
+  # regardless of how long the supplied label happens to be.
+  #
+  # How it works: it measures the input text and, when it is shorter than the
+  # fixed 72-character banner width, computes the total padding needed to fill
+  # the line and divides it as evenly as possible between the left and right
+  # sides; when the padding count is odd, the extra space is added to the right
+  # side.  When the text already meets or exceeds the banner width, no padding
+  # is added.  The result is composed as a leading "** " marker, the left
+  # padding spaces, the text, the right padding spaces (including the extra
+  # space, if any), and a trailing " **" marker.
+  #
+  # Tricky details: the banner length is hard-coded at 72 characters and the
+  # left and right markers each consume four characters, so a text string of
+  # 72 characters or more will receive no padding at all and the final banner
+  # will be longer than 80 characters.
+  #
+  # Arguments:
+  #   text -- The label to be centered inside the banner.
+  #
+  # Results:
+  #   Returns the formatted banner string with the input text centered and
+  #   bracketed by the standard "** " markers.
+  # </help>
+
+  set bannerLength 72
+  set textLength [string length $text]
+
+  if {$textLength < $bannerLength} then {
+    #
+    # NOTE: Calculate the total number of spaces needed.
+    #
+    set spaces [expr {$bannerLength - $textLength}]
+
+    #
+    # NOTE: If the total number of spaces is not evenly divisible
+    #       by two, an extra one will be needed on one side.
+    #
+    set extraSpaces [expr {int($spaces % 2 != 0)}]
+
+    #
+    # NOTE: Calculate the number of spaces needed for each side,
+    #       not including the extra one, if any.
+    #
+    set halfSpaces [expr {$spaces / 2}]
+  } else {
+    set extraSpaces 0
+    set halfSpaces 0
+  }
+
+  return [appendArgs "** " [string repeat " " $halfSpaces] $text \
+      [string repeat " " [expr {$halfSpaces + $extraSpaces}]] " **"]
+}
+
+if {[llength $argv] == 3 || [llength $argv] == 4} then {
+  #
+  # NOTE: This tool requires Eagle.
+  #
+  package require Eagle
+  package require Eagle.Library
+  package require Eagle.Test
+
+  #
+  # NOTE: Verify that all the arguments are valid.  In this case, there are
+  #       three directory arguments.  The first is the location of the plugin
+  #       template files.  The second is the location of the library files to
+  #       be embedded into the plugin (e.g. Eagle scripts, etc).  The third
+  #       directory is the location where the output files should be placed.
+  #
+  if {![info exists templateDirectory]} then {
+    set templateDirectory [string trim [lindex $argv 0]]
+  }
+
+  if {[string length $templateDirectory] == 0} then {
+    error "invalid template directory"
+  }
+
+  set templateDirectory [file normalize $templateDirectory]
+
+  if {![file exists $templateDirectory] || \
+      ![file isdirectory $templateDirectory]} then {
+    error [appendArgs "template directory \"" $templateDirectory \
+        "\" does not exist"]
+  }
+
+  if {![info exists libraryDirectory]} then {
+    set libraryDirectory [string trim [lindex $argv 1]]
+  }
+
+  if {[string length $libraryDirectory] == 0} then {
+    error "invalid library directory"
+  }
+
+  set libraryDirectory [file normalize $libraryDirectory]
+
+  if {![file exists $libraryDirectory] || \
+      ![file isdirectory $libraryDirectory]} then {
+    error [appendArgs "library directory \"" $libraryDirectory \
+        "\" does not exist"]
+  }
+
+  if {![info exists outputDirectory]} then {
+    set outputDirectory [string trim [lindex $argv 2]]
+  }
+
+  if {[string length $outputDirectory] == 0} then {
+    error "invalid output directory"
+  }
+
+  set outputDirectory [file normalize $outputDirectory]
+
+  if {[file exists $outputDirectory]} then {
+    error [appendArgs "output directory \"" $outputDirectory \
+        "\" already exists"]
+  }
+
+  #
+  # NOTE: Set the template project name now.  This is used when renaming
+  #       output files and coming up with a default project name.
+  #
+  if {![info exists templateProjectName]} then {
+    set templateProjectName Aquila
+  }
+
+  #
+  # NOTE: Check if the optional project name argument was supplied on the
+  #       command line.  If so, grab it.
+  #
+  if {![info exists projectName]} then {
+    set projectName ""
+
+    if {[llength $argv] == 4} then {
+      set projectName [string trim [lindex $argv 3]]
+    }
+  }
+
+  #
+  # NOTE: Generate a project GUID for use by the project files.
+  #
+  if {![info exists projectGuid]} then {
+    set projectGuid [string tolower [guid new]]
+  }
+
+  #
+  # NOTE: If a project name was not supplied on the command line, attempt
+  #       to come up with a reasonable one now.
+  #
+  if {[string length $projectName] == 0} then {
+    #
+    # NOTE: For now, construct a name in the format "AquilaPluginXXXXXXXX",
+    #       where "XXXXXXXX" are the first eight characters of the project
+    #       GUID.
+    #
+    set projectName [appendArgs Plugin \
+        [string range [string toupper $projectGuid] 0 7]]
+
+    #
+    # NOTE: The project name was automatically generated.
+    #
+    set automaticProjectName true
+
+    #
+    # NOTE: The package version number will be appended to the assembly name;
+    #       therefore, make sure it ends with an underscore to avoid package
+    #       directory names like "AquilaPlugin61A342061.0" where "1.0" is the
+    #       package version.
+    #
+    set assemblyName [appendArgs $projectName _]
+  } else {
+    #
+    # NOTE: The project name was manually specified.
+    #
+    set automaticProjectName false
+
+    #
+    # NOTE: The project name was specified on the command line, use it
+    #       verbatim for the assembly name.
+    #
+    set assemblyName $projectName
+  }
+
+  #
+  # NOTE: Setup the lists of file name glob patterns to be excluded from
+  #       being copied and/or processed.  In the future, these lists may
+  #       be customizable.
+  #
+  if {![info exists excludeFileNames(library)]} then {
+    set excludeFileNames(library) [list]
+  }
+
+  if {![info exists excludeFileNames(template)]} then {
+    set excludeFileNames(template) [list \
+        *.sln *.suo */Tools/make.eagle */Tools/make.eagle.harpy \
+        */Components/Private/PatchLevel.cs */certificate.exml]
+  }
+
+  if {![info exists excludeFileNames(copy)]} then {
+    set excludeFileNames(copy) [list \
+        *.sln *.suo */Tools/make.eagle */Tools/make.eagle.harpy]
+  }
+
+  #
+  # NOTE: Attempt to create the output directory now.  If this fails, we
+  #       cannot continue.
+  #
+  file mkdir $outputDirectory
+
+  #
+  # NOTE: Get the list of library files that need to be processed into the
+  #       library sub-directory of the output directory.
+  #
+  set libraryFileNames [findFilesRecursive $libraryDirectory]
+
+  #
+  # NOTE: Keep track of how many library files have been seen and copied.
+  #
+  set count(library) [llength $libraryFileNames]
+  set count(excluded) 0
+  set count(copied) 0
+
+  #
+  # NOTE: Process each of the library files, copying them verbatim to the
+  #       output directory in the appropriate sub-directory.  Also, build
+  #       the final list of relative library file names for use with the
+  #       [getLibraryDataElements] procedure when it needs to process the
+  #       "library.resx" template file to insert <data> elements.
+  #
+  set outputLibraryFileNames [list]
+
+  foreach fileName $libraryFileNames {
+    #
+    # NOTE: Make sure this file name is not excluded from the being copied
+    #       with the other library files.
+    #
+    if {[inverseLsearchGlob \
+        true $excludeFileNames(library) $fileName] != -1} then {
+      #
+      # NOTE: Keep track of how many files are excluded.
+      #
+      incr count(excluded); continue
+    }
+
+    #
+    # NOTE: Verify that this template file name starts with the template
+    #       directory name (i.e. it is contained in the template directory).
+    #
+    if {[string first $libraryDirectory $fileName] != 0} then {
+      error [appendArgs "library file name \"" $fileName \
+          "\" does not start with library directory name \"" \
+          $libraryDirectory \"]
+    }
+
+    #
+    # NOTE: Start with the library file name and then strip the library
+    #       directory name from in front of it, including the directory
+    #       separator character.
+    #
+    set newFileName $fileName
+    set newFileName [string range $newFileName \
+        [expr {[string length $libraryDirectory] + 1}] end]
+
+    #
+    # NOTE: Add the necessary library file name, relative to the output
+    #       directory, to the list of file names needed for use with the
+    #       [getLibraryDataElements] procedure when it needs to process
+    #       the "library.resx" template file to insert <data> elements.
+    #
+    lappend outputLibraryFileNames $newFileName
+
+    #
+    # NOTE: Replace the template file name in the output file name; however,
+    #       if the new file name will end with a number, make sure it ends
+    #       with an underscore.  This prevents the output file naming from
+    #       ending up looking like "AquilaPlugin61A342062005.csproj", where
+    #       "2005" is the Visual Studio version.  This check is somewhat
+    #       complex because it must determine if the new file name will be
+    #       transformed (below) to include the project name, which may end
+    #       with a hexadecimal string and since that transformation relies
+    #       upon this variable, it must be done first.
+    #
+    set outputName $projectName
+
+    if {[string first $templateProjectName $newFileName] != -1 && \
+        [regexp -- {\d$} [file rootname [file tail $newFileName]]] && \
+        ($automaticProjectName || [regexp -- {\d$} [file rootname \
+            [file tail $outputName]]])} then {
+      append outputName _
+    }
+
+    #
+    # NOTE: Build the fully qualified output file name based on the output
+    #       directory and the relative library file name.
+    #
+    set newFileName [file join $outputDirectory lib [string map [list \
+        $templateProjectName $outputName] $newFileName]]
+
+    #
+    # NOTE: Make sure the library output directory for the new file exists.
+    #       If not, create it now.
+    #
+    set newDirectory [file dirname $newFileName]
+
+    if {![file exists $newDirectory] || \
+        ![file isdirectory $newDirectory]} then {
+      file mkdir $newDirectory
+    }
+
+    #
+    # NOTE: Copy the library file to its new location inside the "lib"
+    #       sub-directory of the output directory.
+    #
+    file copy $fileName $newFileName
+
+    #
+    # NOTE: Show that we copied the output file.
+    #
+    puts stdout [appendArgs "copied \"" $newFileName \"]
+
+    #
+    # NOTE: Keep track of how many library files are copied.
+    #
+    incr count(copied)
+  }
+
+  #
+  # NOTE: Get the list of template files that need to be processed by this
+  #       tool.  By default, all files in the template directory will be
+  #       processed unless they are specifically excluded.
+  #
+  set templateFileNames [findFilesRecursive $templateDirectory]
+
+  #
+  # NOTE: Keep track of how many template and output files have been seen
+  #       and/or processed.
+  #
+  set count(template) [llength $templateFileNames]
+  set count(wrote) 0
+
+  #
+  # NOTE: Process each of the template files, replacing any dynamic content
+  #       contained in them, and write them to the output directory in the
+  #       appropriate sub-directory.
+  #
+  foreach fileName $templateFileNames {
+    #
+    # NOTE: Verify that this template file name starts with the template
+    #       directory name (i.e. it is contained in the template directory).
+    #
+    if {[string first $templateDirectory $fileName] != 0} then {
+      error [appendArgs "template file name \"" $fileName \
+          "\" does not start with template directory name \"" \
+          $templateDirectory \"]
+    }
+
+    #
+    # NOTE: Start with the template file name and then strip the template
+    #       directory name from in front of it, including the directory
+    #       separator character.
+    #
+    set newFileName $fileName
+    set newFileName [string range $newFileName \
+        [expr {[string length $templateDirectory] + 1}] end]
+
+    #
+    # NOTE: Replace the template file name in the output file name; however,
+    #       if the new file name will end with a number, make sure it ends
+    #       with an underscore.  This prevents the output file naming from
+    #       ending up looking like "AquilaPlugin61A342062005.csproj", where
+    #       "2005" is the Visual Studio version.  This check is somewhat
+    #       complex because it must determine if the new file name will be
+    #       transformed (below) to include the project name, which may end
+    #       with a hexadecimal string and since that transformation relies
+    #       upon this variable, it must be done first.
+    #
+    set outputName $projectName
+
+    if {[string first $templateProjectName $newFileName] != -1 && \
+        [regexp -- {\d$} [file rootname [file tail $newFileName]]] && \
+        ($automaticProjectName || [regexp -- {\d$} [file rootname \
+            [file tail $outputName]]])} then {
+      append outputName _
+    }
+
+    #
+    # NOTE: Build the fully qualified output file name based on the output
+    #       directory and the relative template file name.
+    #
+    set newFileName [file join $outputDirectory [string map [list \
+        $templateProjectName $outputName] $newFileName]]
+
+    #
+    # NOTE: Make sure this file name is not excluded from the standard
+    #       template processing.
+    #
+    if {[inverseLsearchGlob \
+        true $excludeFileNames(template) $fileName] == -1} then {
+      #
+      # NOTE: Make sure the output directory for the new file already
+      #       exists.  If not, create it now.
+      #
+      set newDirectory [file dirname $newFileName]
+
+      if {![file exists $newDirectory] || \
+          ![file isdirectory $newDirectory]} then {
+        file mkdir $newDirectory
+      }
+
+      #
+      # NOTE: Read the entire contents of the file to be processed.
+      #
+      set data [readFile $fileName]
+
+      #
+      # NOTE: Perform any dynamic substitutions that may be contained in the
+      #       template file data.
+      #
+      if {[catch {set data [subst $data]} error]} then {
+        error [appendArgs "template file name \"" $fileName \
+            "\" processing error: " $error]
+      }
+
+      #
+      # NOTE: Write the output file.
+      #
+      writeFile $newFileName $data
+
+      #
+      # NOTE: Show that we wrote the output file.
+      #
+      puts stdout [appendArgs "wrote \"" $newFileName \"]
+
+      #
+      # NOTE: Keep track of how many output files are written.
+      #
+      incr count(wrote)
+    } else {
+      #
+      # NOTE: Make sure this file name is not excluded from being copied.
+      #
+      if {[inverseLsearchGlob \
+          true $excludeFileNames(copy) $fileName] == -1} then {
+        #
+        # NOTE: Make sure the output directory for the new file already
+        #       exists.  If not, create it now.
+        #
+        set newDirectory [file dirname $newFileName]
+
+        if {![file exists $newDirectory] || \
+            ![file isdirectory $newDirectory]} then {
+          file mkdir $newDirectory
+        }
+
+        #
+        # NOTE: Copy the library file to its new location inside the "lib"
+        #       sub-directory of the output directory.
+        #
+        file copy $fileName $newFileName
+
+        #
+        # NOTE: Show that we copied the output file.
+        #
+        puts stdout [appendArgs "copied \"" $newFileName \"]
+
+        #
+        # NOTE: Keep track of how many files are copied.
+        #
+        incr count(copied)
+      } else {
+        #
+        # NOTE: Keep track of how many files are excluded.
+        #
+        incr count(excluded)
+      }
+    }
+  }
+
+  #
+  # NOTE: Show how many template files were found and processed.
+  #
+  puts stdout [appendArgs "found " $count(library) " library files, found " \
+      $count(template) " template files, excluded " $count(excluded) \
+      " files, copied " $count(copied) " output files, wrote " $count(wrote) \
+      " output files"]
+} else {
+  usage ""
+}

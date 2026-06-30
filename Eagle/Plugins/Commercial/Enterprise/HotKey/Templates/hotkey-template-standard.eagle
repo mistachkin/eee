@@ -1,0 +1,122 @@
+###############################################################################
+#
+# hotkey-template-standard.eagle --
+#
+# Extensible Adaptable Generalized Logic Engine (Eagle)
+# Hot-Key Template Type Script
+#
+# Copyright (c) 2007-2012 by Joe Mistachkin.  All rights reserved.
+#
+# See the file "license.terms" for information on usage and redistribution of
+# this file, and for a DISCLAIMER OF ALL WARRANTIES.
+#
+# RCS: @(#) $Id: $
+#
+###############################################################################
+
+apply [list [list] {
+  package require HotKey.Template.Common
+
+  try {
+    set result null
+    set thread [createTemplateThread result]
+
+    set busyId [hotkey busy true [appendArgs \
+        "Busy, please wait... (" [file rootname [file tail [info script]]] )]]
+
+    try {
+      set code [$thread Send {
+        package require Eagle.Test
+        maybeAddToAutoPath [info binary]
+        set HotKey.Enterprise_NoThread true
+        set HotKey.Enterprise_NoComplaintForm true
+        package require HotKey.Enterprise
+        package require HotKey.Template.Common
+
+        #
+        # NOTE: Does the user want to filter the selection list?
+        #
+        set filter [hotkey yesno \
+            "Filter things based on those \"well-known\" to Windows?"]
+
+        #
+        # NOTE: Get a list of all the application files that Windows knows
+        #       about (i.e. in the registry).
+        #
+        set list1 [getApplicationsFromAppPaths \
+            [getWindowsExecutableAppPaths]]
+
+        #
+        # NOTE: Get a list of all the program files within the Windows
+        #       "Start Menu" directories available to the current user.
+        #
+        set list2 [getShortcutTargetPathNames \
+            [getStartMenuShortcutFileNames] *.exe]
+
+        #
+        # NOTE: Filter the raw list of executable file names based on the
+        #       applications known to Windows (e.g. via the registry, etc).
+        #
+        if {$filter} then {
+          set list2 [filterApplicationFileNames $list2]
+        }
+
+        #
+        # NOTE: Get a list of all the executable files within the hot-key
+        #       "root directory" (i.e. the directory where all executable
+        #       file searches should be conducted).
+        #
+        set list3 [findFilesRecursive \
+            [file join [file normalize [hotkey root]] *.exe]]
+
+        #
+        # NOTE: Filter the raw list of executable file names based on the
+        #       applications known to Windows (e.g. via the registry, etc).
+        #
+        if {$filter} then {
+          set list3 [filterApplicationFileNames $list3]
+        }
+
+        #
+        # NOTE: Finally, tag the resulting lists with their sources, so that
+        #       an end-user can see the origin of the listed file names.
+        #
+        set list1 [tagFileNamesWithSources $list1 [list application]]
+        set list2 [tagFileNamesWithSources $list2 [list program]]
+        set list3 [tagFileNamesWithSources $list3 [list executable]]
+      } result]
+    } finally {
+      hotkey busy false $busyId
+    }
+
+    if {$code eq "Ok"} then {
+      set code [$thread Send {
+        #
+        # NOTE: There must be at least one file name to select; otherwise,
+        #       raise an error.
+        #
+        set list [combineFileNamesWithSources $list1 $list2 $list3]
+
+        if {[llength $list] > 0} then {
+          hotkey selectitem -lists -executable $list
+        } else {
+          error "nothing detected"
+        }
+      } result]
+    }
+
+    if {$code ne "Ok"} then {
+      error [getStringFromObjectHandle $result]
+    }
+
+    return [appendArgs \
+        [info newline] "exec \"" [string map [list \\ \\\\] [file \
+        nativename [getStringFromObjectHandle $result]]] "\" &" [info \
+        newline]]
+  } finally {
+    if {[info exists thread]} then {
+      exitTemplateThread $thread
+      unset -nocomplain thread
+    }
+  }
+}]

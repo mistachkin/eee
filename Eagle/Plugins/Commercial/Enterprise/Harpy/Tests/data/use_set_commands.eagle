@@ -1,0 +1,73 @@
+###############################################################################
+#
+# use_set_commands.eagle --
+#
+# Extensible Adaptable Generalized Logic Engine (Eagle)
+# Signed Script Test
+#
+# Copyright (c) 2007-2012 by Joe Mistachkin.  All rights reserved.
+#
+# See the file "license.terms" for information on usage and redistribution of
+# this file, and for a DISCLAIMER OF ALL WARRANTIES.
+#
+# RCS: @(#) $Id: $
+#
+###############################################################################
+
+requireVersion 0.0.0.0
+
+set name [appendArgs ukse_ [pid]]; set value ""; set result [list]
+
+lappend result [haveConfiguration $name]
+lappend result [haveEnvironment $name]
+lappend result [info exists ::env($name)]
+lappend result [catch {setConfiguration $name} value] $value
+lappend result [haveConfiguration $name]
+lappend result [haveEnvironment $name]
+lappend result [info exists ::env($name)]
+lappend result [catch {setConfiguration $name one} value] $value
+lappend result [haveConfiguration $name]
+lappend result [haveEnvironment $name]
+lappend result [info exists ::env($name)]
+lappend result [catch {setConfiguration $name two} value] $value
+lappend result [haveConfiguration $name]
+lappend result [haveEnvironment $name]
+lappend result [info exists ::env($name)]
+lappend result [catch {setConfiguration $name} value] $value
+lappend result [haveConfiguration $name]
+lappend result [haveEnvironment $name]
+lappend result [info exists ::env($name)]
+lappend result [catch {setConfiguration $name ""} value] $value
+lappend result [haveConfiguration $name]
+lappend result [haveEnvironment $name]
+lappend result [info exists ::env($name)]
+lappend result [catch {setConfiguration $name} value] $value
+lappend result [haveConfiguration $name]
+lappend result [haveEnvironment $name]
+lappend result [info exists ::env($name)]
+lappend result [catch {setEnvironment $name} value] $value
+lappend result [haveConfiguration $name]
+lappend result [haveEnvironment $name]
+lappend result [info exists ::env($name)]
+lappend result [catch {setEnvironment $name one} value] $value
+lappend result [haveConfiguration $name]
+lappend result [haveEnvironment $name]
+lappend result [info exists ::env($name)]
+lappend result [catch {setEnvironment $name two} value] $value
+lappend result [haveConfiguration $name]
+lappend result [haveEnvironment $name]
+lappend result [info exists ::env($name)]
+lappend result [catch {setEnvironment $name} value] $value
+lappend result [haveConfiguration $name]
+lappend result [haveEnvironment $name]
+lappend result [info exists ::env($name)]
+lappend result [catch {setEnvironment $name ""} value] $value
+lappend result [haveConfiguration $name]
+lappend result [haveEnvironment $name]
+lappend result [info exists ::env($name)]
+lappend result [catch {setEnvironment $name} value] $value
+lappend result [haveConfiguration $name]
+lappend result [haveEnvironment $name]
+lappend result [info exists ::env($name)]
+
+set result

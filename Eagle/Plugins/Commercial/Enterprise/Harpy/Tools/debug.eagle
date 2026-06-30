@@ -1,0 +1,206 @@
+###############################################################################
+#
+# debug.eagle --
+#
+# Extensible Adaptable Generalized Logic Engine (Eagle)
+# Enterprise Edition Certificate Debugger Tool
+#
+# Copyright (c) 2007-2012 by Joe Mistachkin.  All rights reserved.
+#
+# See the file "license.terms" for information on usage and redistribution of
+# this file, and for a DISCLAIMER OF ALL WARRANTIES.
+#
+# RCS: @(#) $Id: $
+#
+###############################################################################
+
+proc usage { error } {
+  # <help>
+  # This procedure prints the command-line usage summary for the certificate
+  # debugger tool and then terminates the process, signaling failure to
+  # whatever invoked it.  It exists as the single entry point for the "you
+  # called me incorrectly" path, and is also used by the main script to abort
+  # when the operator-requested debugger flag has already been installed.
+  #
+  # How it works: when the error argument is a non-empty string it is written
+  # to standard output first; the usage line is then printed, naming the host
+  # shell executable and this script followed by the supported positional
+  # arguments (the optional certificateFileName and assemblyName).  Finally it
+  # calls [exit 1].
+  #
+  # Tricky details: this procedure never returns to its caller -- it always
+  # exits the process with a non-zero (failure) status, so it must only be
+  # used on terminal error paths.  Note that the main script reuses [usage] to
+  # report the "extra features already present" condition as a hard error.
+  #
+  # Arguments:
+  #   error -- An optional leading error message.  When non-empty it is shown
+  #            before the usage text; pass an empty string to show plain usage.
+  #
+  # Results:
+  #   Does not return; the process exits with status code 1.
+  # </help>
+
+  if {[string length $error] > 0} then {puts stdout $error}
+
+  puts stdout "usage: [file tail [getShellExecutableName]]\
+[file tail [info script]] \[certificateFileName\] \[assemblyName\]"
+
+  #
+  # NOTE: Indicate to the caller, if any, that we have failed.
+  #
+  exit 1
+}
+
+if {[llength $argv] >= 0 && [llength $argv] <= 2} then {
+  #
+  # NOTE: This tool requires Eagle.
+  #
+  package require Eagle
+
+  #
+  # NOTE: This tool requires the enterprise license features.
+  #
+  package require Licensing.Enterprise
+
+  try {
+    #
+    # NOTE: When running as a service, etc, use the local machine
+    #       registry hive and data protection scope; otherwise, use
+    #       those of the current user.
+    #
+    if {[object invoke \
+        Licensing.Components.Public.Utility ShouldUsePerMachine]} then {
+      set rootKey [object invoke -alias \
+          Microsoft.Win32.Registry LocalMachine]
+
+      set dataProtectionScope LocalMachine
+    } else {
+      set rootKey [object invoke -alias \
+          Microsoft.Win32.Registry CurrentUser]
+
+      set dataProtectionScope CurrentUser
+    }
+
+    #
+    # NOTE: Grab the first argument to this tool (the name of the
+    #       certificate file to enable debugging for).
+    #
+    if {[llength $argv] >= 1} then {
+      set fileName [file normalize [lindex $argv 0]]
+    } else {
+      set fileName ""; # global setting
+    }
+
+    #
+    # NOTE: Grab the second argument to this tool (the name of the
+    #       assembly to enable debugging for).
+    #
+    if {[llength $argv] >= 2} then {
+      set assemblyName [lindex $argv 0]
+    } else {
+      set assemblyName Harpy; # legacy default
+    }
+
+    set assemblyNames [list \
+        Harpy Badge Harpy.Basic Badge.Basic Harpy.Limited Harpy.Sdk]
+
+    if {$assemblyName ni $assemblyNames} then {
+      error [appendArgs \
+          "unsupported assembly name \"" $assemblyName \
+          "\", must be one of: " $assemblyNames]
+    }
+
+    #
+    # NOTE: Import the license certificate -OR- skip it if there is none.
+    #
+    if {[string length $fileName] > 0} then {
+      set certificate [certificate import -alias $fileName]
+    } else {
+      set certificate ""; # global setting
+    }
+
+    #
+    # NOTE: Figure out the value name for the registry setting.
+    #
+    if {[isNonNullObjectHandle $certificate]} then {
+      set guid [$certificate Id.ToString D]
+    } else {
+      set guid [guid null]; # global setting
+    }
+
+    set valueName [certificate hashstring \
+        -hexadecimal $certificate [appendArgs \
+        $guid .ExtraFeatures]]
+
+    #
+    # NOTE: Check if the encrypted value has already been written into the
+    #       registry.  If so, we cannot continue.
+    #
+    if {[catch {
+      object invoke Microsoft.Win32.Registry GetValue \
+          [appendArgs [$rootKey ToString] \\Software\\ \
+          $assemblyName \\1.0] $valueName null
+    } valueData] == 0 && [string length $valueData] > 0} then {
+      #
+      # NOTE: This is an error, extra features are already present.
+      #
+      if {[string length $fileName] > 0} then {
+        usage [appendArgs \
+            "certificate extra features for \"" $fileName \
+            "\" already present"]
+      } else {
+        usage "global certificate extra features already present"
+      }
+    }
+
+    #
+    # NOTE: Load the managed assembly containing the DPAPI wrapper.
+    #
+    object load -import System.Security
+
+    #
+    # NOTE: Figure out the encrypted value data to write into the registry.
+    #       The "D" feature flag being used here is "Features.DebuggerOk".
+    #
+    if {[isNonNullObjectHandle $certificate]} then {
+      set features [appendArgs [$certificate Features] D]
+      set key [$certificate Key]
+    } else {
+      set features D
+      set key null
+    }
+
+    set valueData [object invoke -create ProtectedData Protect [set bytes \
+        [object invoke -create Eagle._Encodings.OneByteEncoding.OneByte \
+        GetBytes $features]] $key $dataProtectionScope]
+
+    #
+    # NOTE: Write the encrypted value into the registry, at the location
+    #       where the certificate checking code expects to find it.
+    #
+    object invoke Microsoft.Win32.Registry SetValue \
+        [appendArgs [$rootKey ToString] \\Software\\ \
+        $assemblyName \\1.0] $valueName $valueData Binary
+
+    #
+    # NOTE: Show that we enabled it.
+    #
+    if {[string length $fileName] > 0} then {
+      puts stdout [appendArgs \
+          "WARNING: certificate debugging enabled for \"" $fileName \
+          "\", this is generally not what you actually want."]
+    } else {
+      puts stdout "OK: globally enabled certificate debugging"
+    }
+  } finally {
+    unset -nocomplain rootKey dataProtectionScope fileName assemblyNames \
+        assemblyName certificate guid valueName valueData features key bytes
+
+    object unimport -importpattern System.Security.*
+
+    object cleanup
+  }
+} else {
+  usage ""
+}

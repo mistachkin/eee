@@ -1,0 +1,87 @@
+###############################################################################
+#
+# keyRing8.eagle --
+#
+# Extensible Adaptable Generalized Logic Engine (Eagle)
+# Key Ring Settings File
+#
+# Copyright (c) 2007-2012 by Joe Mistachkin.  All rights reserved.
+#
+# See the file "license.terms" for information on usage and redistribution of
+# this file, and for a DISCLAIMER OF ALL WARRANTIES.
+#
+# RCS: @(#) $Id: $
+#
+###############################################################################
+
+#
+# NOTE: These are the bytes of "TestPublic7.snk".
+#
+set keyPairs(TestPublic7.snk) {
+  0x00 0x24 0x00 0x00 0x04 0x80 0x00 0x00 0x94 0x00 0x00 0x00 0x06 0x02 0x00
+  0x00 0x00 0x24 0x00 0x00 0x52 0x53 0x41 0x31 0x00 0x04 0x00 0x00 0x01 0x00
+  0x01 0x00 0x47 0x55 0x2C 0x4B 0x53 0x4C 0xAA 0x67 0xD6 0x17 0x62 0x94 0xA8
+  0x0B 0x56 0xFB 0x64 0xA0 0x39 0x2B 0x6C 0xA1 0x26 0xF9 0xBA 0xF7 0x2A 0xE4
+  0xC8 0xA0 0xA9 0xCD 0xCF 0x54 0x5C 0xEF 0xE3 0x94 0x34 0xEC 0x1D 0x2B 0xD2
+  0x89 0xC5 0xFF 0xA4 0x54 0xCA 0xA3 0xC5 0x9F 0xB3 0xF6 0xF7 0x8A 0xFA 0x01
+  0x80 0x12 0x7A 0xB6 0xF0 0x57 0x44 0x29 0x70 0xCC 0xE7 0x3E 0xD5 0xFD 0xDB
+  0xD9 0xD9 0x5E 0xBD 0xD0 0xD3 0x70 0x00 0xEE 0xC1 0xCE 0xD4 0x38 0x8E 0x64
+  0x12 0x64 0xA4 0x4F 0x81 0x23 0x48 0xA5 0x65 0xF3 0x5D 0x13 0x94 0x29 0x8E
+  0xB2 0x0A 0x43 0x2D 0x8B 0x76 0x41 0x6F 0xA8 0xCF 0x06 0xEE 0xEB 0x98 0xCB
+  0x5A 0x98 0xC5 0xE5 0xBF 0x4A 0x60 0xA1 0x15 0xBA
+}
+
+###############################################################################
+
+#
+# NOTE: This is the metadata for "TestPublic7.snk".
+#
+set keyMetadata(TestPublic7.snk) {
+  Kind         KeyPair
+  Id           936f5620-5b36-40ac-a205-7f6719c51d9a
+  Name         TestPublic7.snk
+  Group        "Core Library & Enterprise Demo"
+  Description  "Used to sign certificates for demonstration purposes."
+}
+
+###############################################################################
+
+#
+# NOTE: This is the key usage for "TestPublic7.snk".
+#
+set keyUsage(TestPublic7.snk) {
+  SZGE
+}
+
+###############################################################################
+
+#
+# NOTE: These are the key domains for "TestPublic7.snk".
+#
+# WARNING: These are locked to the local machine during testing and signed,
+#          via an identifier that includes the volume serial number for the
+#          location of the Harpy assembly itself.  Details of the algorithm
+#          in use are officially unspecified.
+#
+set keyDomains(TestPublic7.snk) {
+  00000000-0000-0000-0000-000000000000
+}
+
+###############################################################################
+
+#
+# NOTE: These are the key groups for "TestPublic7.snk".  This key ring is
+#       special because it can be used to load the Harpy assembly itself when
+#       it was compiled with the "Demo Edition" feature enabled.  Normally, a
+#       license key ring cannot be loaded until the Harpy assembly itself has
+#       already been loaded, which means that a license certificate for Harpy
+#       itself is always required and must be signed with its public key;
+#       however, this restriction is relaxed for demonstration purposes when
+#       Harpy was compiled with the "Demo Edition" feature enabled.  If the
+#       "Demo Edition" feature is not enabled, this key ring cannot be loaded
+#       during Harpy assembly license certificate verification and any attempt
+#       to verify such a license certificate signed with it will fail.
+#
+set keyGroups(TestPublic7.snk) {
+  0x8bf43b4749e46a0b
+}

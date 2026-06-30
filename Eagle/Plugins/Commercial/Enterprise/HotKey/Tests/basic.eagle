@@ -1,0 +1,748 @@
+###############################################################################
+#
+# basic.eagle --
+#
+# Extensible Adaptable Generalized Logic Engine (Eagle)
+# Enterprise Edition Package Tests
+#
+# Copyright (c) 2007-2012 by Joe Mistachkin.  All rights reserved.
+#
+# See the file "license.terms" for information on usage and redistribution of
+# this file, and for a DISCLAIMER OF ALL WARRANTIES.
+#
+# RCS: @(#) $Id: $
+#
+###############################################################################
+
+package require Eagle.Library
+package require Eagle.Test
+
+runTestPrologue
+
+###############################################################################
+
+set package_path [file dirname [file normalize $path]]
+
+###############################################################################
+
+set keysFile(1) [file join $path data keys1.txt]
+set keysFile(2) [file join $path data keys2.txt]
+
+###############################################################################
+
+#
+# NOTE: Check test constraints specific to tests in this file that do not
+#       require the plugin to be loaded.
+#
+if {![haveConstraint [appendArgs file_ [file tail $keysFile(1)]]]} then {
+  checkForFile $test_channel $keysFile(1)
+}
+
+if {[haveConstraint [appendArgs file_ [file tail $keysFile(1)]]]} then {
+  set keys(1) [readFile $keysFile(1)]
+} else {
+  set keys(1) ""
+}
+
+if {![haveConstraint [appendArgs file_ [file tail $keysFile(2)]]]} then {
+  checkForFile $test_channel $keysFile(2)
+}
+
+if {[haveConstraint [appendArgs file_ [file tail $keysFile(2)]]]} then {
+  set keys(2) [readFile $keysFile(2)]
+} else {
+  set keys(2) ""
+}
+
+###############################################################################
+
+#
+# NOTE: We need to make sure the plugin is actually loaded prior to
+#       querying the compile options.
+#
+if {[catch {package require HotKey.Enterprise} error] == 0} then {
+  #
+  # HACK: Pre-check for the hotkey command now so that we can show
+  #       the plugin compile options.
+  #
+  if {![haveConstraint command.hotkey]} then {
+    checkForCommand $test_channel hotkey
+  }
+
+  #
+  # NOTE: Now, check if the hotkey command is actually available.
+  #       If so, report the plugin compile options; otherwise, report
+  #       that we cannot.
+  #
+  if {[haveConstraint command.hotkey]} then {
+    tputs $test_channel [appendArgs \
+        "---- plugin \"HotKey.Enterprise\" compile options: " \
+        [formatList [hotkey options]] \n]
+  } else {
+    tputs $test_channel [appendArgs \
+        "---- hotkey command not available\n"]
+  }
+} else {
+  tputs $test_channel [appendArgs \
+      "---- failed to load plugin: " $error \n]
+}
+
+unset -nocomplain error
+tputs $test_channel "---- checking for plugin isolation... "
+
+if {[isEagle] && ![haveConstraint hotkey.isolated]} then {
+  #
+  # NOTE: We need to make sure the plugin is actually loaded prior to
+  #       querying the plugin flags.
+  #
+  if {[catch {package present HotKey.Enterprise}] == 0} then {
+    #
+    # NOTE: Query the plugin flags for the plugin and search them for the
+    #       "Isolated" flag.  If this flag is present then the plugin has
+    #       been loaded into an isolated AppDomain and some functionality
+    #       will be unavailable.
+    #
+    if {[lsearch -exact -- \
+        [getPluginFlags {^HotKey\.Enterprise, }] Isolated] != -1} then {
+      #
+      # NOTE: This plugin is running in isolated mode.
+      #
+      addConstraint hotkey.isolated
+
+      tputs $test_channel yes\n
+    } else {
+      tputs $test_channel no\n
+    }
+  } else {
+    tputs $test_channel error\n
+  }
+} else {
+  tputs $test_channel skipped\n
+}
+
+###############################################################################
+
+#
+# HACK: Adjust the wait timeout for this test suite based on the one for the
+#       core library test suite.
+#
+if {![info exists timeout]} then {
+  if {[haveConstraint hotkey.isolated]} then {
+    set timeout [expr {$test_timeout * 4}]
+  } else {
+    set timeout [expr {$test_timeout * 2}]
+  }
+}
+
+tputs $test_channel [appendArgs \
+    "---- using a timeout of " $timeout " milliseconds\n"]
+
+###############################################################################
+
+runTest {test hotkey-1.0 {clear/add/list/get/remove sub-commands} -setup {
+  unset -nocomplain id error result
+} -body {
+  list [catch {hotkey startup; hotkey wait $timeout}] [hotkey clear] \
+      [set id [hotkey add F13 None {lappend result F13}]] [hotkey list] \
+      [hotkey get $id true] [hotkey remove $id] [catch {hotkey get $id} \
+      error] $error [hotkey list] [expr {[info exists result] ? $result : ""}]
+} -cleanup {
+  catch {hotkey clear}
+
+  unset -nocomplain id error result
+} -constraints {eagle command.hotkey} -match regexp -result {^\d+ \{\} \d+ \d+\
+\{form \{.*?, Text: Hot-Key Manager\} handle \d+ id \d+ keys F13 flags\
+(?:None|Default) text \{lappend result F13\} registered False hitCount 0\
+hitTime \{\} hitFlags None returnCode Ok result \{\} errorLine 0 errorCode \{\}\
+errorInfo \{\}\} \{\} 1 \{hot-key \d+ not found\} \{\} \{\}$}}
+
+###############################################################################
+
+runTest {test hotkey-1.1 {save/load/evaluate/result sub-commands} -setup {
+  unset -nocomplain id script error result
+} -body {
+  list [catch {hotkey startup; hotkey wait $timeout}] [hotkey clear] \
+      [set id [hotkey add F14 None {lappend result F14}]] [hotkey list] \
+      [hotkey get $id] [set script [hotkey save]] [hotkey clear] [hotkey \
+      list] [hotkey load $script] [set id [hotkey add F14 None {lappend \
+      result F14}]] [hotkey evaluate $id] [hotkey result $id] [hotkey \
+      list] [hotkey clear] [catch {hotkey get $id} error] $error \
+      [expr {[info exists result] ? $result : ""}]
+} -cleanup {
+  catch {hotkey clear}
+
+  unset -nocomplain id script error result
+} -constraints {eagle command.hotkey} -match regexp -result {^\d+ \{\} \d+ \d+\
+\{id \d+ keys F14 flags (?:None|Default)\}\
+\{###############################################################################
+#
+# This file contains a top-level Eagle script to re-add all the hot-keys saved
+# within it\.
+#
+# It can be loaded via the user-interface by clicking on the "Load" button\.
+#
+# It can also be loaded by using the Eagle script command \[source\] with one
+# argument, the full path and file name of this file\.
+#
+# Last saved on \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{7} by .*?\\.*?\.
+#
+###############################################################################
+
+hotkey add F14 (?:None|Default) \{lappend result F14\}
+\} \{\} \{\} \{\} \d+ F14 F14 \{\d+ \d+\} \{\} 1 \{hot-key \d+ not found\}\
+F14$}}
+
+###############################################################################
+
+runTest {test hotkey-1.2 {register/unregister sub-commands} -setup {
+  unset -nocomplain id script error result
+} -body {
+  list [catch {hotkey startup; hotkey wait $timeout}] [hotkey clear] \
+      [set id [hotkey add F15 None {lappend result F15}]] [hotkey get $id \
+      true] [hotkey register $id] [hotkey get $id true] [hotkey unregister \
+      $id] [hotkey get $id true] [hotkey clear]
+} -cleanup {
+  catch {hotkey clear}
+
+  unset -nocomplain id script error result
+} -constraints {eagle command.hotkey compile.NATIVE compile.WINDOWS} -match \
+regexp -result {^\d+ \{\} \d+ \{form \{.*?, Text: Hot-Key Manager\} handle \d+\
+id \d+ keys F15 flags (?:None|Default) text \{lappend result F15\} registered\
+False hitCount 0 hitTime \{\} hitFlags None returnCode Ok result \{\} errorLine\
+0 errorCode \{\} errorInfo \{\}\} \{\} \{form \{.*?, Text: Hot-Key Manager\}\
+handle \d+ id \d+ keys F15 flags (?:None|Default) text \{lappend result F15\}\
+registered True hitCount 0 hitTime \{\} hitFlags None returnCode Ok result \{\}\
+errorLine 0 errorCode \{\} errorInfo \{\}\} \{\} \{form \{.*?, Text: Hot-Key\
+Manager\} handle \d+ id \d+ keys F15 flags (?:None|Default) text \{lappend\
+result F15\} registered False hitCount 0 hitTime \{\} hitFlags None returnCode\
+Ok result \{\} errorLine 0 errorCode \{\} errorInfo \{\}\} \{\}$}}
+
+###############################################################################
+
+runTest {test hotkey-1.3 {find sub-command} -body {
+  list [catch {hotkey startup; hotkey wait $timeout}] [hotkey clear] \
+      [hotkey add F3 None {return "this is F3"}] [hotkey add {Control F3} \
+      None {return "this is Control-F3"}] [hotkey find -keys F3] [hotkey \
+      find -exact true -keys F3] [hotkey find -all true -keys F3] [hotkey \
+      find -exact true -all true -keys F3] [hotkey clear]
+} -cleanup {
+  catch {hotkey clear}
+} -constraints {eagle command.hotkey} -match regexp -result {^\d+ \{\} \d+ \d+\
+\d+ \d+ \{\d+ \d+\} \d+ \{\}$}}
+
+###############################################################################
+
+runTest {test hotkey-1.4 {busy sub-command} -setup {
+  unset -nocomplain id
+} -body {
+  list [catch {hotkey startup; hotkey wait $timeout}] [hotkey busy] \
+      [set id [hotkey busy true]] [after $timeout] [hotkey busy] \
+      [hotkey busy false $id] [after $timeout] [hotkey busy] \
+      [hotkey busy false $id] [after $timeout] [hotkey busy]
+} -cleanup {
+  unset -nocomplain id
+} -constraints {eagle command.hotkey} -match regexp -result \
+{^\d+ 0 \d+ \{\} 1 1 \{\} 0 0 \{\} 0$}}
+
+###############################################################################
+
+runTest {test hotkey-1.5 {autoload/count sub-commands} -body {
+  list [catch {hotkey startup; hotkey wait $timeout}] [hotkey clear] \
+      [hotkey count] [hotkey autoload] [expr {[hotkey count] > 0}] [hotkey \
+      clear] [hotkey count]
+} -cleanup {
+  catch {hotkey clear}
+} -constraints {eagle command.hotkey} -match regexp -result {^\d+ \{\} 0\
+\{(?:(?: )?\{.*?[/\\]hotkey-(?:autoload|demo)(?:-\w+)?\.eagle\})+\} True \{\}\
+0$}}
+
+###############################################################################
+
+runTest {test hotkey-1.6 {clearlog/log/copylog sub-commands} -setup {
+  unset -nocomplain text
+} -body {
+  set text [appendArgs "test " [clock now]]
+  list [catch {hotkey startup; hotkey wait $timeout}] \
+      [hotkey clearlog] [hotkey log $text] [hotkey copylog] \
+      [object invoke System.Windows.Forms.Clipboard GetText] \
+      [hotkey clearlog] [hotkey copylog] \
+      [object invoke System.Windows.Forms.Clipboard GetText]
+} -cleanup {
+  catch {hotkey clearlog}
+
+  unset -nocomplain text
+} -constraints {eagle command.hotkey} -match regexp -result \
+[string map [list \n \r\n] {^\d+ \{\} \{\} \{\} \{\d{6}:\
+\[\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{7}\]: test \d+
+\} \{\} \{\} \{\}$}]}
+
+###############################################################################
+
+runTest {test hotkey-1.7 {directory sub-command} -body {
+  list [catch {hotkey startup; hotkey wait $timeout}] \
+      [hotkey directory]
+} -constraints {eagle command.hotkey} -match regexp -result "^\\d+\
+\\\{[pathToRegexp [file nativename [file dirname [getPluginPath \
+HotKey]]]]\\\}\$"}
+
+###############################################################################
+
+if {[isEagle]} then {
+  set savedRootDirectory [hotkey root]
+  set rootDirectory [hotkey root ""]
+}
+
+###############################################################################
+
+runTest {test hotkey-1.8 {root sub-command} -setup {
+  set savedRoot [hotkey root]
+} -body {
+  list [catch {hotkey startup; hotkey wait $timeout}] \
+      [hotkey root test] [hotkey root] [hotkey root ""] [hotkey root]
+} -cleanup {
+  catch {hotkey root $savedRoot}
+
+  unset -nocomplain savedRoot
+} -constraints {eagle command.hotkey} -match regexp -result "^\\d+ test test\
+\\\{[pathToRegexp $rootDirectory]\\\} \\\{[pathToRegexp $rootDirectory]\\\}\$"}
+
+###############################################################################
+
+runTest {test hotkey-1.9 {status sub-command} -body {
+  list [catch {hotkey startup; hotkey wait $timeout}] \
+      [hotkey status]
+} -constraints {eagle command.hotkey} -match regexp -result "^\\d+ \\\{thread\
+yes manager yes(?: plugin yes isolated (?:yes|no))? rootDirectory\
+\\\{[pathToRegexp $rootDirectory]\\\} totalCount \\d+ registeredCount \\d+\}\$"}
+
+###############################################################################
+
+if {[isEagle]} then {
+  catch {hotkey root $savedRootDirectory}
+  unset -nocomplain rootDirectory savedRootDirectory
+}
+
+###############################################################################
+
+runTest {test hotkey-1.10.1 {get title with sub-command} -body {
+  list [catch {
+    hotkey startup; hotkey wait $timeout
+  }] [hotkey title]
+} -constraints {eagle command.hotkey} -match regexp -result {^\d+ \{(?:Hot-Key\
+Manager|Eagle Enterprise Edition \(HotKey\)|Eagle Development Hub Client,\
+process \d+, thread \d+)\}$}}
+
+###############################################################################
+
+runTest {test hotkey-1.10.2 {set title with sub-command} -setup {
+  set savedTitle [hotkey title]
+} -body {
+  list [catch {
+    hotkey startup; hotkey wait $timeout
+  }] [hotkey title "Hot-Key Test 'hotkey-1.10.2'"] [hotkey title]
+} -cleanup {
+  catch {hotkey title $savedTitle}
+
+  unset -nocomplain savedTitle
+} -constraints {eagle command.hotkey} -match regexp -result {^\d+ \{Hot-Key\
+Test 'hotkey-1\.10\.2'\} \{Hot-Key Test 'hotkey-1\.10\.2'\}$}}
+
+###############################################################################
+
+if {[isEagle]} then {
+  proc selectWaitCallback { id buttonName controlNames state } {
+    #
+    # NOTE: Remove the callback that was responsible for evaluating
+    #       this procedure.  Since the state is never used for this
+    #       callback, omit it from the callback name to be removed.
+    #
+    object removecallback [lrange [info level [info level]] 0 end-1]
+
+    #
+    # NOTE: Map all the control (i.e. check box) names to the modifier
+    #       Keys enumeration values.  If an empty string is the result,
+    #       use the Keys enumeration value None.
+    #
+    set modifiers [string map [list chk ""] $controlNames]
+    if {[string length $modifiers] == 0} then {set modifiers None}
+
+    #
+    # NOTE: Map the button name to its virtual key Keys enumeration
+    #       value.  If an empty string is the result, use the Keys
+    #       enumeration value None.
+    #
+    set virtualKey [string map [list btn ""] $buttonName]
+    if {[string length $virtualKey] == 0} then {set virtualKey None}
+
+    #
+    # NOTE: Attempt to show the hot-key selector form and await its
+    #       dismissal, capturing the result (or error message) from
+    #       the command.
+    #
+    set idVarName [appendArgs ::formId_ $id]
+    catch {hotkey selectkeys $modifiers $virtualKey $idVarName} keys
+
+    #
+    # NOTE: This is tricky, we need to wait for the main test thread
+    #       to actually enter the [vwait] for the result variable.
+    #
+    vwait -force -timeout $::timeout -eventwaitflags +OnlyWaiting ::result
+
+    #
+    # NOTE: Add this callback description, along with the hot-key
+    #       selector form results, to the overall result.
+    #
+    lappend ::result [list select $buttonName $controlNames] $keys
+  }
+
+  proc clickWaitCallback { id buttonName controlNames cancel state } {
+    #
+    # NOTE: Remove the callback that was responsible for evaluating
+    #       this procedure.  Since the state is never used for this
+    #       callback, omit it from the callback name to be removed.
+    #
+    object removecallback [lrange [info level [info level]] 0 end-1]
+
+    #
+    # NOTE: Attempt to grab the Id of our associated form so that we can
+    #       wait for it to be shown and click the button(s) on it.
+    #
+    set idVarName [appendArgs ::formId_ $id]; set formId [set $idVarName]
+
+    #
+    # NOTE: Wait for the actual selection form to be shown.
+    #
+    hotkey formwait $formId $::timeout; # error?
+
+    #
+    # NOTE: For each control specified by the caller, including the button
+    #       and all the associated check boxes, attempt to virtually click
+    #       each control, in order, as long as the name itself is not an
+    #       empty string.
+    #
+    set savedControlNames $controlNames
+    set controlNames [eval lappendArgs [list $buttonName] $controlNames]
+
+    foreach controlName $controlNames {
+      if {[string length $controlName] > 0} then {
+        hotkey click $formId $controlName
+      }
+    }
+
+    #
+    # NOTE: This is tricky, we need to wait for the main test thread
+    #       to actually enter the [vwait] for the result variable.
+    #
+    vwait -force -timeout $::timeout -eventwaitflags +OnlyWaiting ::result
+
+    #
+    # NOTE: Add this callback description to the overall result.
+    #
+    lappend ::result [list click $buttonName $savedControlNames $cancel]
+
+    #
+    # NOTE: Always attempt to virtually click either the Ok button or the
+    #       Cancel button, depending on the mode specified by the caller.
+    #
+    if {$cancel} then {
+      hotkey click $formId btnCancel
+    } else {
+      hotkey click $formId btnOk
+    }
+  }
+}
+
+###############################################################################
+
+runTest {test hotkey-1.11.1 {click/formid/selectkeys sub-commands} -body {
+  catch {hotkey startup; hotkey wait $timeout}
+
+  set buttonNames [list \
+      btnEscape btnF1 btnF2 btnF3 btnF4 btnF5 btnF6 btnF7 btnF8 btnF9 \
+      btnF10 btnF11 btnF12 btnPrintScreen btnScroll btnPause btnF13 \
+      btnF14 btnF15 btnF16 btnF17 btnF18 btnF19 btnF20 btnF21 btnF22 \
+      btnF23 btnF24 btnOemTilde btnD1 btnD2 btnD3 btnD4 btnD5 btnD6 \
+      btnD7 btnD8 btnD9 btnD0 btnOemMinus btnOemPlus btnBack btnInsert \
+      btnHome btnPageUp btnTab btnQ btnW btnE btnR btnT btnY btnU btnI \
+      btnO btnP btnOemOpenBrackets btnOemCloseBrackets btnOemPipe \
+      btnDelete btnEnd btnPageDown btnCapsLock btnA btnS btnD btnF \
+      btnG btnH btnJ btnK btnL btnOemSemicolon btnOemQuotes btnEnter \
+      btnZ btnX btnC btnV btnB btnN btnM btnOemComma btnOemPeriod \
+      btnOemQuestion btnUp btnSpace btnLeft btnDown btnRight]
+
+  set allControlNames [list [list] \
+      [list chkShift] [list chkControl] [list chkAlt] [list chkShift \
+      chkControl] [list chkShift chkAlt] [list chkControl chkAlt] [list \
+      chkShift chkControl chkAlt]]
+
+  foreach preSelect [list false true] {
+    foreach buttonName $buttonNames {
+      foreach controlNames $allControlNames {
+        foreach cancel [list false true] {
+          #
+          # NOTE: Obtain a unique Id for this loop iteration to be used in
+          #       naming the callbacks.
+          #
+          set id [object invoke Interpreter.GetActive NextId]
+          set idVarName [appendArgs ::formId_ $id]
+
+          #
+          # NOTE: Clear variable wait flags for the result variable because
+          #       we need to wait on it.
+          #
+          object invoke -flags +NonPublic Interpreter ClearVariableNameWait \
+              "" result None None
+
+          #
+          # NOTE: Queue the work item that is used to display the hot-key
+          #       selector form.  This work item cannot actually complete
+          #       until the subsequent work item clicks on the necessary
+          #       buttons.
+          #
+          set item [expr {$preSelect ? \
+              [list ::selectWaitCallback $id $buttonName $controlNames] : \
+              [list ::selectWaitCallback $id "" ""]
+          }]
+
+          set ok [object invoke \
+              System.Threading.ThreadPool QueueUserWorkItem $item]
+
+          #
+          # NOTE: If we could not queue the thread pool work item, then
+          #       something is seriously wrong.
+          #
+          if {!$ok} then {
+            error [appendArgs \
+                "failed to queue first user work item: " $item]
+          }
+
+          #
+          # NOTE: Ok, wait for the hot-key selector form to actually be
+          #       shown (i.e. wait for the queued work item to complete).
+          #
+          vwait -force -timeout $timeout -eventwaitflags +OnlyExists \
+              $idVarName
+
+          #
+          # NOTE: First, wait for the result variable to be changed by the
+          #       queued work item and then clear its variable wait flags
+          #       because we need to wait on it again below.
+          #
+          vwait -force -timeout $timeout result
+
+          object invoke -flags +NonPublic Interpreter ClearVariableNameWait \
+              "" result None None
+
+          #
+          # NOTE: Queue the work item that is used to click the necessary
+          #       buttons on the hot-key selector form.  This work item
+          #       will cause the previously queued work item to complete.
+          #
+          set item [expr {$preSelect ? \
+              [list ::clickWaitCallback $id "" "" $cancel] : \
+              [list ::clickWaitCallback $id $buttonName $controlNames $cancel]
+          }]
+
+          set ok [object invoke \
+              System.Threading.ThreadPool QueueUserWorkItem $item]
+
+          #
+          # NOTE: If we could not queue the thread pool work item, then
+          #       something is seriously wrong.
+          #
+          if {!$ok} then {
+            error [appendArgs \
+                "failed to queue second user work item: " $item]
+          }
+
+          #
+          # NOTE: Wait a while for the form to be dismissed; if not, just
+          #       continue.
+          #
+          vwait -force -timeout $timeout result
+        }
+      }
+    }
+  }
+
+  after $timeout; join $result \n
+} -cleanup {
+  cleanupAfterEvents
+  after $timeout
+
+  foreach name [info callbacks] {
+    if {[string match selectWaitCallback* $name] || \
+        [string match clickWaitCallback* $name]} then {
+      catch {object removecallback $name}
+    }
+  }
+
+  foreach name [info vars formId_*] {unset $name}
+
+  unset -nocomplain buttonNames allControlNames preSelect buttonName \
+      controlNames cancel id idVarName item ok result name
+} -constraints {eagle command.hotkey interactive timeIntensive file_keys1.txt\
+compile.THREADING interactiveFocus} -time true -result [string map [list \r\n \
+\n] $keys(1)]}
+
+###############################################################################
+
+runTest {test hotkey-1.11.2 {click/formid/selectkeys sub-commands} -body {
+  catch {hotkey startup; hotkey wait $timeout}
+
+  set buttonNames [list btnF1 btnD1 btnQ]
+
+  set allControlNames [list [list] \
+      [list chkShift] [list chkControl] [list chkAlt] [list chkShift \
+      chkControl] [list chkShift chkAlt] [list chkControl chkAlt] [list \
+      chkShift chkControl chkAlt]]
+
+  foreach preSelect [list false true] {
+    foreach buttonName $buttonNames {
+      foreach controlNames $allControlNames {
+        foreach cancel [list false true] {
+          #
+          # NOTE: Obtain a unique Id for this loop iteration to be used in
+          #       naming the callbacks.
+          #
+          set id [object invoke Interpreter.GetActive NextId]
+          set idVarName [appendArgs ::formId_ $id]
+
+          #
+          # NOTE: Clear variable wait flags for the result variable because
+          #       we need to wait on it.
+          #
+          object invoke -flags +NonPublic Interpreter ClearVariableNameWait \
+              "" result None None
+
+          #
+          # NOTE: Queue the work item that is used to display the hot-key
+          #       selector form.  This work item cannot actually complete
+          #       until the subsequent work item clicks on the necessary
+          #       buttons.
+          #
+          set item [expr {$preSelect ? \
+              [list ::selectWaitCallback $id $buttonName $controlNames] : \
+              [list ::selectWaitCallback $id "" ""]
+          }]
+
+          set ok [object invoke \
+              System.Threading.ThreadPool QueueUserWorkItem $item]
+
+          #
+          # NOTE: If we could not queue the thread pool work item, then
+          #       something is seriously wrong.
+          #
+          if {!$ok} then {
+            error [appendArgs \
+                "failed to queue first user work item: " $item]
+          }
+
+          #
+          # NOTE: Ok, wait for the hot-key selector form to actually be
+          #       shown (i.e. wait for the queued work item to complete).
+          #
+          vwait -force -timeout $timeout -eventwaitflags +OnlyExists \
+              $idVarName
+
+          #
+          # NOTE: First, wait for the result variable to be changed by the
+          #       queued work item and then clear its variable wait flags
+          #       because we need to wait on it again below.
+          #
+          vwait -force -timeout $timeout result
+
+          object invoke -flags +NonPublic Interpreter ClearVariableNameWait \
+              "" result None None
+
+          #
+          # NOTE: Queue the work item that is used to click the necessary
+          #       buttons on the hot-key selector form.  This work item
+          #       will cause the previously queued work item to complete.
+          #
+          set item [expr {$preSelect ? \
+              [list ::clickWaitCallback $id "" "" $cancel] : \
+              [list ::clickWaitCallback $id $buttonName $controlNames $cancel]
+          }]
+
+          set ok [object invoke \
+              System.Threading.ThreadPool QueueUserWorkItem $item]
+
+          #
+          # NOTE: If we could not queue the thread pool work item, then
+          #       something is seriously wrong.
+          #
+          if {!$ok} then {
+            error [appendArgs \
+                "failed to queue second user work item: " $item]
+          }
+
+          #
+          # NOTE: Wait a while for the form to be dismissed; if not, just
+          #       continue.
+          #
+          vwait -force -timeout $timeout result
+        }
+      }
+    }
+  }
+
+  after $timeout; join $result \n
+} -cleanup {
+  cleanupAfterEvents
+  after $timeout
+
+  foreach name [info callbacks] {
+    if {[string match selectWaitCallback* $name] || \
+        [string match clickWaitCallback* $name]} then {
+      catch {object removecallback $name}
+    }
+  }
+
+  foreach name [info vars formId_*] {unset $name}
+
+  unset -nocomplain buttonNames allControlNames preSelect buttonName \
+      controlNames cancel id idVarName item ok result name
+} -constraints {eagle command.hotkey interactive file_keys2.txt\
+compile.THREADING interactiveFocus} -time true -result [string map [list \r\n \
+\n] $keys(2)]}
+
+###############################################################################
+
+if {[isEagle]} then {
+  rename clickWaitCallback ""
+  rename selectWaitCallback ""
+}
+
+###############################################################################
+
+runTest {test hotkey-1.12 {ready/startup/shutdown/wait sub-commands} -body {
+  list [hotkey ready] [hotkey shutdown] [hotkey ready] [hotkey wait -1] \
+      [hotkey wait 0] [hotkey wait $timeout] [hotkey startup] \
+      [hotkey wait -1] [hotkey wait 0] [hotkey wait $timeout] \
+      [hotkey ready] [hotkey shutdown]
+} -cleanup {
+  catch {hotkey shutdown}
+} -constraints {eagle command.hotkey} -match regexp -result {^(?:True|False)\
+\{\} False False False False \{\} True True True True \{\}$}}
+
+###############################################################################
+
+runTest {test hotkey-1.13 {unload plugin} -setup {
+  unset -nocomplain loaded
+} -body {
+  set loaded [lindex [info loaded "" *HotKey.Enterprise*] 0]
+  unload [lindex $loaded 0] [lindex $loaded 1]
+} -cleanup {
+  unset -nocomplain loaded
+} -constraints {eagle command.hotkey} -match regexp -result \
+{^\{HotKey\.Enterprise, HotKey, Version=1\.0\.\d+\.\d+, Culture=neutral,\
+PublicKeyToken=[0-9a-f]{16}\} 1\.0\.\d+\.\d+$}}
+
+###############################################################################
+
+unset -nocomplain timeout keys keysFile package_path
+
+###############################################################################
+
+runTestEpilogue

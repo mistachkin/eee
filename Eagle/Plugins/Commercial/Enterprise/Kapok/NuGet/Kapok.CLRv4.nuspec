@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package>
+  <metadata>
+    <id>Kapok.CLRv4</id>
+    <title>Eagle Enterprise Edition: Kapok Server (CLRv4)</title>
+    <version>1.0.X.X</version>
+    <authors>Eagle Development Team</authors>
+    <description>
+      Public key infrastructure-based software license enforcement.
+      Supports automatic renewal of license &amp; script certificates.
+    </description>
+    <language>en-US</language>
+    <projectUrl>https://urn.to/r/eagle</projectUrl>
+    <iconUrl>https://eagle.to/images/eagle128.png</iconUrl>
+    <licenseUrl>https://eagle.to/enterprise/license.html</licenseUrl>
+    <requireLicenseAcceptance>true</requireLicenseAcceptance>
+    <tags>certificate eagle enforcement keypair licensing pki</tags>
+    <copyright>Copyright &#x00A9; 2007-2012 by Joe Mistachkin.  All rights reserved.</copyright>
+    <dependencies>
+      <group targetFramework="net40">
+        <dependency id="Harpy.CLRv4" version="[1.0.X.X,1.0.X.99999]" />
+        <dependency id="System.Data.SQLite.Core" version="1.0.119.0" />
+      </group>
+    </dependencies>
+  </metadata>
+  <files>
+    <file src="bin\Kapok.dll" target="build\net40\lib\Kapok1.0\bin" />
+    <file src="lib\keyRing.two.eagle" target="build\net40\lib\Kapok1.0\bin" />
+    <file src="lib\keyRing.two.eagle.harpy" target="build\net40\lib\Kapok1.0\bin" />
+    <file src="lib\pkgIndex.eagle" target="build\net40\lib\Kapok1.0\bin\pkgIndex_a98da1538d38809e.eagle" />
+    <file src="lib\pkgIndex.eagle.harpy" target="build\net40\lib\Kapok1.0\bin\pkgIndex_a98da1538d38809e.eagle.harpy" />
+    <file src="certificate\renew.cgi" target="build\net40\lib\Kapok1.0\certificate" />
+    <file src="certificate\request.cgi" target="build\net40\lib\Kapok1.0\certificate" />
+    <file src="certificate\revoked.cgi" target="build\net40\lib\Kapok1.0\certificate" />
+    <file src="service\provision.cgi" target="build\net40\lib\Kapok1.0\service" />
+    <file src="support\check.cgi" target="build\net40\lib\Kapok1.0\support" />
+    <file src="test\page.cgi" target="build\net40\lib\Kapok1.0\test" />
+    <file src="var\storage.cgi" target="build\net40\lib\Kapok1.0\var" />
+    <file src="wrapper\script.cgi" target="build\net40\lib\Kapok1.0\wrapper" />
+    <file src="Configurations\Web.config" target="build\net40\lib\Kapok1.0" />
+    <file src="Data\package\kapok.db" target="build\net40\lib\Kapok1.0\Data" />
+    <file src="Data\package\var.db" target="build\net40\lib\Kapok1.0\Data" />
+    <file src="Data\template\revokedIds.txt" target="build\net40\lib\Kapok1.0\Data" />
+    <file src="Data\template\revokedTokens.txt" target="build\net40\lib\Kapok1.0\Data" />
+    <file src="Keys\package\keyRing.db" target="build\net40\lib\Kapok1.0\Keys" />
+    <file src="Keys\test\KapokTestPrivate.snk" target="build\net40\lib\Kapok1.0\Keys" />
+    <file src="Keys\test\KapokTestPublic.snk" target="build\net40\lib\Kapok1.0\Keys" />
+    <file src="harpy-trial-certificate.xml" target="build\net40\lib\Kapok1.0\harpy-trial-certificate.xml" />
+    <file src="kapok-trial-certificate.xml" target="build\net40\lib\Kapok1.0\kapok-trial-certificate.xml" />
+    <file src="Tests\data\wrapped.eagle" target="build\net40\lib\Kapok1.0\Tools" />
+    <file src="Tests\data\wrapped.eagle.harpy" target="build\net40\lib\Kapok1.0\Tools" />
+    <file src="..\Harpy\Tools\encrypt.eagle" target="build\net40\lib\Kapok1.0\Tools" />
+    <file src="..\Harpy\Tools\encrypt.eagle.harpy" target="build\net40\lib\Kapok1.0\Tools" />
+    <file src="Tools\fixupWebConfig.eagle" target="build\net40\lib\Kapok1.0\Tools" />
+    <file src="Tools\fixupWebConfig.eagle.harpy" target="build\net40\lib\Kapok1.0\Tools" />
+    <file src="Tools\install.eagle" target="build\net40\lib\Kapok1.0\Tools" />
+    <file src="Tools\install.eagle.harpy" target="build\net40\lib\Kapok1.0\Tools" />
+    <file src="Tools\license.eagle" target="build\net40\lib\Kapok1.0\Tools" />
+    <file src="Tools\license.eagle.harpy" target="build\net40\lib\Kapok1.0\Tools" />
+    <file src="Tools\provision.eagle" target="build\net40\lib\Kapok1.0\Tools" />
+    <file src="Tools\provision.eagle.harpy" target="build\net40\lib\Kapok1.0\Tools" />
+    <file src="Tools\request.eagle" target="build\net40\lib\Kapok1.0\Tools" />
+    <file src="Tools\request.eagle.harpy" target="build\net40\lib\Kapok1.0\Tools" />
+    <file src="Tools\run-netFx.bat" target="build\net40\lib\Kapok1.0\Tools\run.bat" />
+    <file src="Tools\renew.eagle" target="build\net40\lib\Kapok1.0\Tools" />
+    <file src="Tools\renew.eagle.harpy" target="build\net40\lib\Kapok1.0\Tools" />
+    <file src="Tools\support.eagle" target="build\net40\lib\Kapok1.0\Tools" />
+    <file src="Tools\support.eagle.harpy" target="build\net40\lib\Kapok1.0\Tools" />
+    <file src="Tools\data\manifest.eagle" target="build\net40\lib\Kapok1.0\Tools\data" />
+    <file src="Tools\data\manifest.eagle.harpy" target="build\net40\lib\Kapok1.0\Tools\data" />
+  </files>
+</package>

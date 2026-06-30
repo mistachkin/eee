@@ -1,0 +1,117 @@
+<!--
+ *
+ * HotKey.NuGet.targets -
+ *
+ * WARNING: This MSBuild file requires MSBuild 4.0 features.
+ *
+ * Written by Joe Mistachkin and David Archer.
+ * Released to the public domain, use at your own risk!
+ *
+-->
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!--
+  ******************************************************************************
+  **                        HotKey Package Build Items                        **
+  ******************************************************************************
+  -->
+
+  <ItemGroup>
+    <HotKeyFiles Condition="'$(MSBuildThisFileDirectory)' != '' And
+                           HasTrailingSlash('$(MSBuildThisFileDirectory)')"
+                Include="$(MSBuildThisFileDirectory)**"
+                Exclude="$(MSBuildThisFileDirectory)*.targets" />
+  </ItemGroup>
+
+  <!--
+  ******************************************************************************
+  **                     HotKey Package Build Properties                      **
+  ******************************************************************************
+  -->
+
+  <PropertyGroup Condition="'$(NoHotKeyDefineConstant)' != 'false'">
+    <DefineConstants>$(DefineConstants);HOTKEY</DefineConstants>
+  </PropertyGroup>
+
+  <!--
+  ******************************************************************************
+  **                       HotKey Package Build Targets                       **
+  ******************************************************************************
+  -->
+
+  <Target Name="CopyHotKeyFiles"
+          Condition="'$(CopyHotKeyFiles)' != 'false' And
+                     '$(OutDir)' != '' And
+                     HasTrailingSlash('$(OutDir)') And
+                     Exists('$(OutDir)')"
+          Inputs="@(HotKeyFiles)"
+          Outputs="@(HotKeyFiles -> '$(OutDir)%(RecursiveDir)%(Filename)%(Extension)')">
+    <Copy SourceFiles="@(HotKeyFiles)"
+          DestinationFiles="@(HotKeyFiles -> '$(OutDir)%(RecursiveDir)%(Filename)%(Extension)')" />
+  </Target>
+
+  <!--
+  ******************************************************************************
+  -->
+
+  <Target Name="CleanHotKeyFiles"
+          Condition="'$(CleanHotKeyFiles)' != 'false' And
+                     '$(OutDir)' != '' And
+                     HasTrailingSlash('$(OutDir)') And
+                     Exists('$(OutDir)')">
+    <Delete Files="@(HotKeyFiles -> '$(OutDir)%(RecursiveDir)%(Filename)%(Extension)')" />
+  </Target>
+
+  <!--
+  ******************************************************************************
+  -->
+
+  <Target Name="CollectHotKeyFiles"
+          Condition="'$(CollectHotKeyFiles)' != 'false'">
+    <ItemGroup>
+      <FilesForPackagingFromProject Include="@(HotKeyFiles)">
+        <DestinationRelativePath>bin\%(RecursiveDir)%(Filename)%(Extension)</DestinationRelativePath>
+      </FilesForPackagingFromProject>
+    </ItemGroup>
+  </Target>
+
+  <!--
+  ******************************************************************************
+  **                     HotKey Package Build Properties                      **
+  ******************************************************************************
+  -->
+
+  <PropertyGroup>
+    <PostBuildEventDependsOn>
+      $(PostBuildEventDependsOn);
+      CopyHotKeyFiles;
+    </PostBuildEventDependsOn>
+    <BuildDependsOn>
+      $(BuildDependsOn);
+      CopyHotKeyFiles;
+    </BuildDependsOn>
+    <CleanDependsOn>
+      $(CleanDependsOn);
+      CleanHotKeyFiles;
+    </CleanDependsOn>
+  </PropertyGroup>
+
+  <!--
+  ******************************************************************************
+  **         HotKey Package Publish Properties for Visual Studio 20xx         **
+  ******************************************************************************
+  -->
+
+  <PropertyGroup Condition="'$(VisualStudioVersion)' == '' Or
+                            '$(VisualStudioVersion)' == '10.0' Or
+                            '$(VisualStudioVersion)' == '11.0' Or
+                            '$(VisualStudioVersion)' == '12.0' Or
+                            '$(VisualStudioVersion)' == '14.0' Or
+                            '$(VisualStudioVersion)' == '15.0' Or
+                            '$(VisualStudioVersion)' == '16.0' Or
+                            '$(VisualStudioVersion)' == '17.0'">
+    <PipelineCollectFilesPhaseDependsOn>
+      CollectHotKeyFiles;
+      $(PipelineCollectFilesPhaseDependsOn);
+    </PipelineCollectFilesPhaseDependsOn>
+  </PropertyGroup>
+</Project>

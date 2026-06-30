@@ -1,0 +1,83 @@
+###############################################################################
+#
+# pkgIndex.eagle --
+#
+# Extensible Adaptable Generalized Logic Engine (Eagle)
+# Package Index File
+#
+# Copyright (c) 2007-2012 by Joe Mistachkin.  All rights reserved.
+#
+# See the file "license.terms" for information on usage and redistribution of
+# this file, and for a DISCLAIMER OF ALL WARRANTIES.
+#
+# RCS: @(#) $Id: $
+#
+###############################################################################
+
+if {![package vsatisfies [package provide Tcl] 8.4]} then {return}
+if {![package vsatisfies [package provide Eagle] 1.0]} then {return}
+
+###############################################################################
+
+if {[info exists tag]} then {
+  package ifneeded Licensing.Enterprise 1.0 \
+      [list load -publickeytoken $tag \
+      -maybeverifiedonly -maybetrustedonly -- \
+      [file join $dir Harpy.dll] Licensing.Enterprise] +Locked
+} else {
+  package ifneeded Licensing.Enterprise 1.0 \
+      [list load -maybeverifiedonly -maybetrustedonly -- \
+      [file join $dir Harpy.dll] Licensing.Enterprise] +Locked
+}
+
+###############################################################################
+
+if {[info exists tag]} then {
+  package ifneeded Licensing.Standard 1.0 \
+      [list load -publickeytoken $tag \
+      -maybeverifiedonly -maybetrustedonly -- \
+      [file join $dir Harpy.dll] Licensing.Standard] +Locked
+} else {
+  package ifneeded Licensing.Standard 1.0 \
+      [list load -maybeverifiedonly -maybetrustedonly -- \
+      [file join $dir Harpy.dll] Licensing.Standard] +Locked
+}
+
+###############################################################################
+
+#
+# NOTE: This package is shared with the "Harpy.Basic.dll" assembly
+#       from the "Basic" SKU.
+#
+if {[info exists tag]} then {
+  package ifneeded Licensing.Core 1.0 \
+      [list load -publickeytoken $tag \
+      -maybeverifiedonly -maybetrustedonly -- \
+      [file join $dir Harpy.dll] Licensing.Core] +Locked
+} else {
+  package ifneeded Licensing.Core 1.0 \
+      [list load -maybeverifiedonly -maybetrustedonly -- \
+      [file join $dir Harpy.dll] Licensing.Core] +Locked
+}
+
+###############################################################################
+
+#
+# NOTE: This package is shared with the "Harpy.Basic.dll" assembly
+#       from the "Basic" SKU.
+#
+if {[info exists tag]} then {
+  package ifneeded Security.Core 1.0 \
+      [list load -publickeytoken $tag \
+      -maybeverifiedonly -maybetrustedonly -- \
+      [file join $dir Harpy.dll] Security.Core] +Locked
+} else {
+  package ifneeded Security.Core 1.0 \
+      [list load -maybeverifiedonly -maybetrustedonly -- \
+      [file join $dir Harpy.dll] Security.Core] +Locked
+}
+
+###############################################################################
+
+package ifneeded Harpy.Test 1.0 \
+    [list source -library true -- [file join $dir test.eagle]] +Locked

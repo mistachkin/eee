@@ -1,0 +1,2034 @@
+###############################################################################
+#
+# zeus.eagle --
+#
+# Extensible Adaptable Generalized Logic Engine (Eagle)
+# Encrypted Script Support Package
+#
+# Copyright (c) 2007-2012 by Joe Mistachkin.  All rights reserved.
+#
+# See the file "license.terms" for information on usage and redistribution of
+# this file, and for a DISCLAIMER OF ALL WARRANTIES.
+#
+# RCS: @(#) $Id: $
+#
+###############################################################################
+
+#
+# NOTE: Use our own namespace here because even though we do not directly
+#       support namespaces ourselves, we do not want to pollute the global
+#       namespace if this script actually ends up being evaluated in Tcl.
+#
+namespace eval ::Eagle {
+  #
+  # NOTE: Returns the specified variable (or array element) from the context
+  #       of the immediate caller -OR- the specified default value.
+  #
+  proc maybeGet { varName allowEmpty default } {
+    # <help>
+    # This procedure reads a variable (or array element) by name from the
+    # caller's scope and returns either its value or a supplied default.  It
+    # exists so the rest of the package can pull optional configuration values
+    # out of the per-interpreter "zeus" array (and other contexts) without
+    # having to guard every access with an [info exists] / [set] dance, while
+    # still permitting unset and (optionally) empty values to fall back to a
+    # well-known default.
+    #
+    # How it works: it runs [info exists] in the caller's frame (via uplevel)
+    # to verify that the named variable is set, then runs [set] in that same
+    # frame inside a [catch] to retrieve the current value.  When the value is
+    # successfully retrieved, it is returned as long as it is non-empty or the
+    # allowEmpty flag is true; otherwise the default is returned.  Any failure
+    # along the way also yields the default.
+    #
+    # Arguments:
+    #   varName    -- The name of the variable or array element to read in the
+    #                 immediate caller's scope.
+    #   allowEmpty -- When true, an empty string value is returned as-is; when
+    #                 false, an empty value is treated as missing and the
+    #                 default is returned instead.
+    #   default    -- The value to return when the variable is missing,
+    #                 unreadable, or (when allowEmpty is false) empty.
+    #
+    # Results:
+    #   Returns the variable's value or, if not available per the rules above,
+    #   the supplied default value.
+    # </help>
+
+    if {[uplevel 1 [list info exists $varName]]} then {
+      if {[catch {uplevel 1 [list set $varName]} result] == 0} then {
+        if {$allowEmpty || [string length $result] > 0} then {
+          return $result
+        }
+      }
+    }
+
+    return $default
+  }
+
+  #
+  # NOTE: Read the first N bytes from the specified file.
+  #
+  proc readFileBytes { fileName numChars } {
+    # <help>
+    # This procedure reads up to a fixed number of raw bytes from the start of
+    # a file and returns them.  It exists so the package can sniff the very
+    # beginning of a script file (in particular, to detect the encrypted-script
+    # "magic" prefix in [hasEncryptedScriptFileMagic]) without having to read
+    # or decode the entire file.
+    #
+    # How it works: it opens the named file for reading, switches the channel
+    # to binary mode so no encoding translation or end-of-line conversion is
+    # performed, reads at most numChars bytes, closes the channel, and returns
+    # what was read.  The binary-channel step is what lets the same procedure
+    # work correctly in both Tcl and Eagle.
+    #
+    # Arguments:
+    #   fileName -- The path of the file to read from.
+    #   numChars -- The maximum number of bytes to read from the start of the
+    #               file; fewer may be returned if the file is shorter.
+    #
+    # Results:
+    #   Returns the bytes that were read, as a string.
+    # </help>
+
+    #
+    # NOTE: This should work properly in both Tcl and Eagle.
+    #
+    set channel [open $fileName RDONLY]
+    makeBinaryChannel $channel
+    set result [read $channel $numChars]
+    close $channel
+    return $result
+  }
+
+  #
+  # NOTE: This procedure builds an IClientData containing the necessary data
+  #       for the Zeus.Providers.Remote class.  It is primarily for use with
+  #       the test suite.  This procedure may raise script errors.
+  #
+  proc zeus_createRemoteClientData { relativeUri {trusted null} } {
+    # <help>
+    # This procedure builds an IClientData object suitable for passing to the
+    # Zeus.Providers.Remote provider class, packaging together a remote URI
+    # and an optional trust hint.  It exists primarily for the Zeus test
+    # suite, which exercises the remote RFC 2898 data provider path and needs
+    # a convenient way to assemble the client data argument.
+    #
+    # How it works: it composes the full URI by concatenating the result of
+    # [getScriptBaseUri] with the supplied relative URI and wraps it in a
+    # System.Uri object.  It then resolves that Uri's fully qualified type
+    # name, constructs a generic AnyPair pairing the Uri with a nullable
+    # boolean (the trusted flag), and finally wraps that pair in an Eagle
+    # ClientData instance, which is returned.
+    #
+    # Tricky details: the trusted argument is a nullable boolean -- its
+    # default value, "null", means "unspecified" and is distinct from both
+    # true and false.  Script errors raised by any of the [object create]
+    # or [object invoke] calls propagate to the caller.
+    #
+    # Arguments:
+    #   relativeUri -- A relative URI string that is appended to the base URI
+    #                  returned by [getScriptBaseUri] to form the absolute
+    #                  remote URI.
+    #   trusted     -- An optional nullable boolean indicating whether the
+    #                  remote source should be treated as trusted; defaults
+    #                  to null (unspecified).
+    #
+    # Results:
+    #   Returns an opaque object handle for the constructed ClientData
+    #   instance.
+    # </help>
+
+    set uri [object create \
+        Uri [appendArgs [getScriptBaseUri] $relativeUri]]
+
+    set typeName [object invoke $uri GetType.AssemblyQualifiedName]
+
+    set pair [object create [appendArgs "AnyPair`2\[\[" $typeName \
+        "\], System.Nullable`1\[System.Boolean\]\]"] $uri $trusted]
+
+    return [set clientData [object create ClientData $pair]]
+  }
+
+  #
+  # NOTE: This procedure attempts to create an RFC 2898 provider instance,
+  #       using the configured assembly, type, etc.  If configured, it may
+  #       also use the configured plugin and IClientData instances.  This
+  #       procedure may raise script errors.
+  #
+  proc zeus_createProvider {} {
+    # <help>
+    # This procedure constructs an RFC 2898 data provider instance using the
+    # provider configuration that has been pre-populated in the global "zeus"
+    # array.  It exists so that callers (and tests) can obtain a provider
+    # without having to spell out the [zeus create] command and all of its
+    # optional plugin / client-data switches.
+    #
+    # How it works: it reads the provider plugin name, assembly name, type
+    # name, and optional client data from the global "zeus" array using
+    # [maybeGet] (so each value falls back gracefully when not set).  It then
+    # builds the [zeus create -alias] command incrementally, appending the
+    # -plugin switch only when a plugin name was configured and the
+    # -clientdata switch only when the client data is a non-null object
+    # handle, before appending the assembly and type names and evaluating
+    # the command.  The resulting provider object handle is returned.
+    #
+    # Tricky details: the provider client data, when present, is passed as
+    # an opaque object handle rather than as an inline value -- a null
+    # handle deliberately omits the -clientdata switch entirely.  Script
+    # errors raised by [zeus create] (for example, when the assembly or
+    # type cannot be resolved) propagate to the caller.
+    #
+    # Arguments:
+    #   None.  Provider parameters are taken from the global "zeus" array.
+    #
+    # Results:
+    #   Returns an opaque object handle to the newly created RFC 2898 data
+    #   provider instance.
+    # </help>
+
+    global zeus
+
+    set pluginName [maybeGet zeus(providerPluginName) false ""]
+    set assemblyName [maybeGet zeus(providerAssemblyName) false ""]
+    set typeName [maybeGet zeus(providerTypeName) false ""]
+    set clientData [maybeGet zeus(providerClientData) false null]
+
+    set command [list zeus create -alias]
+
+    if {[string length $pluginName] > 0} then {
+      lappend command -plugin $pluginName
+    }
+
+    if {[isNonNullObjectHandle $clientData]} then {
+      lappend command -clientdata $clientData
+    }
+
+    lappend command -- $assemblyName $typeName
+
+    return [set provider [eval $command]]
+  }
+
+  #
+  # NOTE: This procedure accepts a value containing a sequence of hexadecimal
+  #       values without any leading "0x" prefix, optionally delimited with
+  #       spaces, and returns a new System.Array object with those values.  A
+  #       script error may be raised if the input is invalid.  Otherwise, an
+  #       empty string will be returned if the System.Array object cannot be
+  #       created.
+  #
+  proc getSaltBytesFromHex { value } {
+    # <help>
+    # This procedure converts a hexadecimal string into a managed
+    # System.Array of bytes suitable for use as the salt input to the
+    # underlying RFC 2898 key derivation routine.  It exists so the package
+    # can accept salt values in a compact, human-readable hexadecimal form
+    # (the same form a default salt is generated in by
+    # [rawCreateAlgorithm]) and convert them losslessly into the raw byte
+    # array shape the .NET cryptography APIs expect.
+    #
+    # How it works: it removes any embedded spaces, trims surrounding
+    # whitespace, and returns the empty string immediately if nothing is
+    # left.  It then walks the remaining characters in pairs (one byte per
+    # pair), verifying each nibble is a valid hexadecimal digit and
+    # accumulating the bytes as "0x" prefixed strings into a list.  The
+    # list is handed to ByteList.FromString to produce a managed ByteList,
+    # whose ToArray method returns the final System.Array result.
+    #
+    # Tricky details: input is consumed in two-character chunks, so an
+    # odd-length input causes the final nibble2 to be parsed as an empty
+    # string, which will fail the [string is xdigit] test and raise a
+    # descriptive error.  Invalid input therefore fails loudly rather than
+    # silently truncating.  If the System.Array creation itself returns no
+    # value, the empty string is returned to the caller (matching the
+    # documented behavior).
+    #
+    # Arguments:
+    #   value -- A string of hexadecimal digits, optionally separated by
+    #            spaces and without any "0x" prefix.
+    #
+    # Results:
+    #   Returns a System.Array of bytes derived from the input; returns
+    #   the empty string when the input is empty after whitespace removal,
+    #   or when the array could not be constructed.  Raises a script error
+    #   on invalid hexadecimal input.
+    # </help>
+
+    set value [string trim [string map [list " " ""] $value]]
+
+    if {[string length $value] == 0} then {
+      return ""
+    }
+
+    set list [list]
+
+    foreach {nibble1 nibble2} [split $value ""] {
+      if {![string is xdigit -strict $nibble1]} then {
+        error [appendArgs "bad nibble #1 \"" $nibble1 \"]
+      }
+
+      if {![string is xdigit -strict $nibble2]} then {
+        error [appendArgs "bad nibble #2 \"" $nibble2 \"]
+      }
+
+      lappend list [appendArgs 0x $nibble1 $nibble2]
+    }
+
+    set byteList [object invoke -create -alias ByteList FromString $list]
+
+    return [$byteList -create ToArray]
+  }
+
+  #
+  # NOTE: Returns non-zero if the specified script starts with the encrypted
+  #       script "magic" sentinel value.
+  #
+  proc hasEncryptedScriptMagic { script {varName ""} } {
+    # <help>
+    # This procedure reports whether a script string begins with the Zeus
+    # encrypted-script "magic" sentinel value.  It is the first-cut detector
+    # used by [isEncryptedScript] (and indirectly by
+    # [hasEncryptedScriptFileMagic]) to decide whether a script appears to be
+    # one produced by [encryptScript].
+    #
+    # How it works: it reads the configured magic prefix from
+    # zeus(magic) via [maybeGet] and computes its length.  If the magic is
+    # empty or the script is shorter than the magic, the procedure returns
+    # false.  Otherwise it extracts the leading portion of the script and
+    # compares it to the magic for exact equality.  When the optional
+    # varName argument is supplied, it is linked via [upvar] in the caller
+    # and set to the magic length before the comparison, so callers can
+    # capture the prefix length even when the comparison fails.
+    #
+    # Tricky details: the comparison is byte-for-byte equality of the
+    # leading bytes; it does not skip leading whitespace.  Writing the
+    # magic length into the caller's variable is a side effect that
+    # persists regardless of the boolean result, which is exactly the
+    # behavior [hasEncryptedScriptFileMagic] relies on to learn how many
+    # bytes to read.
+    #
+    # Arguments:
+    #   script  -- The script content to inspect.
+    #   varName -- Optional name of a variable in the caller's scope to
+    #              receive the magic length; defaults to empty (no link).
+    #
+    # Results:
+    #   Returns true when the script starts with the configured magic
+    #   prefix, false otherwise.
+    # </help>
+
+    #
+    # NOTE: If the caller wants to capture the length of the "magic" value,
+    #       setup the variable reference now.
+    #
+    if {[string length $varName] > 0} then {
+      upvar 1 $varName magicLength
+    }
+
+    #
+    # NOTE: We need access to the magic prefix used for encrypted scripts;
+    #       therefore, gain access to the global variable for this package.
+    #
+    global zeus
+
+    set magic [maybeGet zeus(magic) false ""]
+    set magicLength [string length $magic]
+    if {$magicLength == 0} then {return false}
+
+    set length [string length $script]
+    if {$length < $magicLength} then {return false}
+    set prologue [string range $script 0 [expr {$magicLength - 1}]]
+
+    return [string equal $prologue $magic]
+  }
+
+  #
+  # NOTE: Returns non-zero if the specified script exactly matches the format
+  #       emitted by this package for encrypted scripts.  This may or may not
+  #       indicate the script can be successfully decrypted.
+  #
+  proc isEncryptedScript { script {strict false} } {
+    # <help>
+    # This procedure reports whether a script string exactly matches the
+    # format emitted by [encryptScript] for an encrypted script.  It is the
+    # stricter companion to [hasEncryptedScriptMagic]: matching here implies
+    # the script looks structurally well-formed, though it does not
+    # guarantee the script can actually be decrypted with any particular
+    # key.
+    #
+    # How it works: it first delegates to [hasEncryptedScriptMagic] to
+    # verify the magic prefix and (as a side effect) capture the magic
+    # length in a local variable.  If the magic is absent, it returns
+    # false.  If the strict flag is false, it returns true at that point.
+    # Otherwise it builds a regular expression describing the expected
+    # body -- a leading newline, an [appendArgs] command containing a
+    # Base64-encoded payload (with embedded newlines permitted because
+    # ToBase64String is called with InsertLineBreaks) -- and matches it
+    # case-insensitively against the script body that follows the magic
+    # prefix.
+    #
+    # Tricky details: the regular expression is constructed using the
+    # current Environment.NewLine sequence (with its CR/LF characters
+    # escaped as \\r and \\n), which is necessary because
+    # ToBase64String emits real line breaks inside the Base64 payload.
+    # The check is purely STRUCTURAL: a passing script may still fail to
+    # decrypt when the password, salt, iteration count, or hash algorithm
+    # is wrong.
+    #
+    # Arguments:
+    #   script -- The script content to classify.
+    #   strict -- When true, additionally verify the body matches the
+    #             encrypted-script regular expression; defaults to false.
+    #
+    # Results:
+    #   Returns true when the script is recognized as an encrypted
+    #   script, false otherwise.
+    # </help>
+
+    #
+    # NOTE: First, make sure the script starts with the required prologue,
+    #       which is a specially formatted comment containing the "magic"
+    #       value.
+    #
+    if {![hasEncryptedScriptMagic $script magicLength]} then {
+      return false
+    } elseif {!$strict} then {
+      return true
+    }
+
+    #
+    # NOTE: Finally, make sure the script body is a correctly formatted
+    #       Base64 encoded string wrapped in an [appendArgs] command.
+    #
+    set newLine [object invoke Environment NewLine]
+    set newLine [string map [list \r \\r \n \\n] $newLine]
+
+    #
+    # BUGFIX: This pattern must include the new line characters within
+    #         the set of characters for Base64 because it can return a
+    #         string with embedded line breaks.
+    #
+    set pattern [appendArgs \
+        ^ $newLine {appendArgs } \\\{ $newLine {[0-9A-Z+/} $newLine \
+        {]{2,}={0,2}} $newLine \\\} $newLine \$]
+
+    set body [string range $script $magicLength end]
+    return [regexp -nocase -- $pattern $body]
+  }
+
+  #
+  # NOTE: Returns non-zero if the specified file appears to be one that was
+  #       encrypted by this package.
+  #
+  proc hasEncryptedScriptFileMagic { fileName } {
+    # <help>
+    # This procedure reports whether a file on disk looks like a script
+    # that was encrypted by this package, without reading the entire file.
+    # It is the file-level companion to [isEncryptedScript] and is used by
+    # [sourceEncrypted] to decide whether to follow the decryption path.
+    #
+    # How it works: it first calls [hasEncryptedScriptMagic] with an empty
+    # script -- which trivially returns false but, as a deliberate side
+    # effect, writes the configured magic length into the local
+    # magicLength variable.  It then reads exactly that many bytes from
+    # the start of the file using [readFileBytes] and returns the result
+    # of running those bytes through [isEncryptedScript] (in non-strict
+    # mode, since only the magic prefix bytes were read).
+    #
+    # Tricky details: the leading [hasEncryptedScriptMagic] call is being
+    # used purely to obtain the magic prefix length and is not itself a
+    # detection step.  Because only the prefix is read, the resulting
+    # detection is necessarily non-strict -- the file may still fail any
+    # full-body checks performed later.
+    #
+    # Arguments:
+    #   fileName -- The path of the file to inspect.
+    #
+    # Results:
+    #   Returns true when the leading bytes of the file match the
+    #   configured encrypted-script magic prefix, false otherwise.
+    # </help>
+
+    hasEncryptedScriptMagic "" magicLength; # HACK: Get prefix length.
+    return [isEncryptedScript [readFileBytes $fileName $magicLength]]
+  }
+
+  #
+  # NOTE: Creates and sets up an instance of the specified algorithm, which
+  #       may be used for either encryption or decryption.
+  #
+  proc rawCreateAlgorithm {
+          encoding encryptionAlgorithmName password salt iterationCount
+          hashAlgorithmName mode padding } {
+    # <help>
+    # This procedure constructs and fully configures a managed symmetric
+    # encryption algorithm instance from a complete set of cryptographic
+    # parameters.  It is the workhorse shared by [rawEncryptString] and
+    # [rawDecryptString]: by routing both directions through the same setup
+    # path it guarantees the encryption side and the decryption side derive
+    # identical key material from identical inputs.
+    #
+    # How it works: it requires the supplied encoding object to be non-null
+    # (used for converting the salt to bytes), looks up the algorithm Type
+    # via Utility.LookupFactoryType, and constructs an instance via
+    # Utility.CreateViaFactory.  It then chooses the largest available key
+    # size and smallest available block size (probed via
+    # Utility.GetGreatestMaxKeySizeAndLeastMinBlockSize, falling back to 256
+    # and 128 respectively) and uses the block size as the feedback size.
+    # When a salt was supplied it is converted to bytes via the encoding;
+    # otherwise a per-process, per-thread default is synthesized by hashing
+    # the pid and thread id with SHA-512 and parsing the hex digest via
+    # [getSaltBytesFromHex].  An Rfc2898DeriveBytes instance is built from
+    # the password, salt bytes, and iteration count (using the hash
+    # algorithm name overload on .NET Core when a name is supplied, the
+    # legacy constructor otherwise; specifying a non-default hash algorithm
+    # name on the full .NET Framework is an error).  The required number of
+    # bytes is then derived for the IV and the encryption key, the
+    # algorithm's IV, Key, Mode, and Padding are set, sensitive locals are
+    # purged via [unset -nocomplain -maybezerostring -purge], and the
+    # configured algorithm handle is returned.
+    #
+    # Tricky and security details: the synthesized default salt is NOT a
+    # secure random salt -- it is derived from the pid and thread id and
+    # is only intended as a fallback when no salt is configured; production
+    # uses should supply an explicit salt.  Failing closed is important
+    # here: any invalid combination (unresolved algorithm type, unsupported
+    # hash algorithm name on full .NET Framework, missing encoding) raises
+    # a script error before any key material is produced.  Sensitive
+    # parameter copies are wiped from the procedure's local frame before
+    # returning.
+    #
+    # Arguments:
+    #   encoding               -- A non-null encoding object handle used to
+    #                             convert the salt string to bytes.
+    #   encryptionAlgorithmName -- The factory-resolvable symmetric
+    #                             algorithm type name to instantiate.
+    #   password               -- The password used to derive key material.
+    #   salt                   -- The salt string; empty selects a
+    #                             synthesized default.
+    #   iterationCount         -- The Rfc2898DeriveBytes iteration count.
+    #   hashAlgorithmName      -- Optional PRF hash algorithm name; empty
+    #                             selects the platform default.
+    #   mode                   -- The cipher mode (for example CBC).
+    #   padding                -- The padding mode (for example PKCS7).
+    #
+    # Results:
+    #   Returns the configured symmetric algorithm object handle.  Raises
+    #   a script error on any failure.
+    # </help>
+
+    #
+    # NOTE: Verify that the caller specified a valid encoding.
+    #
+    if {![isNonNullObjectHandle $encoding]} then {
+      error "cannot create algorithm, encoding not available"
+    }
+
+    #
+    # NOTE: First, attempt to translate the encryption algorithm name
+    #       to the Type object we need to create it with.
+    #
+    set type [object invoke -create \
+        Utility LookupFactoryType $encryptionAlgorithmName true]
+
+    #
+    # NOTE: Next, setup the storage for the error message, if any.
+    #
+    set error null
+
+    #
+    # NOTE: Attempt to create an instance of the encryption algorithm
+    #       itself.
+    #
+    set algorithm [object invoke -alias \
+        Utility CreateViaFactory $type error]
+
+    if {![isNonNullObjectHandle $algorithm]} then {
+      error [appendArgs \
+          "could not create symmetric algorithm \"" \
+          $encryptionAlgorithmName "\": " \
+          [getStringFromObjectHandle $error]]
+    }
+
+    #
+    # NOTE: Attempt to figure out what the "best" key size and block size
+    #       values are.  Failing that, use hard-coded defaults that are
+    #       compliant with the NIST standard.
+    #
+    set keySize 256; set blockSize 128
+
+    catch {
+      object invoke \
+          Utility GetGreatestMaxKeySizeAndLeastMinBlockSize \
+          $algorithm keySize blockSize
+    }
+
+    #
+    # NOTE: Always use the maximum key size available.
+    #
+    $algorithm KeySize $keySize
+
+    #
+    # NOTE: Always use the minimum block size available.
+    #
+    $algorithm BlockSize $blockSize
+
+    #
+    # NOTE: Always use the block size as the feedback size.
+    #
+    $algorithm FeedbackSize $blockSize
+
+    #
+    # NOTE: Use a reasonable default salt value if one was not provided.
+    #
+    if {[string length $salt] > 0} then {
+      set saltBytes [object invoke -create $encoding GetBytes $salt]
+    } else {
+      set salt [hash normal sha512 [appendArgs [pid] [info tid]]]
+      set saltBytes [getSaltBytesFromHex $salt]
+    }
+
+    #
+    # NOTE: Create an instance of the RFC 2898 class that will be used to
+    #       obtain bytes to be used for the actual IV and encryption key.
+    #
+    if {[isDotNetCore]} then {
+      #
+      # NOTE: Does the caller want to use a non-default hash algorithm to
+      #       derive the encryption key?
+      #
+      if {[string length $hashAlgorithmName] > 0} then {
+        #
+        # NOTE: Use the specified hash algorithm name to create the hash
+        #       algorithm name object expected by Rfc2898DeriveBytes.
+        #
+        set hashAlgorithmNameObject [object create \
+            System.Security.Cryptography.HashAlgorithmName \
+            $hashAlgorithmName]
+
+        set rfc2898 [object create -alias \
+            System.Security.Cryptography.Rfc2898DeriveBytes $password \
+            $saltBytes $iterationCount $hashAlgorithmNameObject]
+      } else {
+        #
+        # NOTE: Use the legacy Rfc2898DeriveBytes constructor that does
+        #       not support hash algorithm names for compatibility with
+        #       older applications.
+        #
+        set rfc2898 [object create -alias \
+            System.Security.Cryptography.Rfc2898DeriveBytes $password \
+            $saltBytes $iterationCount]
+      }
+    } elseif {[string length $hashAlgorithmName] == 0} then {
+      #
+      # NOTE: The full .NET Framework does not support the hash algorithm
+      #       name enabled method overloads for the Rfc2898DeriveBytes
+      #       class; therefore, use the legacy constructor and ignore the
+      #       hash algorithm name.
+      #
+      set rfc2898 [object create -alias \
+          System.Security.Cryptography.Rfc2898DeriveBytes $password \
+          $saltBytes $iterationCount]
+    } else {
+      #
+      # NOTE: The caller specified a hash algorithm name that is not the
+      #       default value and we cannot use it due to the underlying
+      #       platform not supporting it; therefore, fail.
+      #
+      error [appendArgs \
+          "hash algorithm name \"" $hashAlgorithmName \
+          "\" not supported for RFC 2898 on this platform"]
+    }
+
+    #
+    # NOTE: Get enough derived bytes for the IV.
+    #
+    set iv [$rfc2898 GetBytes [expr {[$algorithm BlockSize] / 8}]]
+
+    #
+    # NOTE: Get enough derived bytes for the encryption key.
+    #
+    set key [$rfc2898 GetBytes [expr {[$algorithm KeySize] / 8}]]
+
+    #
+    # NOTE: Set the IV, encryption key, cipher mode, and padding mode.
+    #
+    $algorithm IV $iv
+    $algorithm Key $key
+    $algorithm Mode $mode
+    $algorithm Padding $padding
+
+    #
+    # NOTE: Cleanup some potentially sensitive data that may be around.
+    #
+    unset -nocomplain -maybezerostring -purge -- \
+        encryptionAlgorithmName password salt iterationCount \
+        hashAlgorithmName mode padding error type keySize blockSize \
+        saltBytes hashAlgorithmNameObject rfc2898 iv key; debug collect
+
+    #
+    # NOTE: Finally, return the created and fully configured algorithm.
+    #
+    return $algorithm
+  }
+
+  #
+  # NOTE: Decrypts and returns the specified string using the specified
+  #       algorithm, password, salt, iteration count, mode, and padding.
+  #
+  proc rawDecryptString {
+          encodingName encryptionAlgorithmName string password salt
+          iterationCount hashAlgorithmName mode padding } {
+    # <help>
+    # This procedure decrypts a Base64-encoded ciphertext string using a
+    # fully specified symmetric algorithm configuration and returns the
+    # cleartext.  It is the low-level counterpart to [rawEncryptString] and
+    # is the actual decryption engine ultimately reached from
+    # [decryptScript] (and from there, [sourceEncrypted]).
+    #
+    # How it works: it runs inside a try/finally block so cleanup happens
+    # even when decryption fails.  It resolves the encoding (specified by
+    # name or system default), constructs and configures the algorithm via
+    # [rawCreateAlgorithm], creates an ICryptoTransform decryptor, and
+    # writes the bytes through a CryptoStream into a MemoryStream.  The
+    # input Base64 is decoded with Convert.FromBase64String before being
+    # streamed in.  After the CryptoStream is closed, the resulting bytes
+    # are extracted from the MemoryStream and converted back to a string
+    # using the chosen encoding, which is returned.
+    #
+    # Tricky and security details: the finally block disposes the
+    # CryptoStream and algorithm even on failure; if a CryptoStream Close
+    # fails (a common symptom of a wrong key, salt, or padding), the
+    # procedure falls back to a no-dispose object cleanup so the script
+    # interpreter is not left holding a stale handle.  All sensitive
+    # parameter copies in the local frame are purged via
+    # [unset -nocomplain -maybezerostring -purge] before exit, and a
+    # [debug collect] is requested.  Failure modes (bad key, wrong salt,
+    # incorrect padding) surface as script errors raised from within the
+    # CryptoStream operations.
+    #
+    # Arguments:
+    #   encodingName            -- The .NET encoding name to use; empty
+    #                              selects the system default.
+    #   encryptionAlgorithmName -- The symmetric algorithm type name
+    #                              passed through to [rawCreateAlgorithm].
+    #   string                  -- The Base64-encoded ciphertext to
+    #                              decrypt.
+    #   password                -- The password used to derive the key.
+    #   salt                    -- The salt string used to derive the key.
+    #   iterationCount          -- The Rfc2898DeriveBytes iteration count.
+    #   hashAlgorithmName       -- Optional PRF hash algorithm name.
+    #   mode                    -- The cipher mode.
+    #   padding                 -- The padding mode.
+    #
+    # Results:
+    #   Returns the decrypted cleartext string.  Raises a script error on
+    #   any failure.
+    # </help>
+
+    #
+    # NOTE: This procedure requires "guaranteed" cleanup; therefore, use
+    #       a try/finally block.
+    #
+    try {
+      #
+      # NOTE: Did the caller specify a text encoding name?
+      #
+      if {[string length $encodingName] > 0} then {
+        #
+        # NOTE: Use the specified text encoding.
+        #
+        set encoding [object invoke \
+            -alias System.Text.Encoding GetEncoding $encodingName]
+      } else {
+        #
+        # NOTE: Use the system default text encoding.
+        #
+        set encoding [object invoke -alias System.Text.Encoding Default]
+      }
+
+      #
+      # NOTE: Create the encryption algorithm to use for this request.
+      #
+      set algorithm [rawCreateAlgorithm \
+          $encoding $encryptionAlgorithmName $password $salt \
+          $iterationCount $hashAlgorithmName $mode $padding]
+
+      #
+      # NOTE: Verify that the decryption algorithm object is available.
+      #
+      if {![isNonNullObjectHandle $algorithm]} then {
+        error "cannot decrypt, algorithm not available"
+      }
+
+      #
+      # NOTE: Create an ICryptoTransform to decrypt the encrypted bytes.
+      #
+      set decryptor [object invoke -alias $algorithm CreateDecryptor]
+
+      #
+      # NOTE: Create a memory stream without a predetermined size.
+      #
+      set memoryStream [object create -alias System.IO.MemoryStream]
+
+      #
+      # NOTE: Create a crypto stream to write the script bytes into to have
+      #       them decrypted using the encryption algorithm.
+      #
+      set cryptoStream [object create -alias \
+          System.Security.Cryptography.CryptoStream $memoryStream \
+          $decryptor Write]
+
+      #
+      # NOTE: Decode the Base64 encoded script to get the actual encrypted
+      #       bytes.
+      #
+      set data [object invoke -create -alias Convert FromBase64String $string]
+
+      #
+      # NOTE: Write all the encrypted bytes into the crypto stream and then
+      #       close the stream.
+      #
+      $cryptoStream Write $data 0 [$data Length]
+      $cryptoStream Close; unset cryptoStream
+
+      #
+      # NOTE: Extract all the decrypted bytes from the memory stream and then
+      #       close the stream.  Also, dispose of the algorithm decryptor.
+      #
+      set newData [$memoryStream -create -alias ToArray]
+      $memoryStream Close
+      $decryptor -type IDisposable Dispose
+
+      #
+      # NOTE: Convert the decrypted script bytes to a string using the text
+      #       encoding.
+      #
+      return [object invoke $encoding GetString $newData]
+    } finally {
+      #
+      # NOTE: If we failed to close the CryptoStream, dispose of it now.
+      #       It can sometimes fail to close if the decryption failed due
+      #       to an invalid key, etc.  Otherwise, just remove its opaque
+      #       object handle.
+      #
+      if {[info exists cryptoStream] && \
+          [isNonNullObjectHandle $cryptoStream]} then {
+        if {[catch {object dispose $cryptoStream}]} then {
+          catch {object dispose -nodispose $cryptoStream}
+        }
+      }
+
+      #
+      # NOTE: Finalize the encryption algorithm using the pre-defined
+      #       script fragment.
+      #
+      catch {object dispose $algorithm}
+
+      #
+      # NOTE: Cleanup some potentially sensitive data that may be around.
+      #
+      unset -nocomplain -maybezerostring -purge -- \
+          encodingName encryptionAlgorithmName string password salt \
+          iterationCount hashAlgorithmName mode padding encoding \
+          algorithm decryptor memoryStream cryptoStream data newData; \
+          debug collect
+    }
+  }
+
+  #
+  # NOTE: Encrypts and returns the specified string using the specified
+  #       algorithm, password, salt, iteration count, mode, and padding.
+  #
+  proc rawEncryptString {
+          encodingName encryptionAlgorithmName string password salt
+          iterationCount hashAlgorithmName mode padding } {
+    # <help>
+    # This procedure encrypts a string with a fully specified symmetric
+    # algorithm configuration and returns the ciphertext as Base64.  It is
+    # the low-level counterpart to [rawDecryptString] and the actual
+    # encryption engine ultimately reached from [encryptScript].
+    #
+    # How it works: it runs inside a try/finally block so cleanup happens
+    # even when encryption fails.  It resolves the encoding (by name or
+    # system default), constructs and configures the algorithm via
+    # [rawCreateAlgorithm], creates an ICryptoTransform encryptor, and
+    # writes plaintext bytes through a CryptoStream into a MemoryStream.
+    # After closing the CryptoStream it extracts the encrypted bytes and
+    # returns them via Convert.ToBase64String with the InsertLineBreaks
+    # option so the output is wrap-friendly inside the generated script.
+    #
+    # Tricky and security details: the finally block disposes the
+    # CryptoStream and algorithm even on failure; if a CryptoStream Close
+    # fails the procedure falls back to a no-dispose cleanup so the
+    # interpreter is not left with a stale handle.  All sensitive
+    # parameter copies in the local frame are purged via
+    # [unset -nocomplain -maybezerostring -purge] before exit, and a
+    # [debug collect] is requested.  The InsertLineBreaks flag is what
+    # produces the embedded line breaks that [isEncryptedScript] expects
+    # to see in its regular expression.
+    #
+    # Arguments:
+    #   encodingName            -- The .NET encoding name to use; empty
+    #                              selects the system default.
+    #   encryptionAlgorithmName -- The symmetric algorithm type name
+    #                              passed through to [rawCreateAlgorithm].
+    #   string                  -- The plaintext string to encrypt.
+    #   password                -- The password used to derive the key.
+    #   salt                    -- The salt string used to derive the key.
+    #   iterationCount          -- The Rfc2898DeriveBytes iteration count.
+    #   hashAlgorithmName       -- Optional PRF hash algorithm name.
+    #   mode                    -- The cipher mode.
+    #   padding                 -- The padding mode.
+    #
+    # Results:
+    #   Returns the Base64-encoded ciphertext (with embedded line breaks).
+    #   Raises a script error on any failure.
+    # </help>
+
+    #
+    # NOTE: This procedure requires "guaranteed" cleanup; therefore, use
+    #       a try/finally block.
+    #
+    try {
+      #
+      # NOTE: Did the caller specify a text encoding name?
+      #
+      if {[string length $encodingName] > 0} then {
+        #
+        # NOTE: Use the specified text encoding.
+        #
+        set encoding [object invoke \
+            -alias System.Text.Encoding GetEncoding $encodingName]
+      } else {
+        #
+        # NOTE: Use the system default text encoding.
+        #
+        set encoding [object invoke -alias System.Text.Encoding Default]
+      }
+
+      #
+      # NOTE: Create the encryption algorithm to use for this request.
+      #
+      set algorithm [rawCreateAlgorithm \
+          $encoding $encryptionAlgorithmName $password $salt \
+          $iterationCount $hashAlgorithmName $mode $padding]
+
+      #
+      # NOTE: Verify that the encryption algorithm object is available.
+      #
+      if {![isNonNullObjectHandle $algorithm]} then {
+        error "cannot encrypt, algorithm not available"
+      }
+
+      #
+      # NOTE: Create an ICryptoTransform to encrypt the script bytes.
+      #
+      set encryptor [object invoke -alias $algorithm CreateEncryptor]
+
+      #
+      # NOTE: Create a memory stream without a predetermined size.
+      #
+      set memoryStream [object create -alias System.IO.MemoryStream]
+
+      #
+      # NOTE: Create a crypto stream to write the script bytes into to have
+      #       them encrypted using the encryption algorithm.
+      #
+      set cryptoStream [object create -alias \
+          System.Security.Cryptography.CryptoStream $memoryStream \
+          $encryptor Write]
+
+      #
+      # NOTE: Convert the script to bytes based on the encoding.
+      #
+      set data [object invoke -create -alias $encoding GetBytes $string]
+
+      #
+      # NOTE: Write all the script bytes into the crypto stream and then
+      #       close the stream.
+      #
+      $cryptoStream Write $data 0 [$data Length]
+      $cryptoStream Close; unset cryptoStream
+
+      #
+      # NOTE: Extract all encrypted bytes from the memory stream and then
+      #       close the stream.  Also, dispose of the algorithm encryptor.
+      #
+      set newData [$memoryStream -create -alias ToArray]
+      $memoryStream Close
+      $encryptor -type IDisposable Dispose
+
+      #
+      # NOTE: Return the encrypted string.  Please note that the actual
+      #       encrypted string bytes are Base64 encoded for ease of use.
+      #
+      return [object invoke Convert ToBase64String $newData InsertLineBreaks]
+    } finally {
+      #
+      # NOTE: If we failed to close the CryptoStream, dispose of it now.
+      #       It can sometimes fail to close if the encryption failed due
+      #       to an invalid key, etc.  Otherwise, just remove its opaque
+      #       object handle.
+      #
+      if {[info exists cryptoStream] && \
+          [isNonNullObjectHandle $cryptoStream]} then {
+        if {[catch {object dispose $cryptoStream}]} then {
+          catch {object dispose -nodispose $cryptoStream}
+        }
+      }
+
+      #
+      # NOTE: Finalize the encryption algorithm using the pre-defined
+      #       script fragment.
+      #
+      catch {object dispose $algorithm}
+
+      #
+      # NOTE: Cleanup some potentially sensitive data that may be around.
+      #
+      unset -nocomplain -maybezerostring -purge -- \
+          encodingName encryptionAlgorithmName string password salt \
+          iterationCount hashAlgorithmName mode padding encoding \
+          algorithm encryptor memoryStream cryptoStream data newData; \
+          debug collect
+    }
+  }
+
+  #
+  # NOTE: Get a fully-qualified name of the symmetric encryption algorithm
+  #       to use when encrypting and/or decrypting script files.
+  #
+  proc getEncryptionAlgorithmName {} {
+    # <help>
+    # This procedure returns the fully qualified name of the symmetric
+    # encryption algorithm that this package will use for encrypting and
+    # decrypting scripts.  It exists so the rest of the package (and
+    # outside callers like the encrypt.eagle tool) can consult a single
+    # source of truth for the algorithm choice that is sensitive to both
+    # any configured override and the current managed runtime.
+    #
+    # How it works: it reads the override from zeus(encryptionAlgorithmName)
+    # via [maybeGet].  When unset, it falls back to a hard-coded default
+    # that is RijndaelManaged.  On .NET Core the default is an assembly
+    # qualified name (the type lives in System.Security.Cryptography.
+    # Algorithms there); on .NET Framework the unqualified type name
+    # suffices.
+    #
+    # Arguments:
+    #   None.
+    #
+    # Results:
+    #   Returns the fully (or assembly-)qualified algorithm type name
+    #   suitable for passing through to the algorithm factory.
+    # </help>
+
+    global zeus
+
+    if {[isDotNetCore]} then {
+      return [maybeGet \
+          zeus(encryptionAlgorithmName) false [appendArgs \
+          System.Security.Cryptography.RijndaelManaged ", " \
+          System.Security.Cryptography.Algorithms]]
+    } else {
+      return [maybeGet \
+          zeus(encryptionAlgorithmName) false \
+          System.Security.Cryptography.RijndaelManaged]
+    }
+  }
+
+  #
+  # NOTE: Decrypts and returns the specified encrypted script using the
+  #       specified password, salt, and iteration count.
+  #
+  # WARNING: This procedure contains hard-coded system defaults for the
+  #          algorithm name, cipher mode, and padding mode.
+  #
+  proc decryptScript {
+          script encodingName password salt iterationCount
+          hashAlgorithmName } {
+    # <help>
+    # This procedure decrypts a Zeus-encrypted script payload using the
+    # package's configured cryptographic defaults (algorithm name, cipher
+    # mode, and padding mode) and returns the cleartext.  It is the public
+    # decryption entry point used by [sourceEncrypted] and is the inverse
+    # of [encryptScript].
+    #
+    # How it works: it runs inside a try/finally block to guarantee
+    # cleanup of sensitive locals.  It reads the algorithm name from
+    # [getEncryptionAlgorithmName] and the cipher mode and padding mode
+    # from the global zeus array via [maybeGet] (defaulting to CBC and
+    # PKCS7).  It then delegates to [rawDecryptString] for the actual
+    # decryption.  Finally, it normalizes line endings in the result to
+    # Unix style (LF only) and returns the cleartext.  Sensitive local
+    # variables (including the password, salt, and cleartext) are wiped
+    # in the finally block via
+    # [unset -nocomplain -maybezerostring -purge] followed by
+    # [debug collect].
+    #
+    # Tricky and security details: there are hard-coded system defaults
+    # for the algorithm name, cipher mode, and padding mode -- callers
+    # cannot override these per call without configuring the global zeus
+    # array first.  The output line-ending normalization is important for
+    # downstream [uplevel]/[source] use because the encrypted script may
+    # have been authored under a different platform than the decrypting
+    # one.
+    #
+    # Arguments:
+    #   script            -- The Base64-encoded ciphertext (just the
+    #                        payload extracted from the encrypted-script
+    #                        wrapper).
+    #   encodingName      -- The .NET encoding name; empty selects the
+    #                        system default.
+    #   password          -- The password used to derive the key.
+    #   salt              -- The salt string used to derive the key.
+    #   iterationCount    -- The Rfc2898DeriveBytes iteration count.
+    #   hashAlgorithmName -- Optional PRF hash algorithm name.
+    #
+    # Results:
+    #   Returns the decrypted script text with LF line endings.  Raises
+    #   a script error on any failure.
+    # </help>
+
+    #
+    # NOTE: This procedure requires "guaranteed" cleanup; therefore, use
+    #       a try/finally block.
+    #
+    try {
+      #
+      # NOTE: We need access to the configuration parameters; therefore,
+      #       gain access to the global variable for this package.
+      #
+      global zeus
+
+      #
+      # NOTE: Grab all the configuration parameters that we need now.
+      #
+      set encryptionAlgorithmName [getEncryptionAlgorithmName]
+      set mode [maybeGet zeus(mode) false CBC]
+      set padding [maybeGet zeus(padding) false PKCS7]
+
+      #
+      # NOTE: Decrypted the script and then transform all line endings to
+      #       Unix style (i.e. line-feed only).
+      #
+      set text [string map [list \r\n \n \r \n] [rawDecryptString \
+          $encodingName $encryptionAlgorithmName $script $password \
+          $salt $iterationCount $hashAlgorithmName $mode $padding]]
+
+      #
+      # NOTE: Finally, return the decrypted script.
+      #
+      return $text
+    } finally {
+      #
+      # NOTE: Cleanup some potentially sensitive data that may be around.
+      #
+      unset -nocomplain -maybezerostring -purge -- \
+          script encodingName password salt iterationCount \
+          hashAlgorithmName encryptionAlgorithmName mode padding \
+          text; debug collect
+    }
+  }
+
+  #
+  # NOTE: Encrypts and returns the specified script using the specified
+  #       password, salt, and iteration count.
+  #
+  # WARNING: This procedure contains hard-coded system defaults for the
+  #          algorithm name, cipher mode, and padding mode.
+  #
+  proc encryptScript {
+          script encodingName password salt iterationCount
+          hashAlgorithmName } {
+    # <help>
+    # This procedure encrypts a script using the package's configured
+    # cryptographic defaults and returns the full wrapper text that is
+    # ready to be written out as an encrypted script file.  It is the
+    # public encryption entry point used by the encrypt.eagle tool and the
+    # inverse of [decryptScript].
+    #
+    # How it works: it runs inside a try/finally block to guarantee
+    # cleanup of sensitive locals.  It reads the algorithm name from
+    # [getEncryptionAlgorithmName] and the cipher mode, padding mode,
+    # magic prefix, prologue, and epilogue from the global zeus array via
+    # [maybeGet] (mode and padding default to CBC and PKCS7; the others
+    # default to empty).  It delegates the actual encryption to
+    # [rawEncryptString] and then assembles the wrapper by concatenating
+    # the magic prefix, prologue, an [appendArgs] command containing the
+    # Base64 ciphertext (using Environment.NewLine as the line separator),
+    # and the epilogue.  Sensitive local copies (including the password,
+    # salt, plaintext, and ciphertext text) are wiped in the finally
+    # block via [unset -nocomplain -maybezerostring -purge] followed by
+    # [debug collect].
+    #
+    # Tricky and security details: like [decryptScript] this procedure
+    # hard-codes the cipher mode and padding mode defaults, so callers
+    # who need different values must configure the global zeus array
+    # first.  The wrapper format must remain compatible with the regular
+    # expression used by [isEncryptedScript]; in particular, the Base64
+    # body must sit inside an [appendArgs] command on its own line and
+    # be surrounded by the configured Environment.NewLine sequences.
+    #
+    # Arguments:
+    #   script            -- The cleartext script to encrypt.
+    #   encodingName      -- The .NET encoding name; empty selects the
+    #                        system default.
+    #   password          -- The password used to derive the key.
+    #   salt              -- The salt string used to derive the key.
+    #   iterationCount    -- The Rfc2898DeriveBytes iteration count.
+    #   hashAlgorithmName -- Optional PRF hash algorithm name.
+    #
+    # Results:
+    #   Returns the full encrypted-script wrapper text suitable for
+    #   writing to disk.  Raises a script error on any failure.
+    # </help>
+
+    #
+    # NOTE: This procedure requires "guaranteed" cleanup; therefore, use
+    #       a try/finally block.
+    #
+    try {
+      #
+      # NOTE: We need access to the configuration parameters; therefore,
+      #       gain access to the global variable for this package.
+      #
+      global zeus
+
+      #
+      # NOTE: Grab all the configuration parameters that we need now.
+      #
+      set encryptionAlgorithmName [getEncryptionAlgorithmName]
+      set mode [maybeGet zeus(mode) false CBC]
+      set padding [maybeGet zeus(padding) false PKCS7]
+      set magic [maybeGet zeus(magic) false ""]
+      set prologue [maybeGet zeus(prologue) false ""]
+      set epilogue [maybeGet zeus(epilogue) false ""]
+
+      #
+      # NOTE: Build the final encrypted script using the configured "magic"
+      #       prefix string, prologue, and epilogue.  Please note that the
+      #       actual encrypted script bytes are Base64 encoded and wrapped
+      #       in a [return] command.
+      #
+      set newLine [object invoke Environment NewLine]
+
+      set text [appendArgs \
+          $magic $prologue $newLine "appendArgs \{" $newLine \
+          [rawEncryptString $encodingName $encryptionAlgorithmName \
+          $script $password $salt $iterationCount $hashAlgorithmName \
+          $mode $padding] $newLine \} $newLine $epilogue]
+
+      #
+      # NOTE: Finally, return the encrypted script.
+      #
+      return $text
+    } finally {
+      #
+      # NOTE: Cleanup some potentially sensitive data that may be around.
+      #
+      unset -nocomplain -maybezerostring -purge -- \
+          script encodingName password salt iterationCount \
+          hashAlgorithmName encryptionAlgorithmName mode padding magic \
+          prologue epilogue newLine text; debug collect
+    }
+  }
+
+  #
+  # NOTE: If the specified script file is encrypted, decrypt and evaluate it;
+  #       otherwise, raise an error.
+  #
+  proc sourceEncrypted { args } {
+    # <help>
+    # This procedure is the public "source an encrypted script" entry
+    # point.  It parses an extended argument list patterned after the
+    # built-in [source] command, decrypts the named file when it is in
+    # the Zeus encrypted-script format (or is a remote URI), and
+    # evaluates the cleartext in the caller's scope.  When the file is
+    # not encrypted, it raises an error rather than silently delegating
+    # to [source].  It is the runtime counterpart of [encryptScript].
+    #
+    # How it works: it runs inside a try/finally so sensitive locals are
+    # always wiped on exit.  Argument parsing handles a fixed set of
+    # [source] options (-encoding, -withinfo, -time, -password, -library,
+    # -bundle, -erroronempty, -stoponerror) by collecting each into a
+    # currentOptions array; unknown options raise a descriptive error
+    # listing the accepted set.  The end-of-options marker is the
+    # standard double-dash.  After options, it expects a required file
+    # name followed by optional password, salt, iteration count, hash
+    # algorithm name, and signature arguments.  When the file is a
+    # remote URI or its leading bytes match the encrypted magic prefix,
+    # it fills any missing decryption parameters first from the global
+    # zeus array, and then from the configured RFC 2898 data provider
+    # (assembled via [zeus create -alias] with optional plugin and
+    # client-data switches).  It re-runs [source] on the encrypted file
+    # to obtain the inner [appendArgs] Base64 body, pushes the original
+    # file name onto the script location stack so [info script] reports
+    # it correctly during evaluation, sets the current per-thread
+    # provider (or an Rfc2898Data instance carrying the decryption
+    # parameters) via [zeus proc], and finally evaluates the
+    # [decryptScript] result in the caller's scope via [uplevel 1].
+    # The script location is popped and the provider is reset in nested
+    # finally blocks before sensitive locals are wiped.
+    #
+    # Tricky and security details: option parsing is intentionally
+    # tolerant of abbreviated option names but does NOT handle ambiguous
+    # prefixes -- the comment block calls this out.  The "-password"
+    # option here is for the core library script BUNDLE subsystem, not
+    # for Zeus; the Zeus password comes from either a positional
+    # argument or the zeus(password) configuration value.  When the
+    # file is a remote URI, the magic prefix check is deliberately
+    # skipped because remote sources cannot be byte-sniffed cheaply.
+    # If decryption parameters are still missing after all sources are
+    # consulted, the procedure raises a "cannot decrypt, missing
+    # password, salt, or iteration count" error.  All sensitive locals
+    # are wiped via [unset -nocomplain -maybezerostring -purge] and
+    # [debug collect] in the outer finally block.  Errors from a wrong
+    # password, salt, iteration count, or hash algorithm surface as
+    # script errors from inside the [uplevel] call.
+    #
+    # Arguments:
+    #   args -- A variable argument list of the form
+    #           "?options? fileName ?password? ?salt? ?iterationCount?
+    #            ?hashAlgorithmName? ?signature?".  Supported options
+    #           are -encoding, -withinfo, -time, -password, -library,
+    #           -bundle, -erroronempty, and -stoponerror, terminated
+    #           by an optional "--".
+    #
+    # Results:
+    #   Returns the result of evaluating the decrypted script in the
+    #   caller's scope.  Raises a script error when arguments are
+    #   malformed, when the file is not encrypted, when decryption
+    #   parameters cannot be resolved, or when decryption or evaluation
+    #   fails.
+    # </help>
+
+    #
+    # NOTE: This procedure requires "guaranteed" cleanup; therefore, use
+    #       a try/finally block.
+    #
+    try {
+      #
+      # NOTE: Create error message we can use when the caller does not
+      #       provide the right number of arguments.
+      #
+      set syntax [appendArgs \
+          " ?options? fileName ?password? ?salt? ?iterationCount?" \
+          " ?hashAlgorithmName? ?signature?"]
+
+      set usage [appendArgs \
+          "wrong # args: should be \"" [info commands [appendArgs \
+          [lindex [info level [info level]] 0] *]] $syntax \"]
+
+      #
+      # NOTE: Setup known [source] option names, their associated default
+      #       values and their currently configured values, which will be
+      #       initially set to their default values.
+      #
+      # TODO: This procedure does not handle "ambiguous" option names as
+      #       there is currently no possibility of that for the [source]
+      #       command.
+      #
+      # TODO: Update this list when new [source] options are added.
+      #
+      set defaultOptions(-encoding) ""
+      set defaultOptions(-withinfo) false
+      set defaultOptions(-time) false
+      set defaultOptions(-password) ""; # NOTE: For bundle, not Zeus.
+      set defaultOptions(-library) false
+      set defaultOptions(-bundle) false
+      set defaultOptions(-erroronempty) false
+      set defaultOptions(-stoponerror) false
+
+      #
+      # NOTE: Initially, make sure all options values are defaulted.
+      #
+      array set currentOptions [array get defaultOptions]
+
+      #
+      # NOTE: Check how many arguments were provided by the caller and
+      #       then process each argument.
+      #
+      set length [llength $args]
+
+      for {set index 0} {$index < $length} {} {
+        #
+        # NOTE: Grab the current argument from the list.
+        #
+        set arg [lindex $args $index]
+
+        #
+        # NOTE: Does the current argument even look like an option?
+        #
+        if {[string index $arg 0] ne "-"} then {
+          #
+          # NOTE: Not an option, we are done.
+          #
+          break
+        }
+
+        #
+        # NOTE: Is this the official end-of-options option?
+        #
+        if {$arg eq "--"} then {
+          #
+          # NOTE: Found end-of-options option, skip it and stop.
+          #
+          incr index; break
+        }
+
+        #
+        # NOTE: Check all known [source] options and attempt to get
+        #       their values, if present.
+        #
+        set optionFound false; set optionName ""
+
+        if {[set endIndex [expr {[string length $arg] - 1}]] > 0} then {
+          foreach optionName [lsort [array names currentOptions]] {
+            if {$arg eq [string range $optionName 0 $endIndex]} then {
+              set optionFound true; break
+            }
+          }
+        }
+
+        if {$optionFound && \
+            [info exists currentOptions($optionName)]} then {
+          #
+          # NOTE: Advance index beyond the option name itself and then
+          #       make sure there is a value to go with it.
+          #
+          incr index
+
+          if {$index < $length} then {
+            #
+            # NOTE: Ok, set the option value to use.
+            #
+            set currentOptions($optionName) [lindex $args $index]
+
+            incr index
+          } else {
+            #
+            # NOTE: No option value, this is an error.
+            #
+            error [appendArgs \
+                "\"" $arg "\" option must be followed by string"]
+          }
+        } else {
+          #
+          # NOTE: Unknown option, this is an error.
+          #
+          # TODO: Update this error message when new [source] options
+          #       are added.
+          #
+          error [appendArgs \
+              "bad option \"" $arg "\": must be --, -bundle, " \
+              "-encoding, -erroronempty, -library, -password, " \
+              "-stoponerror, -time, or -withinfo"]
+        }
+      }
+
+      #
+      # NOTE: Make sure we have at least one formal argument (i.e. the
+      #       file name) to continue.
+      #
+      if {$index < $length} then {
+        #
+        # NOTE: Ok, get the file name and advance the index.
+        #
+        set fileName [lindex $args $index]; incr index
+      } else {
+        #
+        # NOTE: The caller must provide a file name, this is an error.
+        #
+        error $usage
+      }
+
+      #
+      # NOTE: The default is to use pre-configured values for password,
+      #       salt, iteration count, hash algorithm name, and signature
+      #       unless overridden by arguments provided by the caller.
+      #
+      set password ""
+      set salt ""
+      set iterationCount ""
+      set hashAlgorithmName ""
+      set signature ""
+
+      #
+      # NOTE: Check the password, salt, iteration count, and hash algorithm
+      #       name were supplied in the arguments provided by the caller.
+      #
+      if {$index < $length} then {
+        set password [lindex $args $index]; incr index
+      }
+
+      if {$index < $length} then {
+        set salt [lindex $args $index]; incr index
+      }
+
+      if {$index < $length} then {
+        set iterationCount [lindex $args $index]; incr index
+      }
+
+      if {$index < $length} then {
+        set hashAlgorithmName [lindex $args $index]; incr index
+      }
+
+      if {$index < $length} then {
+        set signature [lindex $args $index]; incr index
+      }
+
+      #
+      # NOTE: Make sure there are no more arguments at this point; otherwise,
+      #       this is an error.
+      #
+      if {$index != $length} then {
+        error $usage
+      }
+
+      #
+      # NOTE: If the file name is a remote URI, we must skip the check for the
+      #       magic prefix.
+      #
+      if {[object invoke Utility IsRemoteUri $fileName] || \
+          [hasEncryptedScriptFileMagic $fileName]} then {
+        #
+        # NOTE: We may need access to the current default password, salt,
+        #       and/or iteration count; therefore, gain access to the global
+        #       variable for this package.
+        #
+        global zeus
+
+        #
+        # NOTE: If no encoding was specified, use pre-configured one.
+        #
+        set encodingName $currentOptions(-encoding)
+
+        if {[string length $encodingName] == 0} then {
+          set encodingName [maybeGet zeus(encodingName) false ""]
+        }
+
+        #
+        # NOTE: If no password was specified, use pre-configured one.
+        #
+        # HACK: This is NOT the same as the "bundle" password, which can
+        #       be specified via the "-password" option to the [source]
+        #       command.  Please do not use "$currentOptions(-password)"
+        #       (i.e. the option value) here as that should only be used
+        #       by the core library script bundle subsystem.
+        #
+        if {[string length $password] == 0} then {
+          set password [maybeGet zeus(password) false ""]
+        }
+
+        #
+        # NOTE: If no salt was specified, use pre-configured one.
+        #
+        if {[string length $salt] == 0} then {
+          set salt [maybeGet zeus(salt) false ""]
+        }
+
+        #
+        # NOTE: If no iteration count was specified, use pre-configured
+        #       one, if available.
+        #
+        if {[string length $iterationCount] == 0} then {
+          set iterationCount [maybeGet zeus(iterationCount) false ""]
+        }
+
+        #
+        # NOTE: If no hash algorithm name was specified, use pre-configured
+        #       one.
+        #
+        if {[string length $hashAlgorithmName] == 0} then {
+          set hashAlgorithmName [maybeGet zeus(hashAlgorithmName) false ""]
+        }
+
+        #
+        # NOTE: If no signature was specified, use pre-configured one.
+        #
+        if {[string length $signature] == 0} then {
+          set signature [maybeGet zeus(signature) false ""]
+        }
+
+        #
+        # NOTE: If no password, salt, or iteration count was specified, use
+        #       the RFC 2898 data provider manager to obtain them, if it is
+        #       properly configured.
+        #
+        # HACK: Since the hash algorithm name is optional, it cannot be used
+        #       here to make a decision about whether or not custom provider
+        #       sould be used.  In the future, when backward compatibility
+        #       is no longer an issue, that could change.
+        #
+        if {[string length $password] == 0 || \
+            [string length $salt] == 0 || \
+            [string length $iterationCount] == 0} then {
+          #
+          # NOTE: This can only be done if the necessary command ([zeus]) is
+          #       already available -AND- the necessary pre-configuration has
+          #       been done.
+          #
+          set providerPluginName [maybeGet \
+              zeus(providerPluginName) false ""]
+
+          set providerAssemblyName [maybeGet \
+              zeus(providerAssemblyName) false ""]
+
+          set providerTypeName [maybeGet \
+              zeus(providerTypeName) false ""]
+
+          if {[llength [info command zeus]] > 0} then {
+            #
+            # NOTE: Setup the optional IClientData value to pass into the
+            #       provider creation command.  Since this is must be an
+            #       opaque object handle, it cannot be an empty string.
+            #
+            set providerClientData [maybeGet \
+                zeus(providerClientData) false null]
+
+            #
+            # NOTE: Start with the base [zeus create] command.
+            #
+            set providerCommand [list zeus create -alias]
+
+            #
+            # NOTE: If necessary, add the -plugin option.  This will be used
+            #       to locate the correct application domain.
+            #
+            if {[string length $providerPluginName] > 0} then {
+              lappend providerCommand -plugin $providerPluginName
+            }
+
+            #
+            # NOTE: If necessary, add the -clientdata option.  This will be
+            #       passed to the provider after it is created.
+            #
+            if {[isNonNullObjectHandle $providerClientData]} then {
+              lappend providerCommand -clientdata $providerClientData
+            }
+
+            #
+            # NOTE: Add the remaining options and arguments to the command.
+            #
+            lappend providerCommand -- $providerAssemblyName $providerTypeName
+
+            #
+            # NOTE: Attempt to create the RFC 2898 data provider now, using
+            #       pre-configured parameters.
+            #
+            set provider [eval $providerCommand]
+
+            #
+            # NOTE: Remove the extra object reference added by the [maybeGet]
+            #       return value.  This should not dispose the object.
+            #
+            object removereference $providerClientData
+
+            #
+            # NOTE: Make sure that a RFC 2898 data provider was really created,
+            #       even if no error was raised by the create sub-command.
+            #
+            if {![isNonNullObjectHandle $provider]} then {
+              error [appendArgs \
+                  "could not create RFC 2898 data provider using assembly " \
+                  "name \"" $providerAssemblyName "\" and type name \"" \
+                  $providerTypeName "\": unknown error"]
+            }
+
+            #
+            # NOTE: At this point, if the iteration count is not an integer,
+            #       set it to zero prior to calling the GetData method on the
+            #       RFC 2898 data provider.  This should force it to be reset
+            #       to something valid by the provider.
+            #
+            if {![string is integer -strict $iterationCount]} then {
+              set iterationCount 0
+            }
+
+            #
+            # NOTE: Setup the storage for the error message, if any.
+            #
+            set error null
+
+            #
+            # NOTE: Attempt to query the RFC 2898 data provider now, using
+            #       the specified parameters.
+            #
+            set code [$provider \
+                -type Eagle._Interfaces.Public.IRfc2898DataProvider GetData \
+                $fileName $encodingName password salt iterationCount \
+                hashAlgorithmName signature error]
+
+            #
+            # NOTE: Check if the RFC 2898 data provider was successfully
+            #       queried.  If not, bail out with an error now.
+            #
+            if {$code ne "Ok"} then {
+              set errorString [getStringFromObjectHandle \
+                  $error "unknown error"]
+
+              error [appendArgs \
+                  "could not query RFC 2898 data provider: " $errorString]
+            }
+          } else {
+            #
+            # NOTE: One or more of the required decryption parameters are
+            #       missing; we cannot decrypt the script.  Bail out now.
+            #
+            error "cannot decrypt, missing password, salt, or iteration count"
+          }
+        }
+
+        #
+        # NOTE: Start building the [source] command to be evaluated below.
+        #
+        set command [list source]
+
+        #
+        # NOTE: If options were specified, append them to the [source] (?)
+        #       command to be evaluated.
+        #
+        foreach optionName [lsort [array names currentOptions]] {
+          if {![info exists defaultOptions($optionName)]} then {
+            continue; # HACK: Unknown option is set?
+          }
+
+          set currentValue $currentOptions($optionName)
+          set defaultValue $defaultOptions($optionName)
+
+          if {$currentValue ne $defaultValue} then {
+            lappend command $optionName $currentValue
+          }
+        }
+
+        #
+        # NOTE: Append file name to the [source] command to be evaluated.
+        #
+        lappend command -- $fileName
+
+        #
+        # NOTE: The file appears to be an encrypted script file; therefore,
+        #       we will try to decrypt and evaluate it.  The reason we [source]
+        #       the encrypted script file here first is because it should
+        #       contain an [appendArgs] command that will return the encrypted
+        #       and Base64 encoded bytes of the script, which we can then
+        #       decode, decrypt, and evaluate in the context of our caller.
+        #
+        set script [eval $command]
+
+        #
+        # NOTE: Manually override file name returned by [info script] to
+        #       refer back to the original (encrypted) script file name.
+        #
+        set pushed false
+
+        object invoke -flags +NonPublic Interpreter.GetActive \
+            PushScriptLocation $fileName true pushed
+
+        try {
+          #
+          # NOTE: During the encrypted script evaluation (only), set the
+          #       current RFC 2898 data provider for use when decrypting
+          #       obfuscated procedure bodies.
+          #
+          if {[info exists provider]} then {
+            set provider2 [zeus clone $provider]
+
+            if {[isNonNullObjectHandle $provider2]} then {
+              zeus proc $provider2
+            } else {
+              zeus proc null
+            }
+
+            unset provider2
+          } else {
+            set data [zeus create -allownull -alias "" Rfc2898Data]
+
+            if {[isNonNullObjectHandle $data]} then {
+              foreach propertyName [list \
+                  password salt iterationCount hashAlgorithmName \
+                  signature] {
+                $data -type Eagle._Interfaces.Public.IRfc2898Data \
+                    [appendArgs [string toupper [string index \
+                    $propertyName 0]] [string range $propertyName \
+                    1 end]] [set $propertyName]
+              }
+
+              zeus proc $data
+            } else {
+              zeus proc null
+            }
+
+            unset data
+          }
+
+          try {
+            #
+            # NOTE: Attempt to decrypt the script and evaluate it in the
+            #       context of the caller.  This will, of course, raise
+            #       an error if the password and/or salt are incorrect.
+            #
+            uplevel 1 [decryptScript \
+                $script $encodingName $password $salt $iterationCount \
+                $hashAlgorithmName]
+          } finally {
+            #
+            # NOTE: Reset the RFC 2898 data provider used to decrypt the
+            #       obfuscated procedure bodies because it may not exist
+            #       next time (i.e. it may be disposed) -OR- a different
+            #       RFC 2898 data provider may be needed next time.
+            #
+            zeus proc null
+          }
+        } finally {
+          #
+          # NOTE: Reset manual override of the script file name returned
+          #       by [info script].
+          #
+          object invoke -flags +NonPublic Interpreter.GetActive \
+              PopScriptLocation true pushed
+        }
+      } else {
+        #
+        # NOTE: The file is not encrypted.  Raise an error.
+        #
+        error [appendArgs \
+            "cannot source \"" $fileName "\": not encrypted"]
+      }
+    } finally {
+      #
+      # NOTE: Cleanup potentially sensitive data that may be around.
+      #
+      unset -nocomplain -maybezerostring -purge -- \
+          syntax usage defaultOptions currentOptions length index arg \
+          endIndex optionFound optionName currentValue defaultValue \
+          fileName encodingName password salt iterationCount \
+          hashAlgorithmName signature providerPluginName \
+          providerAssemblyName providerTypeName providerClientData \
+          providerCommand propertyName provider provider2 error code \
+          errorString command script pushed data; debug collect
+    }
+  }
+
+  #
+  # NOTE: Setup the global state required for this package.
+  #
+  proc setupStateForZeus { requiredOnly } {
+    # <help>
+    # This procedure initializes the global "zeus" array with the package's
+    # configuration variables, populating each one with a sensible default
+    # only when it has not already been set.  It is called at package load
+    # time (with requiredOnly true) to establish the bare minimum needed
+    # for detection of encrypted scripts, and can be called again later
+    # with requiredOnly false to populate every optional configuration
+    # variable as well.
+    #
+    # How it works: it uses [uplevel 1] to perform every variable
+    # assignment in the IMMEDIATE caller's scope rather than in this
+    # procedure's local scope, so the assignments establish global state.
+    # Each assignment is guarded by an [info exists] check so a value
+    # that was already configured (for example, from a settings file
+    # sourced earlier) is preserved.  The "required" set consists only
+    # of zeus(magic) -- the encrypted-script sentinel prefix.  The
+    # optional set covers the prologue, epilogue, encryption algorithm
+    # name, cipher mode, padding mode, encoding name, password, salt,
+    # iteration count, hash algorithm name, signature, and the four
+    # RFC 2898 data provider parameters (plugin name, assembly name,
+    # type name, and client data).  After populating defaults, the
+    # procedure returns an empty string.
+    #
+    # Tricky details: because the assignments happen through [uplevel],
+    # the caller's scope must be the one in which the global state
+    # should live.  Calling this procedure from inside another procedure
+    # would establish the variables in that procedure's local frame
+    # instead.  When invoked at the top level of the namespace eval at
+    # the bottom of this file, this places them in the global scope as
+    # intended.
+    #
+    # Arguments:
+    #   requiredOnly -- When true, only the required magic prefix is
+    #                   defaulted; when false, all optional
+    #                   configuration variables are also defaulted.
+    #
+    # Results:
+    #   Returns the empty string; its effect is the side effect of
+    #   defaulting global configuration variables.
+    # </help>
+
+    #
+    # NOTE: This is the prefix string that indicates the script following
+    #       it is actually encrypted.
+    #
+    uplevel 1 {
+      if {![info exists zeus(magic)]} then {
+        set zeus(magic) "# <<ENCRYPTED-1.0>>"
+      }
+    }
+
+    #
+    # NOTE: Does the caller only want to initialize the required state?
+    #
+    if {!$requiredOnly} then {
+      #
+      # NOTE: The following configuration parameters are all optional and do
+      #       not normally need to be set.
+      #
+      uplevel 1 {
+        #
+        # NOTE: This is the script fragment to be used as the prologue for
+        #       encrypted scripts generated by this package.
+        #
+        if {![info exists zeus(prologue)]} then {
+          set zeus(prologue) ""
+        }
+
+        #
+        # NOTE: This is the script fragment to be used as the epilogue for
+        #       encrypted scripts generated by this package.
+        #
+        if {![info exists zeus(epilogue)]} then {
+          set zeus(epilogue) ""
+        }
+
+        #
+        # NOTE: This is the name of the encryption algorithm to be used.
+        #       Normally, this is some variant of AES.
+        #
+        if {![info exists zeus(encryptionAlgorithmName)]} then {
+          set zeus(encryptionAlgorithmName) ""
+        }
+
+        #
+        # NOTE: This is the cipher mode to use.  Supported values include
+        #       "CBC", "ECB", "OFB", "CFB", and "CTS".  Normally, this is
+        #       "CBC".
+        #
+        if {![info exists zeus(mode)]} then {
+          set zeus(mode) ""
+        }
+
+        #
+        # NOTE: This is the padding mode to use.  Supported values include
+        #       "None", "PKCS7", "Zeros", "ANSIX923", and "ISO10126".
+        #       Normally, this is "PKCS7".
+        #
+        if {![info exists zeus(padding)]} then {
+          set zeus(padding) ""
+        }
+
+        #
+        # NOTE: This is the name of the encoding that will be used to convert
+        #       the decrypted text to bytes and the decrypted bytes to text.
+        #       Normally, this ends up being the system default.  On Windows,
+        #       this will be "Windows-1252".  On other (i.e. Unix) systems,
+        #       it will probably be "utf-8".
+        #
+        if {![info exists zeus(encodingName)]} then {
+          set zeus(encodingName) ""
+        }
+
+        #
+        # NOTE: This is the password string that will be used to create the
+        #       RFC 2898 algorithm implementation, which will then be used
+        #       to generate the IV and encryption key for the encryption
+        #       algorithm itself.
+        #
+        if {![info exists zeus(password)]} then {
+          set zeus(password) ""
+        }
+
+        #
+        # NOTE: This is the salt string that will be converted to bytes and
+        #       used to create the RFC 2898 algorithm implementation, which
+        #       will then be used to generate the IV and encryption key for
+        #       the encryption algorithm itself.
+        #
+        if {![info exists zeus(salt)]} then {
+          set zeus(salt) ""
+        }
+
+        #
+        # NOTE: This is the RFC 2898 iteration count.  It is the number of
+        #       times an operation is performed.  The count should be greater
+        #       than zero.  The minimum recommended number of iterations is
+        #       1000.
+        #
+        if {![info exists zeus(iterationCount)]} then {
+          set zeus(iterationCount) ""
+        }
+
+        #
+        # NOTE: This is the RFC 2898 hash algorithm name.  It is an extension
+        #       provided by .NET Core in order to override the standard hash
+        #       algorithm (e.g. HMACSHA1) used to derive the key bytes.
+        #
+        if {![info exists zeus(hashAlgorithmName)]} then {
+          set zeus(hashAlgorithmName) ""
+        }
+
+        #
+        # NOTE: This is the RFC 2898 data signature.  It is not required as
+        #       of this writing (April 2023).
+        #
+        if {![info exists zeus(signature)]} then {
+          set zeus(signature) ""
+        }
+
+        #
+        # NOTE: This is the Eagle plugin name containing the RFC 2898 data
+        #       provider to use if no password, salt, or iteration count is
+        #       otherwise available.  This will be used as the basis for
+        #       locating the correct application domain in which to create
+        #       the specified provider type.
+        #
+        if {![info exists zeus(providerPluginName)]} then {
+          set zeus(providerPluginName) ""
+        }
+
+        #
+        # NOTE: This is the managed assembly name containing the RFC 2898 data
+        #       provider to use if no password, salt, or iteration count is
+        #       otherwise available.
+        #
+        if {![info exists zeus(providerAssemblyName)]} then {
+          set zeus(providerAssemblyName) ""
+        }
+
+        #
+        # NOTE: This is the managed type name that implements an RFC 2898 data
+        #       provider to use if no password, salt, or iteration count is
+        #       otherwise available.
+        #
+        if {![info exists zeus(providerTypeName)]} then {
+          set zeus(providerTypeName) ""
+        }
+
+        #
+        # NOTE: This is the client data to use when creating the instance of the
+        #       RFC 2898 data provider to use if no password, salt, or iteration
+        #       count is otherwise available.  This is always provided via the
+        #       setting the ClientData public property.
+        #
+        if {![info exists zeus(providerClientData)]} then {
+          set zeus(providerClientData) ""
+        }
+      }
+    }
+
+    return ""
+  }
+
+  #
+  # NOTE: When loading the package, setup the (initially required) global
+  #       state.
+  #
+  setupStateForZeus true
+
+  #
+  # NOTE: Provide the package to the interpreter.
+  #
+  package provide Zeus.Cryptography 1.0
+}
+

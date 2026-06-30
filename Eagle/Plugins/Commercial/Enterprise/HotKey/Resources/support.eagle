@@ -1,0 +1,324 @@
+###############################################################################
+#
+# data.eagle --
+#
+# Extensible Adaptable Generalized Logic Engine (Eagle)
+# Eagle Scintilla.NET Syntax Highlighting Support Script
+#
+# Copyright (c) 2007-2012 by Joe Mistachkin.  All rights reserved.
+#
+# See the file "license.terms" for information on usage and redistribution of
+# this file, and for a DISCLAIMER OF ALL WARRANTIES.
+#
+# RCS: @(#) $Id: $
+#
+###############################################################################
+
+#
+# NOTE: Use our own namespace here because even though we do not directly
+#       support namespaces ourselves, we do not want to pollute the global
+#       namespace if this script actually ends up being evaluated in Tcl.
+#
+namespace eval ::Eagle {
+  proc isHotKeyCommandAvailable {} {
+    # <help>
+    # This procedure reports whether the plugin's [hotkey] command is
+    # currently defined in the interpreter.  It is the precondition test
+    # used by the support layer before reaching for any plugin-exposed
+    # functionality, most notably for querying the isolated-mode flag and
+    # for reading embedded plugin resources when running isolated.
+    #
+    # How it works: it asks the interpreter whether a command named
+    # "hotkey" exists, using [info commands], and returns true when at
+    # least one match is found.
+    #
+    # Arguments:
+    #   None.
+    #
+    # Results:
+    #   Returns true when the [hotkey] command is available in the current
+    #   interpreter, false otherwise.
+    # </help>
+
+    return [expr {[llength [info commands hotkey]] > 0}]
+  }
+
+  proc logForScintilla { message } {
+    # <help>
+    # This procedure emits an opt-in diagnostic log message describing a
+    # Scintilla.NET configuration step.  It is the trace facility used by
+    # [applyScintillaNetStyles] to record each style property assignment
+    # (the SET_COLOR and SET_OTHER entries) so the setup pass can be
+    # debugged without modifying its hot path.
+    #
+    # How it works: when the "logForScintilla" environment variable is set
+    # (to any value), the message is passed to [::tclLog] inside a [catch]
+    # so a failing or absent log sink cannot abort the setup.  When the
+    # environment variable is not set, the procedure does nothing.
+    #
+    # Arguments:
+    #   message -- The text to log.  Any string is accepted.
+    #
+    # Results:
+    #   Returns the empty string; its effect is the side effect of
+    #   writing to the Tcl log when logging is enabled.
+    # </help>
+
+    if {[info exists ::env(logForScintilla)]} then {
+      catch {::tclLog $message}
+    }
+  }
+
+  proc shouldTreatAsIsolated {} {
+    # <help>
+    # This procedure determines whether the HotKey plugin should be
+    # treated as running in isolated mode, in which the plugin assembly is
+    # not loaded into the AppDomain that backs the active interpreter.
+    # The answer changes how the support layer reaches for embedded
+    # resources -- in isolated mode the [hotkey] command (copied across
+    # from the parent interpreter) must be asked directly, because the
+    # core script-file resolution path is not available -- and it also
+    # gates the Scintilla configuration script's immediate evaluation
+    # against the outermost interpreter.
+    #
+    # How it works: it checks two signals in order.  First, if the global
+    # "isolated" variable exists (its value is not inspected), it returns
+    # true.  Otherwise, if the [hotkey] command is available and reports
+    # via [hotkey isolated] that the plugin is running isolated, it
+    # returns true.  Otherwise it returns false.
+    #
+    # Tricky details: the second branch only runs when the [hotkey]
+    # command is itself present, so the absence of the plugin command
+    # does not trigger an error here -- it simply falls through to the
+    # safe false default.  The source notes the false default as a
+    # "relatively safe" choice rather than an authoritative one.
+    #
+    # Arguments:
+    #   None.
+    #
+    # Results:
+    #   Returns true when the plugin should be treated as isolated, false
+    #   otherwise.
+    # </help>
+
+    #
+    # NOTE: If the "isolated" global variable is set (to anything),
+    #       just assume the plugin is running in isolated mode.
+    #
+    if {[info exists ::isolated]} then {
+      return true
+    }
+
+    #
+    # NOTE: Otherwise, if the [hotkey] command is available, rely
+    #       upon it to tell us if the plugin is running in isolated
+    #       mode.
+    #
+    if {[isHotKeyCommandAvailable] && [hotkey isolated]} then {
+      return true
+    }
+
+    #
+    # TODO: This seems like a relatively safe default here?
+    #
+    return false
+  }
+
+  proc getThemeRegistryKey {} {
+    # <help>
+    # This procedure returns the full registry path of the per-user
+    # Windows theme preferences key.  It exists so [shouldUseDarkMode] can
+    # query the AppsUseLightTheme value at a single, named location rather
+    # than open-coding the registry path inline.
+    #
+    # How it works: it joins the well-known path components --
+    # HKEY_CURRENT_USER, Software, Microsoft, Windows, CurrentVersion,
+    # Themes, and Personalize -- into a single path string using [file
+    # join] and returns the result.
+    #
+    # Tricky details: this is the per-user theme preferences key used by
+    # modern Windows desktop builds; the source notes it as Windows 11+
+    # with a question mark, reflecting that the same key has been used by
+    # recent Windows 10 releases as well.  The path is returned as text;
+    # there is no validation that the key actually exists in the local
+    # registry (or that the host is even Windows -- that check belongs to
+    # the caller).
+    #
+    # Arguments:
+    #   None.
+    #
+    # Results:
+    #   Returns the textual registry path of the per-user theme
+    #   preferences key.
+    # </help>
+
+    return [file join \
+        HKEY_CURRENT_USER Software Microsoft Windows CurrentVersion \
+        Themes Personalize]; # Windows 11+ (?)
+  }
+
+  proc shouldUseDarkMode {} {
+    # <help>
+    # This procedure decides whether the Scintilla editor should be
+    # configured with the dark style palette.  It is the policy used by
+    # [fixScintillaNetXmlData] to pick between the embedded "dark.xml" and
+    # "light.xml" style fragments that are substituted into the Eagle
+    # syntax highlighting configuration document.
+    #
+    # How it works: it first honors an explicit user override -- when the
+    # "shouldUseDarkMode" environment variable is set (to any value), it
+    # returns true immediately.  Otherwise, on Windows, it reads the
+    # AppsUseLightTheme value from the per-user theme preferences key
+    # (resolved via [getThemeRegistryKey]) using the Microsoft.Win32
+    # registry API; when the read succeeds and the value is zero (meaning
+    # apps should NOT use the light theme), dark mode is selected.  In all
+    # other situations, including non-Windows hosts, a missing or
+    # non-readable value, or an AppsUseLightTheme value of one, it returns
+    # false.
+    #
+    # Tricky details: the read is wrapped in [catch], so an absent or
+    # unreadable registry entry yields false rather than raising.  The
+    # call passes null as the default value, but the test requires the
+    # value to be exactly zero -- so a default-only result will also fall
+    # through to the false branch.  On non-Windows hosts the registry path
+    # is never traversed.
+    #
+    # Arguments:
+    #   None.
+    #
+    # Results:
+    #   Returns true when the editor should use the dark style palette,
+    #   false otherwise.
+    # </help>
+
+    if {[info exists ::env(shouldUseDarkMode)]} then {
+      return true
+    }
+
+    if {[isWindows] && [catch {
+      object invoke Microsoft.Win32.Registry GetValue \
+          [getThemeRegistryKey] AppsUseLightTheme null
+    } value] == 0 && $value == 0} then {
+      return true
+    } else {
+      return false
+    }
+  }
+
+  proc getScintillaResourceData { name } {
+    # <help>
+    # This procedure reads a named embedded resource shipped with the
+    # HotKey plugin assembly, returning its contents as a string.  It is
+    # the indirection used by the configuration setup to fetch the main
+    # "eagle.xml" document and either the "dark.xml" or "light.xml" style
+    # palette overlay regardless of whether the plugin is running loaded
+    # in the interpreter's AppDomain or in an isolated child interpreter.
+    #
+    # How it works: when [shouldTreatAsIsolated] reports the plugin is
+    # running isolated, and the [hotkey] command is available, it asks
+    # the plugin directly via [hotkey resource $name].  If [hotkey] is
+    # not available in that mode, an empty string is returned because no
+    # other resource path is reachable.  When not running isolated, the
+    # resource is fetched through the normal interpreter script-file
+    # resolution path via [interp readorgetscriptfile -scriptflags +NoXml
+    # {} $name], which goes through the standard security checks if
+    # script security is enabled.
+    #
+    # Tricky and security details: the isolated-mode branch bypasses the
+    # core library's script-file resolution and asks the plugin directly
+    # for the resource, which is noted in the source as a path that does
+    # NOT cause a signature check -- because the resource comes straight
+    # out of the plugin assembly that itself was already loaded subject
+    # to whatever trust applied at load time.  In contrast, the non-
+    # isolated branch routes the read through the normal script-file
+    # interpreter API, so embedded script policies and signature checks
+    # apply to it.  The +NoXml script flag is passed to indicate the
+    # content is not to be treated as embedded XML.
+    #
+    # Arguments:
+    #   name -- The embedded resource name (e.g. eagle.xml, dark.xml,
+    #           light.xml).
+    #
+    # Results:
+    #   Returns the resource data as a string, or an empty string when
+    #   running isolated without the [hotkey] command available.
+    # </help>
+
+    #
+    # HACK: Attempt to obtain (now legacy) Scintilla.NET 2.x XML data used
+    #       to configure syntax highlighting for the control from embedded
+    #       resource data within the plugin assembly.
+    #
+    if {[shouldTreatAsIsolated]} then {
+      #
+      # NOTE: When running in isolated mode, the plugin is not loaded into
+      #       the isolated AppDomain for the created interpreter.  In that
+      #       case, we must query for the necessary resource directly from
+      #       the plugin via the exposed [hotkey] command copied from the
+      #       parent interpreter.
+      #
+      if {[isHotKeyCommandAvailable]} then {
+        #
+        # HACK: It should be noted that this will never cause a signature
+        #       to be checked (i.e. since it is bypassing the core library
+        #       and querying the plugin directly for an embedded resource).
+        #
+        return [hotkey resource $name]
+      } else {
+        #
+        # HACK: Something bad happened and there is no way to obtain the
+        #       necessary resource data.  There is really not much we can
+        #       do at this point.
+        #
+        return ""
+      }
+    } else {
+      #
+      # NOTE: When not running in isolated mode, treat the data the same
+      #       as a script file.  If security is enabled, this will cause
+      #       its signature to be checked.
+      #
+      return [interp readorgetscriptfile -scriptflags +NoXml {} $name]
+    }
+  }
+
+  proc fixScintillaNetXmlData { data } {
+    # <help>
+    # This procedure splices the active light or dark style palette into a
+    # Scintilla.NET XML configuration document.  It exists so the main
+    # "eagle.xml" resource can carry a placeholder where the entire style
+    # block lives, and the appropriate per-theme overlay can be selected
+    # at runtime without duplicating the rest of the document.
+    #
+    # How it works: it consults [shouldUseDarkMode] to choose between
+    # the embedded "dark.xml" and "light.xml" resources, fetches the
+    # chosen overlay via [getScintillaResourceData], and then uses
+    # [string map] to replace the standard XML comment placeholder
+    # (representing the literal "Styles" sentinel) in the input data with
+    # the overlay text.
+    #
+    # Tricky details: the placeholder text is the XML comment sentinel
+    # baked into the main document; both the comment open and close
+    # delimiters together must appear verbatim or the substitution will
+    # not fire.  The procedure does not validate that the replacement
+    # actually occurred; if the placeholder is missing the document is
+    # returned unchanged.
+    #
+    # Arguments:
+    #   data -- The original Scintilla.NET XML configuration document
+    #           containing the styles placeholder comment.
+    #
+    # Results:
+    #   Returns the configuration document with the styles placeholder
+    #   replaced by either the dark or light palette overlay.
+    # </help>
+
+    if {[shouldUseDarkMode]} then {
+      set styles [getScintillaResourceData dark.xml]
+    } else {
+      set styles [getScintillaResourceData light.xml]
+    }
+
+    return [string map [list {<!-- %Styles% -->} $styles] $data]
+  }
+}

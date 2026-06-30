@@ -1,0 +1,4 @@
+puts stdout BEFORE
+demo closed
+demo shutdown -native true -exit true
+puts stdout AFTER

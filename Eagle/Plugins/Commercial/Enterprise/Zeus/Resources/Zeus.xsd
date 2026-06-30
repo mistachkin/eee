@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+ *
+ * Zeus.xsd -
+ *
+ * Copyright (c) 2007-2012 by Joe Mistachkin.  All rights reserved.
+ *
+ * See the file "license.terms" for information on usage and redistribution of
+ * this file, and for a DISCLAIMER OF ALL WARRANTIES.
+ *
+ * RCS: @(#) $Id: $
+ *
+-->
+<xsd:schema xmlns:zeus="https://eagle.to/2015/zeus"
+            xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+            elementFormDefault="qualified"
+            attributeFormDefault="unqualified"
+            targetNamespace="https://eagle.to/2015/zeus">
+  <xsd:complexType name="rfc2898"
+                   final="#all">
+    <xsd:all>
+      <xsd:element name="password"
+                   type="xsd:string"
+                   minOccurs="0" />
+
+      <xsd:element name="salt"
+                   type="xsd:string"
+                   minOccurs="0" />
+
+      <xsd:element name="iterationCount"
+                   type="xsd:integer"
+                   minOccurs="0" />
+
+      <xsd:element name="hashAlgorithmName"
+                   type="xsd:string"
+                   minOccurs="0" />
+
+      <xsd:element name="signature"
+                   type="xsd:string"
+                   minOccurs="0" />
+    </xsd:all>
+  </xsd:complexType>
+
+  <xsd:element name="rfc2898"
+               type="zeus:rfc2898" />
+</xsd:schema>

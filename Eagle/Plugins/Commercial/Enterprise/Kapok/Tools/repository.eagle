@@ -1,0 +1,224 @@
+###############################################################################
+#
+# repository.eagle --
+#
+# Extensible Adaptable Generalized Logic Engine (Eagle)
+# Enterprise Edition Repository Tool
+#
+# Copyright (c) 2007-2012 by Joe Mistachkin.  All rights reserved.
+#
+# See the file "license.terms" for information on usage and redistribution of
+# this file, and for a DISCLAIMER OF ALL WARRANTIES.
+#
+# RCS: @(#) $Id: $
+#
+###############################################################################
+
+package require Eagle
+
+if {1} then {
+  proc getFossilFileNameOnly {} {
+    # <help>
+    # This procedure returns the bare executable name of the Fossil tool
+    # appropriate for the current operating system.  It exists so that the
+    # rest of this tool can spawn Fossil through a single platform-aware
+    # helper rather than scattering OS checks at every call site.
+    #
+    # How it works: when running on Windows it returns "fossil.exe";
+    # otherwise it returns "fossil".  No path resolution is performed; the
+    # caller is expected to locate the executable through the normal PATH
+    # mechanism.
+    #
+    # Arguments:
+    #   None.
+    #
+    # Results:
+    #   Returns the platform-appropriate Fossil executable name.
+    # </help>
+
+    return [expr {[isWindows] ? "fossil.exe" : "fossil"}]
+  }
+
+  proc fossil { args } {
+    # <help>
+    # This procedure runs the Fossil command-line tool with the given
+    # arguments and returns its combined standard output and standard error.
+    # It exists so the rest of this script can invoke Fossil as if it were a
+    # plain Tcl command, without having to spell out the [exec] options or
+    # quote each argument on every call.
+    #
+    # How it works: it builds an [exec] command pinned to the platform-
+    # appropriate Fossil executable (via [getFossilFileNameOnly]), with
+    # carriage returns stripped and standard streams captured into output
+    # and error variables.  Each supplied argument is then appended wrapped
+    # in double quotes so that arguments containing spaces survive the
+    # shell-style parsing performed by [exec].  The whole command is run
+    # under [catch]; on success the captured output and error are joined and
+    # returned, otherwise the caught error message is re-raised.
+    #
+    # Tricky details: arguments are quoted unconditionally with literal
+    # double quotes; arguments that themselves contain double quotes will
+    # need to be pre-escaped by the caller.  Standard error is folded into
+    # the returned text rather than being kept separate, on the assumption
+    # that Fossil writes diagnostics there even on success.
+    #
+    # Arguments:
+    #   args -- The Fossil sub-command and its arguments, as separate
+    #           words; each is quoted individually before being passed.
+    #
+    # Results:
+    #   Returns the captured standard output followed by standard error on
+    #   success.  Raises a script error carrying the [exec] result on
+    #   failure.
+    # </help>
+
+    set command [list \
+        exec -nocarriagereturns -stdout output -stderr error \
+        [getFossilFileNameOnly]]
+
+    foreach arg $args {lappend command [appendArgs \" $arg \"]}
+
+    if {[catch {eval $command} result] == 0} then {
+      return [appendArgs $output $error]
+    } else {
+      error $result
+    }
+  }
+
+  proc createFossilRepository { fileName } {
+    # <help>
+    # This procedure creates a new, empty Fossil repository file at the
+    # given path.  It exists as a thin, intention-revealing wrapper around
+    # "fossil new" so the calling code is easier to read.
+    #
+    # How it works: it invokes the local [fossil] helper with the new
+    # sub-command and the supplied repository path, which forwards to the
+    # Fossil executable.
+    #
+    # Arguments:
+    #   fileName -- The path of the repository file to create.  Must not
+    #               already exist (callers check this before invoking).
+    #
+    # Results:
+    #   Returns the combined Fossil output and error text from creating the
+    #   repository.
+    # </help>
+
+    fossil new $fileName
+  }
+
+  proc setupFossilRepository { fileName userName varName } {
+    # <help>
+    # This procedure hardens a freshly created Fossil repository by
+    # tightening the built-in user capabilities and writing a curated set of
+    # configuration settings.  It exists so the tool produces a repository
+    # ready to host an enterprise script repository without the operator
+    # having to remember every individual capability and setting tweak.
+    #
+    # How it works: when userName is non-empty it creates that user (with
+    # empty password and contact info -- to be fixed by the operator) and
+    # grants the uv capability.  It then strips capabilities from the
+    # nobody and anonymous users, gives the reader user the ghjorz
+    # capabilities, and gives the developer user the deip capabilities.
+    # Finally, when varName is non-empty, it opens the repository file
+    # directly as a SQLite database and INSERT-OR-REPLACES each name/value
+    # pair from the named settings array into the config table, with mtime
+    # set to the current clock seconds.
+    #
+    # Tricky details: the direct SQLite update is a deliberate workaround --
+    # certain Fossil settings the tool wants to set cannot be changed via
+    # "fossil settings".  Each setting writes through its own opened
+    # connection, closed in a finally so a partial failure does not leak
+    # connections.  The TODO comment about the new user's empty password
+    # and contact info is preserved as a deliberate placeholder.
+    #
+    # Arguments:
+    #   fileName -- The path of the repository file just created.
+    #   userName -- Optional additional user to create; pass an empty
+    #               string to skip user creation.
+    #   varName  -- Optional name of an array in the caller's frame whose
+    #               name/value pairs are written to the repository's config
+    #               table; pass an empty string to skip settings.
+    #
+    # Results:
+    #   Returns the empty string; its effect is reshaping the repository's
+    #   user capabilities and configuration.
+    # </help>
+
+    #
+    # NOTE: Secure capabilities for all built-in users and add our new
+    #       user(s), if any.
+    #
+    if {[string length $userName] > 0} then {
+      fossil user new $userName "" ""; # TODO: Fix me.
+      fossil user capabilities $userName uv -R $fileName
+    }
+
+    fossil user capabilities nobody "" -R $fileName
+    fossil user capabilities anonymous "" -R $fileName
+    fossil user capabilities reader ghjorz -R $fileName
+    fossil user capabilities developer deip -R $fileName
+
+    #
+    # HACK: Since some repository settings that need to be changed are
+    #       unavailable via the Fossil "settings" command, fallback to
+    #       directly modifying the repository database file directly.
+    #
+    if {[string length $varName] > 0} then {
+      set sql {
+        INSERT OR REPLACE INTO config (name, value, mtime) VALUES(?, ?, ?);
+      }
+
+      upvar 1 $varName settings
+
+      foreach name [lsort [array names settings]] {
+        set value $settings($name)
+
+        try {
+          set connection [sql open \
+              -type SQLite [subst {Data Source=${fileName};}]]
+
+          sql execute $connection $sql \
+              [list param1 String $name] [list param2 String $value] \
+              [list param3 Int32 [clock seconds]]
+        } finally {
+          if {[info exists connection]} then {
+            sql close $connection; unset connection
+          }
+        }
+      }
+    }
+  }
+
+  apply [list [list fileName] {
+    if {![string is path -strict $fileName]} then {
+      error "invalid repository path"
+    }
+
+    if {[file exists $fileName]} then {
+      error "repository path cannot already exist"
+    }
+
+    #
+    # TODO: Improve this list of initial settings to more
+    #       closely match the official script repository.
+    #
+    array set settings {
+      access-log                   1
+      admin-log                    1
+      allow-symlinks               1
+      backoffice-disable           1
+      clearsign                    1
+      localauth                    1
+      public-pages                 /doc/trunk/th1/example.th1[?]*
+      redirect-to-https            1
+      tcl                          1
+      test_env_enable              1
+      th1-docs                     1
+      th1-hooks                    1
+    }
+
+    createFossilRepository $fileName
+    setupFossilRepository $fileName "" settings
+  }] $argv
+}

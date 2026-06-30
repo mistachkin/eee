@@ -1,0 +1,206 @@
+###############################################################################
+#
+# chkRefs.lst --
+#
+# Extensible Adaptable Generalized Logic Engine (Eagle)
+# Official Assembly References Manifest
+#
+# Copyright (c) 2007-2012 by Joe Mistachkin.  All rights reserved.
+#
+# See the file "license.terms" for information on usage and redistribution of
+# this file, and for a DISCLAIMER OF ALL WARRANTIES.
+#
+# RCS: @(#) $Id: $
+#
+###############################################################################
+#
+# NOTE: If it exists, attempt to include the official assembly reference
+#       manifest for Eagle.
+#
+# HACK: If necessary, the "::eagle_platform(patchLevel)" array element value
+#       can be overridden via "-preInitialize" command line argument so that
+#       an arbitrary build of Eagle can be used to evaluate this script file.
+#
+if {[info exists ::env(EAGLE)] && [file exists \
+    [file join $::env(EAGLE) Library Tools data chkRefs.lst]]} then {
+  source [file join $::env(EAGLE) Library Tools data chkRefs.lst]
+}
+
+###############################################################################
+#################################### Badge ####################################
+###############################################################################
+
+set references(ReleaseNetFx20/lib/Badge1.0/Badge.dll) {
+  {mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089}
+  {Eagle, Version=$::eagle_platform(patchLevel), Culture=neutral, PublicKeyToken=29c6297630be05eb}
+  {System, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089}
+}
+
+set references(ReleaseNetFx40/lib/Badge1.0/Badge.dll) {
+  {mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089}
+  {Eagle, Version=$::eagle_platform(patchLevel), Culture=neutral, PublicKeyToken=29c6297630be05eb}
+  {System, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089}
+}
+
+#
+# BUGBUG: For now, "mscorlib" version 2.0 ends up in the manifest of the
+#         obfuscated assembly due to a bug in Crypto Obfuscator For .Net
+#         v2020.  Seemingly, the root cause is the AssemblyInfoAttribute
+#         emitted into the obfuscated assembly with an empty string as
+#         its only constructor parameter.  There seems to be no way to
+#         prevent this as of build 210317.  This means that the assembly
+#         will probably not load properly unless the .NET Framework 2.0
+#         is installed on the machine.
+#
+set references(ReleaseNetStandard20/lib/Badge1.0/Badge.dll) {
+  {netstandard, Version=2.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51}
+  {Eagle, Version=$::eagle_platform(patchLevel), Culture=neutral, PublicKeyToken=29c6297630be05eb}
+}
+
+#
+# BUGBUG: For now, "mscorlib" version 2.0 ends up in the manifest of the
+#         obfuscated assembly due to a bug in Crypto Obfuscator For .Net
+#         v2020.  Seemingly, the root cause is the AssemblyInfoAttribute
+#         emitted into the obfuscated assembly with an empty string as
+#         its only constructor parameter.  There seems to be no way to
+#         prevent this as of build 210317.  This means that the assembly
+#         will probably not load properly unless the .NET Framework 2.0
+#         is installed on the machine.
+#
+set references(ReleaseNetStandard21/lib/Badge1.0/Badge.dll) {
+  {netstandard, Version=2.1.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51}
+  {Eagle, Version=$::eagle_platform(patchLevel), Culture=neutral, PublicKeyToken=29c6297630be05eb}
+}
+
+###############################################################################
+#################################### Demo #####################################
+###############################################################################
+
+set references(ReleaseNetFx20/lib/Demo1.0/Demo.dll) {
+  {mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089}
+  {Eagle, Version=$::eagle_platform(patchLevel), Culture=neutral, PublicKeyToken=29c6297630be05eb}
+  {System, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089}
+}
+
+set references(ReleaseNetFx40/lib/Demo1.0/Demo.dll) {
+  {mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089}
+  {Eagle, Version=$::eagle_platform(patchLevel), Culture=neutral, PublicKeyToken=29c6297630be05eb}
+  {System, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089}
+}
+
+###############################################################################
+#################################### Harpy ####################################
+###############################################################################
+
+set references(ReleaseNetFx20/lib/Harpy1.0/Harpy.dll) {
+  {mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089}
+  {Eagle, Version=$::eagle_platform(patchLevel), Culture=neutral, PublicKeyToken=29c6297630be05eb}
+  {System, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089}
+  {System.Xml, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089}
+  {System.Security, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a}
+}
+
+set references(ReleaseNetFx40/lib/Harpy1.0/Harpy.dll) {
+  {mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089}
+  {Eagle, Version=$::eagle_platform(patchLevel), Culture=neutral, PublicKeyToken=29c6297630be05eb}
+  {System, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089}
+  {System.Xml, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089}
+  {System.Security, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a}
+  {System.Numerics, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089}
+}
+
+#
+# BUGBUG: For now, "mscorlib" version 2.0 ends up in the manifest of the
+#         obfuscated assembly due to a bug in Crypto Obfuscator For .Net
+#         v2020.  Seemingly, the root cause is the AssemblyInfoAttribute
+#         emitted into the obfuscated assembly with an empty string as
+#         its only constructor parameter.  There seems to be no way to
+#         prevent this as of build 210317.  This means that the assembly
+#         will probably not load properly unless the .NET Framework 2.0
+#         is installed on the machine.
+#
+set references(ReleaseNetStandard20/lib/Harpy1.0/Harpy.dll) {
+  {netstandard, Version=2.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51}
+  {Eagle, Version=$::eagle_platform(patchLevel), Culture=neutral, PublicKeyToken=29c6297630be05eb}
+}
+
+#
+# BUGBUG: For now, "mscorlib" version 2.0 ends up in the manifest of the
+#         obfuscated assembly due to a bug in Crypto Obfuscator For .Net
+#         v2020.  Seemingly, the root cause is the AssemblyInfoAttribute
+#         emitted into the obfuscated assembly with an empty string as
+#         its only constructor parameter.  There seems to be no way to
+#         prevent this as of build 210317.  This means that the assembly
+#         will probably not load properly unless the .NET Framework 2.0
+#         is installed on the machine.
+#
+set references(ReleaseNetStandard21/lib/Harpy1.0/Harpy.dll) {
+  {netstandard, Version=2.1.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51}
+  {Eagle, Version=$::eagle_platform(patchLevel), Culture=neutral, PublicKeyToken=29c6297630be05eb}
+}
+
+###############################################################################
+################################ Featherlight #################################
+###############################################################################
+
+set references(ReleaseNetFx20/lib/Featherlight1.0/Featherlight.exe) {
+  {mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089}
+  {Eagle, Version=$::eagle_platform(patchLevel), Culture=neutral, PublicKeyToken=29c6297630be05eb}
+  {PresentationCore, Version=3.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35}
+  {WindowsBase, Version=3.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35}
+  {System, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089}
+  {PresentationFramework, Version=3.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35}
+}
+
+set references(ReleaseNetFx40/lib/Featherlight1.0/Featherlight.exe) {
+  {mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089}
+  {Eagle, Version=$::eagle_platform(patchLevel), Culture=neutral, PublicKeyToken=29c6297630be05eb}
+  {PresentationCore, Version=4.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35}
+  {WindowsBase, Version=4.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35}
+  {System, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089}
+  {PresentationFramework, Version=4.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35}
+  {System.Xaml, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089}
+}
+
+###############################################################################
+################################### HotKey ####################################
+###############################################################################
+
+set references(ReleaseNetFx20/lib/HotKey1.0/HotKey.dll) {
+  {mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089}
+  {Eagle, Version=$::eagle_platform(patchLevel), Culture=neutral, PublicKeyToken=29c6297630be05eb}
+  {System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089}
+  {System, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089}
+  {System.Drawing, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a}
+  {ScintillaNET, Version=3.0.1.0, Culture=neutral, PublicKeyToken=948d6c9751444115}
+}
+
+set references(ReleaseNetFx40/lib/HotKey1.0/HotKey.dll) {
+  {mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089}
+  {Eagle, Version=$::eagle_platform(patchLevel), Culture=neutral, PublicKeyToken=29c6297630be05eb}
+  {System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089}
+  {System, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089}
+  {System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a}
+  {ScintillaNET, Version=3.6.3.0, Culture=neutral, PublicKeyToken=d42c48f11a620156}
+}
+
+###############################################################################
+#################################### Zeus #####################################
+###############################################################################
+
+set references(ReleaseNetFx20/lib/Zeus1.0/Zeus.dll) {
+  {mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089}
+  {Eagle, Version=$::eagle_platform(patchLevel), Culture=neutral, PublicKeyToken=29c6297630be05eb}
+  {System, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089}
+  {System.Xml, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089}
+}
+
+set references(ReleaseNetFx40/lib/Zeus1.0/Zeus.dll) {
+  {mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089}
+  {Eagle, Version=$::eagle_platform(patchLevel), Culture=neutral, PublicKeyToken=29c6297630be05eb}
+  {System, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089}
+  {System.Xml, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089}
+}
+
+###############################################################################
+# end of file

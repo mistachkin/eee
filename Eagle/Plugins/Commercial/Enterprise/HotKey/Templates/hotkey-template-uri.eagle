@@ -1,0 +1,63 @@
+###############################################################################
+#
+# hotkey-template-uri.eagle --
+#
+# Extensible Adaptable Generalized Logic Engine (Eagle)
+# Hot-Key Template Type Script
+#
+# Copyright (c) 2007-2012 by Joe Mistachkin.  All rights reserved.
+#
+# See the file "license.terms" for information on usage and redistribution of
+# this file, and for a DISCLAIMER OF ALL WARRANTIES.
+#
+# RCS: @(#) $Id: $
+#
+###############################################################################
+
+apply [list [list] {
+  package require HotKey.Template.Common
+
+  set result null
+  set thread [createTemplateThread result]
+
+  try {
+    set code [$thread Send {
+      package require Eagle.Test
+      maybeAddToAutoPath [info binary]
+      set HotKey.Enterprise_NoThread true
+      set HotKey.Enterprise_NoComplaintForm true
+      package require HotKey.Enterprise
+
+      set assembly [object load -import Microsoft.VisualBasic]
+
+      set text [object invoke Interaction InputBox \
+          "Paste the URL here:" [hotkey title]]
+
+      if {[string length $text] > 0} then {
+        set uri null
+
+        if {![object invoke -argumentflags {Create Alias} \
+            Uri TryCreate $text Absolute uri]} then {
+          error [appendArgs "invalid uri \"" $text "\""]
+        }
+
+        return [$uri AbsoluteUri]
+      } else {
+        error "no uri entered"
+      }
+    } result]
+
+    if {$code ne "Ok"} then {
+      error [getStringFromObjectHandle $result]
+    }
+
+    return [appendArgs \
+        [info newline] "exec -shell \"" [getStringFromObjectHandle $result] \
+        "\" &" [info newline]]
+  } finally {
+    if {[info exists thread]} then {
+      exitTemplateThread $thread
+      unset -nocomplain thread
+    }
+  }
+}]

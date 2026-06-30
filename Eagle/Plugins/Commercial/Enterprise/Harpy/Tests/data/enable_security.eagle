@@ -1,0 +1,34 @@
+###############################################################################
+#
+# enable_security.eagle --
+#
+# Extensible Adaptable Generalized Logic Engine (Eagle)
+# Signed Script Test
+#
+# Copyright (c) 2007-2012 by Joe Mistachkin.  All rights reserved.
+#
+# See the file "license.terms" for information on usage and redistribution of
+# this file, and for a DISCLAIMER OF ALL WARRANTIES.
+#
+# RCS: @(#) $Id: $
+#
+###############################################################################
+
+# <<swapCommands>>
+failOnError true; # Upon error, plugin will fail to load.
+requireVersion 0.0.0.0; # NOTE: Set allowed versions.
+
+maybeEvaluate {[haveVariable ::security_flags]} {
+  enableSecurity $::security_flags; # NOTE: Toggle signed-only script policies?
+} else {
+  maybeEvaluate {[haveVariable ::pluginConfigurationPhase] && \
+      $::pluginConfigurationPhase eq "Initialize"} {
+    enableSecurity {
+      :ToggleLocally MaybeKeyRings WithKeyRingsOnly
+    }; # NOTE: Toggle signed-only script policies?
+  } else {
+    enableSecurity {
+      :ToggleLocally AlwaysKeyRings
+    }; # NOTE: Toggle signed-only script policies?
+  }
+}

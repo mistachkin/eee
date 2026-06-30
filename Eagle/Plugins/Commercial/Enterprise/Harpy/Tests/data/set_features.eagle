@@ -1,0 +1,25 @@
+###############################################################################
+#
+# set_features.eagle --
+#
+# Extensible Adaptable Generalized Logic Engine (Eagle)
+# Signed Script Test
+#
+# Copyright (c) 2007-2012 by Joe Mistachkin.  All rights reserved.
+#
+# See the file "license.terms" for information on usage and redistribution of
+# this file, and for a DISCLAIMER OF ALL WARRANTIES.
+#
+# RCS: @(#) $Id: $
+#
+###############################################################################
+
+# <<swapCommands>>
+requireVersion 0.0.0.0; # NOTE: Set allowed versions.
+changeFeatures $features; # NOTE: Changes features via script variable.
+
+writeWithoutFail \
+    "Plugin \"" $::pluginType "\" features now changed to \"" \
+    [changeFeatures] "\" via " $::scriptType " configuration " \
+    $::scriptSubType " \"" $::scriptFileName "\" (" $::scriptFileId \
+    ") with a change count of " $::pluginChangeCount .

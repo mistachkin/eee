@@ -1,0 +1,93 @@
+###############################################################################
+#
+# fixupWebConfig.eagle --
+#
+# Extensible Adaptable Generalized Logic Engine (Eagle)
+# Enterprise Edition Web Configuration File Fixup Tool
+#
+# Copyright (c) 2007-2012 by Joe Mistachkin.  All rights reserved.
+#
+# See the file "license.terms" for information on usage and redistribution of
+# this file, and for a DISCLAIMER OF ALL WARRANTIES.
+#
+# RCS: @(#) $Id: $
+#
+###############################################################################
+
+proc usage { error } {
+  # <help>
+  # This procedure prints the command-line usage summary for the Web
+  # configuration file fixup tool and then terminates the process,
+  # signaling failure to whatever invoked it.  It is invoked when the tool
+  # cannot find the Web.config file to fix up.
+  #
+  # How it works: when error is non-empty it is printed first; the usage
+  # line is then printed, naming the host shell executable and this
+  # script.  The tool takes no positional arguments -- it locates the
+  # Web.config it operates on either from a preset fileName variable or
+  # relative to its own directory.  Finally it calls exit 1.
+  #
+  # Tricky details: this procedure never returns to its caller; it always
+  # terminates the process with a non-zero status, so it must only be used
+  # on terminal error paths.
+  #
+  # Arguments:
+  #   error -- An optional leading error message.  When non-empty it is
+  #            shown before the usage text.
+  #
+  # Results:
+  #   Does not return; the process exits with status code 1.
+  # </help>
+
+  if {[string length $error] > 0} then {puts stdout $error}
+
+  puts stdout "usage: [file tail [getShellExecutableName]]\
+[file tail [info script]]"
+
+  #
+  # NOTE: Indicate to the caller, if any, that we have failed.
+  #
+  exit 1
+}
+
+package require Eagle
+
+if {![info exists whatIf]} then {
+  set whatIf false
+}
+
+if {![info exists fileName]} then {
+  set path [file dirname [info script]]
+  set fileName [file join [file dirname $path] Web.config]
+}
+
+if {[file exists $fileName]} then {
+  set subSpecs(1) \
+      {<validation validateIntegratedModeConfiguration="false" />}
+
+  set patterns(1) [string trim [appendArgs {
+    <!--\s*} $subSpecs(1) {\s*-->
+  }]]
+
+  set count 0
+  set data [readFile $fileName]
+
+  foreach name [array names patterns] {
+    set pattern $patterns($name)
+
+    if {[info exists subSpecs($name)]} then {
+      set subSpec $subSpecs($name)
+    } else {
+      set subSpec ""
+    }
+
+    incr count [regsub -all -- $pattern $data $subSpec data]
+  }
+
+  if {!$whatIf && $count > 0} then {
+    writeFile $fileName $data
+  }
+} else {
+  usage [appendArgs \
+      "missing configuration file \"" $fileName \"]
+}

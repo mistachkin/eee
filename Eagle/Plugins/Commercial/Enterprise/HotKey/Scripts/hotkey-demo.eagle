@@ -1,0 +1,77 @@
+
+hotkey add F13 None {
+  # <<NAME>> : Runs Microsoft Excel automatically.
+  source [file join $env(EAGLE) Library Tests excel2.eagle]
+}
+
+hotkey add {Control F13} None {
+  # <<NAME>> : Copies the specified secret to the clipboard.
+  if {[info exists env(SecretProcessIsolation)]} then {
+    execShell [list] -file [file join \
+        $env(SCRATCH_ROOT) eagle startup Scripts secret.eagle] &
+  } else {
+    source [file join \
+        $env(SCRATCH_ROOT) eagle startup Scripts secret.eagle]
+  }
+}
+
+hotkey add F14 None {
+  # <<NAME>> : Prints the current time to the console.
+  puts stdout "The current time is [clock format [clock seconds]]"
+}
+
+hotkey add F15 Asynchronous {
+  # <<NAME>> : Prints a line to the console after 10 seconds.
+  after 10000; puts stdout "This is 10 seconds later."
+}
+
+hotkey add F16 None {
+  # <<NAME>> : Navigates to the Eagle web site via the default browser.
+  exec -shell https://urn.to/r/eagle
+}
+
+hotkey add F17 None {
+  # <<NAME>> : Starts the Notepad and Calculator applets.
+  exec notepad.exe &; exec calc.exe &
+}
+
+hotkey add F18 Asynchronous {
+  #
+  # WARNING: This will "crash" Eagle prior to beta 28 due
+  #          to the .NET Framework being unable to handle
+  #          the System.Console being closed asynchronously
+  #          out from under a Win32Native.ReadFile call
+  #          (i.e. from the perspective of the interactive
+  #          loop thread).  This has been fixed in Eagle
+  #          beta 28 by preventing the console host from
+  #          being closed if there are any reads or writes
+  #          pending.
+  #
+  # <<NAME>> : Closes the console window for 5 seconds.
+  host close; after 5000; host open; # NOTE: Crash?
+}
+
+hotkey add F19 None {
+  #
+  # WARNING: This will "crash" Eagle prior to beta 28 due
+  #          to the .NET Framework being unable to handle
+  #          the System.Console being closed asynchronously
+  #          out from under a Win32Native.ReadFile call
+  #          (i.e. from the perspective of the interactive
+  #          loop thread).  This has been fixed in Eagle
+  #          beta 28 by preventing the console host from
+  #          being closed if there are any reads or writes
+  #          pending.
+  #
+  # <<NAME>> : Also closes the console window for 5 seconds.
+  host close; after 5000; host open; # NOTE: Crash?
+}
+
+#
+# NOTE: The following commented out script fragment will
+#       register, unregister, and remove all hot-keys.
+#
+if {0} then {
+  foreach id [hotkey list] {hotkey register $id}
+  foreach id [hotkey list] {hotkey unregister $id; hotkey remove $id}
+}

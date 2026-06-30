@@ -1,0 +1,117 @@
+<!--
+ *
+ * Zeus.NuGet.targets -
+ *
+ * WARNING: This MSBuild file requires MSBuild 4.0 features.
+ *
+ * Written by Joe Mistachkin and David Archer.
+ * Released to the public domain, use at your own risk!
+ *
+-->
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!--
+  ******************************************************************************
+  **                         Zeus Package Build Items                         **
+  ******************************************************************************
+  -->
+
+  <ItemGroup>
+    <ZeusFiles Condition="'$(MSBuildThisFileDirectory)' != '' And
+                           HasTrailingSlash('$(MSBuildThisFileDirectory)')"
+                Include="$(MSBuildThisFileDirectory)**"
+                Exclude="$(MSBuildThisFileDirectory)*.targets" />
+  </ItemGroup>
+
+  <!--
+  ******************************************************************************
+  **                      Zeus Package Build Properties                       **
+  ******************************************************************************
+  -->
+
+  <PropertyGroup Condition="'$(NoZeusDefineConstant)' != 'false'">
+    <DefineConstants>$(DefineConstants);ZEUS</DefineConstants>
+  </PropertyGroup>
+
+  <!--
+  ******************************************************************************
+  **                        Zeus Package Build Targets                        **
+  ******************************************************************************
+  -->
+
+  <Target Name="CopyZeusFiles"
+          Condition="'$(CopyZeusFiles)' != 'false' And
+                     '$(OutDir)' != '' And
+                     HasTrailingSlash('$(OutDir)') And
+                     Exists('$(OutDir)')"
+          Inputs="@(ZeusFiles)"
+          Outputs="@(ZeusFiles -> '$(OutDir)%(RecursiveDir)%(Filename)%(Extension)')">
+    <Copy SourceFiles="@(ZeusFiles)"
+          DestinationFiles="@(ZeusFiles -> '$(OutDir)%(RecursiveDir)%(Filename)%(Extension)')" />
+  </Target>
+
+  <!--
+  ******************************************************************************
+  -->
+
+  <Target Name="CleanZeusFiles"
+          Condition="'$(CleanZeusFiles)' != 'false' And
+                     '$(OutDir)' != '' And
+                     HasTrailingSlash('$(OutDir)') And
+                     Exists('$(OutDir)')">
+    <Delete Files="@(ZeusFiles -> '$(OutDir)%(RecursiveDir)%(Filename)%(Extension)')" />
+  </Target>
+
+  <!--
+  ******************************************************************************
+  -->
+
+  <Target Name="CollectZeusFiles"
+          Condition="'$(CollectZeusFiles)' != 'false'">
+    <ItemGroup>
+      <FilesForPackagingFromProject Include="@(ZeusFiles)">
+        <DestinationRelativePath>bin\%(RecursiveDir)%(Filename)%(Extension)</DestinationRelativePath>
+      </FilesForPackagingFromProject>
+    </ItemGroup>
+  </Target>
+
+  <!--
+  ******************************************************************************
+  **                      Zeus Package Build Properties                       **
+  ******************************************************************************
+  -->
+
+  <PropertyGroup>
+    <PostBuildEventDependsOn>
+      $(PostBuildEventDependsOn);
+      CopyZeusFiles;
+    </PostBuildEventDependsOn>
+    <BuildDependsOn>
+      $(BuildDependsOn);
+      CopyZeusFiles;
+    </BuildDependsOn>
+    <CleanDependsOn>
+      $(CleanDependsOn);
+      CleanZeusFiles;
+    </CleanDependsOn>
+  </PropertyGroup>
+
+  <!--
+  ******************************************************************************
+  **          Zeus Package Publish Properties for Visual Studio 20xx          **
+  ******************************************************************************
+  -->
+
+  <PropertyGroup Condition="'$(VisualStudioVersion)' == '' Or
+                            '$(VisualStudioVersion)' == '10.0' Or
+                            '$(VisualStudioVersion)' == '11.0' Or
+                            '$(VisualStudioVersion)' == '12.0' Or
+                            '$(VisualStudioVersion)' == '14.0' Or
+                            '$(VisualStudioVersion)' == '15.0' Or
+                            '$(VisualStudioVersion)' == '16.0' Or
+                            '$(VisualStudioVersion)' == '17.0'">
+    <PipelineCollectFilesPhaseDependsOn>
+      CollectZeusFiles;
+      $(PipelineCollectFilesPhaseDependsOn);
+    </PipelineCollectFilesPhaseDependsOn>
+  </PropertyGroup>
+</Project>

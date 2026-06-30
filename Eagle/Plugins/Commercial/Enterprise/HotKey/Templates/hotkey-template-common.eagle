@@ -1,0 +1,1203 @@
+###############################################################################
+#
+# hotkey-template-common.eagle --
+#
+# Extensible Adaptable Generalized Logic Engine (Eagle)
+# Hot-Key Template Common Package
+#
+# Copyright (c) 2007-2012 by Joe Mistachkin.  All rights reserved.
+#
+# See the file "license.terms" for information on usage and redistribution of
+# this file, and for a DISCLAIMER OF ALL WARRANTIES.
+#
+# RCS: @(#) $Id: $
+#
+###############################################################################
+
+#
+# NOTE: Use our own namespace here because even though we do not directly
+#       support namespaces ourselves, we do not want to pollute the global
+#       namespace if this script actually ends up being evaluated in Tcl.
+#
+namespace eval ::Eagle {
+  #
+  # NOTE: The vast majority of the script code in this file will only work in
+  #       Eagle, not Tcl.
+  #
+  if {[isEagle]} then {
+    proc showConsole { {show ""} } {
+      # <help>
+      # This procedure shows, hides, or toggles the visibility of the Win32
+      # console window attached to the current process.  It exists so hot-key
+      # templates can hide their helper console window from the user (and
+      # bring it back when needed) without depending on any other package.
+      #
+      # How it works: it dynamically loads kernel32.dll and user32.dll,
+      # declares the GetConsoleWindow, IsWindowVisible, and ShowWindow APIs
+      # against them, and obtains the console window handle via
+      # GetConsoleWindow.  If no console is attached (handle is zero), it
+      # returns false.  When the show argument is empty, the current
+      # visibility is sampled with IsWindowVisible and the desired state is
+      # taken to be its logical negation (toggle).  ShowWindow is then
+      # called with SW_SHOW or SW_HIDE.  The finally block undeclares each
+      # function and unloads each library so the process leaves no dangling
+      # native references.
+      #
+      # Tricky details: the return value follows ShowWindow's convention --
+      # non-zero from ShowWindow means the previous state was already as
+      # requested (treated here as a no-op failure path returning false);
+      # the success path returns the new logical show value.  Library
+      # cleanup is unconditional via try/finally so a mid-way failure does
+      # not leak handles.
+      #
+      # Arguments:
+      #   show -- Optional truthy value to show the console, a falsy value
+      #           to hide it, or the empty string (the default) to toggle
+      #           the current state.
+      #
+      # Results:
+      #   Returns the new visibility state on success, or false when the
+      #   process has no attached console or when ShowWindow signals no
+      #   change.
+      # </help>
+
+      #
+      # NOTE: This procedure is designed to show or hide the console window
+      #       associated with the current process, if any.  It is entirely
+      #       self-contained.
+      #
+      try {
+        set kernel32 [library load kernel32.dll]
+
+        set GetConsoleWindow [library declare \
+            -functionname GetConsoleWindow \
+            -returntype IntPtr -module $kernel32]
+
+        set user32 [library load user32.dll]
+
+        set IsWindowVisible [library declare \
+            -functionname IsWindowVisible \
+            -returntype Int32 -parametertypes \
+            [list IntPtr] -module $user32]
+
+        set SW_HIDE 0; set SW_SHOW 5
+
+        set ShowWindow [library declare \
+            -functionname ShowWindow \
+            -returntype Int32 -parametertypes \
+            [list IntPtr Int32] -module $user32]
+
+        set hWnd [library call -create -alias $GetConsoleWindow]
+
+        if {[$hWnd ToInt32] == 0} then {
+          return false
+        }
+
+        if {[string length $show] == 0} then {
+          #
+          # NOTE: In this case, toggle the existing window visibility.
+          #
+          set show [expr {![library call $IsWindowVisible $hWnd]}]
+        }
+
+        if {$show} then {
+          if {[library call $ShowWindow $hWnd $SW_SHOW]} then {
+            return false
+          }
+        } else {
+          if {![library call $ShowWindow $hWnd $SW_HIDE]} then {
+            return false
+          }
+        }
+
+        return $show
+      } finally {
+        if {[info exists ShowWindow]} then {
+          library undeclare $ShowWindow
+          unset ShowWindow
+        }
+
+        if {[info exists IsWindowVisible]} then {
+          library undeclare $IsWindowVisible
+          unset IsWindowVisible
+        }
+
+        if {[info exists GetConsoleWindow]} then {
+          library undeclare $GetConsoleWindow
+          unset GetConsoleWindow
+        }
+
+        if {[info exists user32]} then {
+          library unload $user32
+          unset user32
+        }
+
+        if {[info exists kernel32]} then {
+          library unload $kernel32
+          unset kernel32
+        }
+      }
+    }
+
+    #
+    # NOTE: This procedure is designed to prevent a window from being closed
+    #       via the system menu or its associated 'X' button.
+    #
+    proc preventWindowClose { hWnd } {
+      # <help>
+      # This procedure disables the Close entry on the given window's system
+      # menu, which also disables the window's title-bar X button.  It is
+      # the building block used by preventConsoleClose and is useful when a
+      # hot-key template wants its window to be dismissable only through
+      # script-controlled means.
+      #
+      # How it works: it loads user32.dll, declares GetSystemMenu and
+      # DeleteMenu against it, fetches the window's system menu handle, and
+      # calls DeleteMenu with the SC_CLOSE identifier and the MF_BYCOMMAND
+      # flag.  A zero menu handle or a failed DeleteMenu causes the
+      # procedure to return false; success returns true.  The finally block
+      # undeclares each function and unloads the library.
+      #
+      # Tricky details: removing SC_CLOSE from the system menu is the
+      # standard Win32 idiom for graying out the title-bar X button;
+      # Alt-F4 is also disabled as a side effect.  The library cleanup
+      # runs even on early returns, courtesy of try/finally.
+      #
+      # Arguments:
+      #   hWnd -- The HWND of the window to lock.
+      #
+      # Results:
+      #   Returns true when the Close item was successfully removed; false
+      #   when the system menu could not be obtained or DeleteMenu failed.
+      # </help>
+
+      try {
+        set user32 [library load user32.dll]
+
+        set SC_CLOSE 0xF060; set MF_BYCOMMAND 0x0
+
+        set GetSystemMenu [library declare \
+            -functionname GetSystemMenu \
+            -returntype IntPtr -parametertypes \
+            [list IntPtr UInt32] -charset ansi \
+            -module $user32]
+
+        set DeleteMenu [library declare \
+            -functionname DeleteMenu \
+            -returntype Int32 -parametertypes \
+            [list IntPtr UInt32 UInt32] -charset \
+            ansi -module $user32]
+
+        set hMenu [library call -create -alias $GetSystemMenu $hWnd 0]
+
+        if {[$hMenu ToInt32] == 0} then {
+          return false
+        }
+
+        if {![library call $DeleteMenu $hMenu $SC_CLOSE $MF_BYCOMMAND]} then {
+          return false
+        }
+
+        return true
+      } finally {
+        if {[info exists DeleteMenu]} then {
+          library undeclare $DeleteMenu
+          unset DeleteMenu
+        }
+
+        if {[info exists GetSystemMenu]} then {
+          library undeclare $GetSystemMenu
+          unset GetSystemMenu
+        }
+
+        if {[info exists user32]} then {
+          library unload $user32
+          unset user32
+        }
+      }
+    }
+
+    #
+    # NOTE: This procedure is designed to prevent a console window matching
+    #       the specified title from being closed via the system menu or its
+    #       associated 'X' button.
+    #
+    proc preventConsoleClose { title } {
+      # <help>
+      # This procedure locates the console window whose title matches the
+      # supplied string and disables its Close menu item.  It exists so
+      # hot-key templates can lock their console while still letting their
+      # script logic close it on its own terms.
+      #
+      # How it works: it loads user32.dll, declares FindWindowExA for ANSI
+      # lookups against the well-known "ConsoleWindowClass" class name, and
+      # searches for a top-level window with that class and the given
+      # title; when the title argument is empty the literal "null" is
+      # passed (causing FindWindowEx to match by class only).  A zero
+      # handle yields false; otherwise the handle is forwarded to
+      # preventWindowClose, whose result is returned.  The finally block
+      # cleans up any user32-related declarations.
+      #
+      # Tricky details: the ANSI charset is required because the
+      # ConsoleWindowClass identifier is registered by Windows in ANSI
+      # form.  The "null" literal trick relies on FindWindowEx matching
+      # only by class when the window-name string is degenerate.  The
+      # finally block defensively undeclares DeleteMenu and GetSystemMenu
+      # if they happen to be present in this scope from a nested call.
+      #
+      # Arguments:
+      #   title -- The exact console window title to look up; empty string
+      #            matches the first ConsoleWindowClass top-level window.
+      #
+      # Results:
+      #   Returns the result of preventWindowClose (true on success) or
+      #   false when no matching console window was found.
+      # </help>
+
+      try {
+        set user32 [library load user32.dll]
+
+        set FindWindowEx [library declare \
+            -functionname FindWindowExA \
+            -returntype IntPtr -parametertypes \
+            [list IntPtr IntPtr String String] \
+            -charset ansi -module $user32]
+
+        set zero [object invoke -create IntPtr Zero]
+
+        set hWnd [library call -create -alias \
+            $FindWindowEx $zero $zero ConsoleWindowClass \
+            [expr {[string length $title] > 0 ? $title : "null"}]]
+
+        if {[$hWnd ToInt32] == 0} then {
+          return false
+        }
+
+        return [preventWindowClose $hWnd]
+      } finally {
+        if {[info exists DeleteMenu]} then {
+          library undeclare $DeleteMenu
+          unset DeleteMenu
+        }
+
+        if {[info exists GetSystemMenu]} then {
+          library undeclare $GetSystemMenu
+          unset GetSystemMenu
+        }
+
+        if {[info exists user32]} then {
+          library unload $user32
+          unset user32
+        }
+      }
+    }
+
+    proc areTemplateThreadsIsolated {} {
+      # <help>
+      # This procedure reports whether new hot-key template threads should
+      # load their binary plugins in isolated mode.  It exists so the
+      # createTemplateThread procedure can mirror the current
+      # interpreter's loader posture into each worker thread it spawns.
+      #
+      # How it works: it asks getPluginFlags for the flags reported by the
+      # HotKey.Enterprise plugin and checks whether the Isolated flag is
+      # present.  Presence yields true; absence (or no such plugin) yields
+      # false.
+      #
+      # Tricky details: the decision is taken from the parent interpreter's
+      # plugin flags, not from a configuration variable; the assumption is
+      # that the parent's loader policy is the correct default for any
+      # child it creates.
+      #
+      # Arguments:
+      #   None.
+      #
+      # Results:
+      #   Returns true if the hot-key plugin is loaded in Isolated mode in
+      #   the current interpreter, false otherwise.
+      # </help>
+
+      #
+      # HACK: For now, just assume that hot-key template threads should
+      #       always be isolated if the hot-key plugin was loaded into
+      #       the current interpreter in isolated mode.
+      #
+      set pluginFlags [getPluginFlags {^HotKey\.Enterprise, }]
+
+      if {[lsearch -exact -- $pluginFlags Isolated] != -1} then {
+        return true
+      }
+
+      return false
+    }
+
+    proc getTemplateThreads {} {
+      # <help>
+      # This procedure returns the current list of hot-key template script
+      # threads that have been registered with the common template
+      # bookkeeping.  It is the safe accessor for the global
+      # ::hotkey_template_threads list (returning an empty list when no
+      # threads are registered).
+      #
+      # How it works: when the global ::hotkey_template_threads exists, its
+      # value is returned; otherwise an empty list is returned.
+      #
+      # Arguments:
+      #   None.
+      #
+      # Results:
+      #   Returns a Tcl list of thread object handles, possibly empty.
+      # </help>
+
+      return [expr {[info exists ::hotkey_template_threads] ? \
+          $::hotkey_template_threads : [list]}]
+    }
+
+    proc clearTemplateThreads {} {
+      # <help>
+      # This procedure empties the registered list of hot-key template
+      # script threads.  It is called as part of cancelTemplateThreads
+      # after every known thread has been signalled, to make sure the
+      # registry does not keep stale handles around.
+      #
+      # How it works: it sets the global ::hotkey_template_threads to an
+      # empty list, creating the variable if it did not yet exist.
+      #
+      # Arguments:
+      #   None.
+      #
+      # Results:
+      #   Returns the empty list.
+      # </help>
+
+      set ::hotkey_template_threads [list]
+    }
+
+    proc addTemplateThread { thread } {
+      # <help>
+      # This procedure registers a newly created script thread with the
+      # hot-key template bookkeeping so it can be enumerated and canceled
+      # collectively later on.  It is called by createTemplateThread once
+      # the underlying ScriptThread has been successfully constructed.
+      #
+      # How it works: it appends the thread handle to the global
+      # ::hotkey_template_threads list, creating the list when this is the
+      # first registered thread.
+      #
+      # Arguments:
+      #   thread -- The ScriptThread object handle to register.
+      #
+      # Results:
+      #   Returns the new value of the global list.
+      # </help>
+
+      lappend ::hotkey_template_threads $thread
+    }
+
+    proc removeTemplateThread { thread } {
+      # <help>
+      # This procedure removes a single script-thread handle from the
+      # hot-key template bookkeeping.  It is called by exitTemplateThread
+      # so that a template thread that has finished on its own no longer
+      # appears in the registry of live threads.
+      #
+      # How it works: when the global ::hotkey_template_threads exists, it
+      # locates the handle with an exact lsearch and (if present) splices
+      # it out with [lremove].  If the handle is not registered, or the
+      # registry does not exist, it is a silent no-op.
+      #
+      # Arguments:
+      #   thread -- The ScriptThread object handle to unregister.
+      #
+      # Results:
+      #   Returns the empty string.
+      # </help>
+
+      if {[info exists ::hotkey_template_threads]} then {
+        set index [lsearch -exact $::hotkey_template_threads $thread]
+
+        if {$index != -1} then {
+          set ::hotkey_template_threads \
+              [lremove $::hotkey_template_threads $index]
+        }
+      }
+    }
+
+    proc createTemplateThread { varName } {
+      # <help>
+      # This procedure creates a new ScriptThread for hot-key template use,
+      # registers it with the template bookkeeping, applies any inherited
+      # loader policy, and runs any custom interpreter-initialization
+      # script.  It is the canonical entry point for spawning a template
+      # worker thread; templates that need their own interpreter call this
+      # instead of touching ScriptThread.Create directly.
+      #
+      # How it works: the caller supplies the name of a variable that will
+      # hold any error result; it is bound with upvar.  ScriptThread Create
+      # is invoked with the InterfaceUse flag and a wait variable named
+      # "x".  When the thread handle is non-empty it is registered with
+      # addTemplateThread, an informational entry is written via [hotkey
+      # log], and -- when areTemplateThreadsIsolated returns true -- a
+      # bootstrap script is Sent into the new thread to require Eagle.Test
+      # and enable the Isolated plugin flag.  If the global ::hotkey_
+      # template_thread_extra variable is set, its value is then Sent into
+      # the thread as additional initialization (used for things like
+      # "secure mode").  Send failures at either step are converted to
+      # errors carrying the thread's result.  An empty thread handle means
+      # Create itself failed; that path logs and re-raises an error.
+      #
+      # Tricky details: the bound variable serves dual duty -- it is the
+      # output result variable from ScriptThread Create and also the
+      # named result variable from each Send (which writes the thread-side
+      # result back through it).  The two HACK comments are intentional:
+      # the isolation propagation and the extra-initialization hook are
+      # there to make templates inherit the parent interpreter's loader
+      # posture and any secure-mode setup.
+      #
+      # Arguments:
+      #   varName -- Name of a caller-side variable that should receive
+      #              any error result object handle.
+      #
+      # Results:
+      #   Returns the new ScriptThread object handle on success, raises
+      #   an error on failure (with the cause in the bound variable).
+      # </help>
+
+      upvar 1 $varName result
+
+      set thread [object invoke -alias \
+          ScriptThread Create null InterfaceUse null null null null null \
+          x 0 result]
+
+      if {[string length $thread] > 0} then {
+        addTemplateThread $thread
+
+        hotkey log [appendArgs \
+            "Started hot-key template thread \"" $thread \"]
+
+        #
+        # HACK: If hot-key template threads are supposed to load
+        #       their binary plugins (e.g. the hot-key plugin) in
+        #       isolated mode, attempt to enable that now.
+        #
+        if {[areTemplateThreadsIsolated]} then {
+          set code [$thread Send {
+            package require Eagle.Test
+            enablePluginFlags Isolated true
+          } result]
+
+          if {$code ne "Ok"} then {
+            error [getStringFromObjectHandle $result]
+          }
+        }
+
+        #
+        # HACK: Perform any extra interpreter initialization for
+        #       the newly created script thread here.  This allows
+        #       for things like "secure mode" to work properly for
+        #       hot-key templates.
+        #
+        if {[info exists ::hotkey_template_thread_extra]} then {
+          set code [$thread Send $::hotkey_template_thread_extra result]
+
+          if {$code ne "Ok"} then {
+            error [getStringFromObjectHandle $result]
+          }
+        }
+      } else {
+        hotkey log [appendArgs \
+            "Failed to start hot-key template thread \"" $thread \
+            "\", error: " [getStringFromObjectHandle $result]]
+
+        error [getStringFromObjectHandle $result]
+      }
+
+      return $thread
+    }
+
+    proc exitTemplateThread { thread } {
+      # <help>
+      # This procedure performs the orderly teardown of a single hot-key
+      # template script thread: it unregisters the thread and then
+      # disposes the underlying object.  It is intended to be called when
+      # a template's main routine returns or otherwise wants to shut
+      # itself down.
+      #
+      # How it works: it calls removeTemplateThread to deregister the
+      # handle, then attempts [object dispose] on the thread inside a
+      # catch.  Success is logged through [hotkey log] as a "Stopped"
+      # entry; a failure is logged with the captured error text.
+      #
+      # Tricky details: the deregistration happens before the dispose so
+      # the registry never references an already-disposed handle, even if
+      # a concurrent enumeration occurs.
+      #
+      # Arguments:
+      #   thread -- The ScriptThread object handle to stop and dispose.
+      #
+      # Results:
+      #   Returns the empty string; the effects are deregistration,
+      #   disposal, and a log entry recording the outcome.
+      # </help>
+
+      removeTemplateThread $thread
+
+      if {[catch {object dispose $thread} error] == 0} then {
+        hotkey log [appendArgs \
+            "Stopped hot-key template thread \"" $thread \"]
+      } else {
+        hotkey log [appendArgs \
+            "Failed to stop hot-key template thread\"" \
+            $thread "\", error: " $error]
+      }
+    }
+
+    proc cancelTemplateThreads {} {
+      # <help>
+      # This procedure cancels every registered hot-key template script
+      # thread and then cancels the current interpreter itself.  It is the
+      # global panic-stop for hot-key templates and is typically wired up
+      # to the manager's cancel command.
+      #
+      # How it works: it snapshots the current registry with
+      # getTemplateThreads, iterates each handle, and asks the thread to
+      # Cancel with the UnwindAndNotify flag set; the outcome of each
+      # cancel is logged via [hotkey log].  After the loop it calls
+      # clearTemplateThreads to empty the registry.  Whether or not any
+      # template threads existed, it then issues "interp cancel -global
+      # -unwind --" so the current interpreter also unwinds; the trailing
+      # comment notes that this last step cancels the caller.
+      #
+      # Tricky details: each thread is canceled independently; one
+      # thread's failure to cancel does not stop the others.  The
+      # registry is cleared even on partial failure, so a thread that
+      # could not be canceled is no longer tracked here -- the caller is
+      # expected to be tearing down the whole interpreter anyway.
+      #
+      # Arguments:
+      #   None.
+      #
+      # Results:
+      #   Does not return normally; the trailing [interp cancel] unwinds
+      #   the calling interpreter.
+      # </help>
+
+      set threads [getTemplateThreads]
+
+      if {[llength $threads] > 0} then {
+        foreach thread $threads {
+          if {[catch {
+            $thread Cancel UnwindAndNotify
+          } result] == 0 && $result} then {
+            hotkey log [appendArgs \
+                "Canceled hot-key template thread \"" $thread \"]
+          } else {
+            hotkey log [appendArgs \
+                "Failed to cancel hot-key template thread \"" \
+                $thread "\", error: " $result]
+          }
+        }
+        clearTemplateThreads
+      }
+
+      interp cancel -global -unwind -- {}; # NOTE: Cancels self.
+    }
+
+    proc getCommonStartMenuFolderPath {} {
+      # <help>
+      # This procedure returns the file-system path of the all-users
+      # ("common") Start Menu folder on Windows.  It exists because the
+      # standard .NET Environment.GetFolderPath enum does not directly
+      # expose the common Start Menu CSIDL on older runtimes, so the
+      # underlying Win32 SHGetFolderPath shim is called directly.
+      #
+      # How it works: it creates a StringBuilder of MAX_PATH (260)
+      # capacity, an IntPtr.Zero handle for the unused arguments, and
+      # invokes the non-public Microsoft.Win32.Win32Native.SHGetFolderPath
+      # method with CSIDL_COMMON_STARTMENU (22) and SHGFP_TYPE_CURRENT (0)
+      # to fill the buffer.  The result is the StringBuilder's ToString.
+      #
+      # Tricky details: this depends on the non-public Win32Native shim
+      # being present in the runtime (it ships in .NET Framework's
+      # mscorlib); on runtimes where it is absent the invoke will fail.
+      # The path returned is uppercase or otherwise rendered exactly as
+      # the shell reports it.
+      #
+      # Arguments:
+      #   None.
+      #
+      # Results:
+      #   Returns the path of the all-users Start Menu directory.
+      # </help>
+
+      set stringBuilder [object create -alias \
+          System.Text.StringBuilder 260]; # MAX_PATH
+
+      set IntPtrZero [object invoke -create IntPtr Zero]
+      set CSIDL_COMMON_STARTMENU 22
+      set SHGFP_TYPE_CURRENT 0
+
+      object invoke -flags +NonPublic \
+          Microsoft.Win32.Win32Native SHGetFolderPath \
+          $IntPtrZero $CSIDL_COMMON_STARTMENU $IntPtrZero \
+          $SHGFP_TYPE_CURRENT $stringBuilder
+
+      return [$stringBuilder ToString]
+    }
+
+    proc tagFileNamesWithSources { fileNames sources } {
+      # <help>
+      # This procedure converts a flat list of file names into the tagged
+      # triple form used elsewhere in the template, attaching a sources
+      # list to each entry.  The triple form is {fileName displayText
+      # sources}, which the manager template displays in a list and uses
+      # to remember where each candidate came from.
+      #
+      # How it works: for each file name in the input list, the path is
+      # converted to native form (forward to back slashes on Windows) and
+      # a three-element list is built using that path as both the file
+      # name and the display text plus the supplied sources list; the
+      # triple is appended to the result.
+      #
+      # Arguments:
+      #   fileNames -- A flat list of paths.
+      #   sources   -- A list of source tags describing where the file
+      #                names came from (for example, registry roots).
+      #
+      # Results:
+      #   Returns a list of three-element entries in the form
+      #   {fileName displayText sources}.
+      # </help>
+
+      set result [list]
+
+      foreach fileName $fileNames {
+        set fileName [file nativename $fileName]
+        lappend result [list $fileName $fileName $sources]
+      }
+
+      return $result
+    }
+
+    proc combineFileNamesWithSources { args } {
+      # <help>
+      # This procedure merges several tagged-file-name lists into a single
+      # de-duplicated list, accumulating the source tags whenever the same
+      # file name appears in more than one input list.  It is used to fold
+      # together the multiple application registries that
+      # filterApplicationFileNames consults, so the manager UI can show
+      # one entry per file with the union of where it was found.
+      #
+      # How it works: it iterates each list given as a separate argument
+      # (variadic), then each element of that list.  For every element it
+      # looks for an existing result entry with a case-insensitive match
+      # on the first field (file name).  If found, the old and new source
+      # lists are concatenated, sorted, and deduplicated with [lsort
+      # -unique], and the entry is rewritten in place via [lreplace].
+      # Otherwise the new element is appended verbatim.
+      #
+      # Tricky details: each input list is expected to use the
+      # tagFileNamesWithSources triple shape (fileName, displayText,
+      # sources).  The matching key is purely the file name (index 0);
+      # display text from later entries is intentionally ignored in favor
+      # of the first one seen.
+      #
+      # Arguments:
+      #   args -- Two or more tagged-file-name lists to combine.
+      #
+      # Results:
+      #   Returns a single tagged-file-name list with one entry per file
+      #   name and the union of source tags.
+      # </help>
+
+      set result [list]
+
+      foreach list $args {
+        foreach newElement $list {
+          set index [lsearch -exact -nocase -index 0 \
+              $result [lindex $newElement 0]]
+
+          if {$index != -1} then {
+            set oldElement [lindex $result $index]
+
+            set oldFileName [lindex $oldElement 0]
+            set oldText [lindex $oldElement 1]
+
+            set oldSources [lindex $oldElement 2]
+            set newSources [lindex $newElement 2]
+
+            set sources [list]
+
+            eval lappend sources $oldSources
+            eval lappend sources $newSources
+
+            set sources [lsort -unique $sources]
+            set element [list $oldFileName $oldText $sources]
+
+            set result [lreplace $result $index $index $element]
+          } else {
+            lappend result $newElement
+          }
+        }
+      }
+
+      return $result
+    }
+
+    proc getStartMenuShortcutFileNames {} {
+      # <help>
+      # This procedure walks both the per-user and the all-users Start
+      # Menu folders and returns the paths of every shortcut (.lnk) file
+      # found inside them.  It feeds the application-discovery flow used
+      # by the hot-key template that lets the user pick a program to bind.
+      #
+      # How it works: it loops over two directories -- the per-user Start
+      # Menu (Environment.GetFolderPath StartMenu) and the all-users
+      # Start Menu (getCommonStartMenuFolderPath) -- and runs
+      # [findFilesRecursive] on each, matching the *.lnk pattern.  Every
+      # match is converted to native (back-slash) form and appended to
+      # the result.
+      #
+      # Tricky details: the search is non-fatal: a missing or
+      # inaccessible directory simply yields no matches.  The returned
+      # list may contain duplicates if the same shortcut appears in both
+      # menus.
+      #
+      # Arguments:
+      #   None.
+      #
+      # Results:
+      #   Returns a list of native-format .lnk shortcut file paths.
+      # </help>
+
+      set result [list]
+
+      foreach directory [list \
+          [object invoke Environment GetFolderPath StartMenu] \
+          [getCommonStartMenuFolderPath]] {
+        #
+        # NOTE: Recursively search for all the LNK files in this
+        #       "Start Menu" directory, adding them to the list.
+        #
+        foreach fileName [findFilesRecursive \
+            [file join [file normalize $directory] *.lnk]] {
+          lappend result [file nativename $fileName]
+        }
+      }
+
+      return $result
+    }
+
+    proc getShortcutTargetPathNames { fileNames {pattern ""} } {
+      # <help>
+      # This procedure resolves each .lnk shortcut in the supplied list to
+      # its target path and returns the unique, sorted set of targets,
+      # optionally filtered by a glob pattern.  It exists to convert
+      # Start-Menu shortcuts into the actual executable paths the manager
+      # template ultimately registers.
+      #
+      # How it works: it iterates over the input file names, calling
+      # getShortcutTargetPath on each to read the LNK's target.  A target
+      # is kept only when it is non-empty and -- if a pattern was given
+      # -- when it matches the pattern via [string match -nocase].  The
+      # final list is sorted and deduplicated with [lsort -nocase
+      # -unique].
+      #
+      # Arguments:
+      #   fileNames -- A list of .lnk shortcut file paths to resolve.
+      #   pattern   -- Optional glob pattern; only target paths matching
+      #                this pattern (case-insensitively) are kept.  The
+      #                default empty string disables filtering.
+      #
+      # Results:
+      #   Returns the sorted, unique list of resolved target paths.
+      # </help>
+
+      set result [list]
+
+      foreach fileName $fileNames {
+        set targetPath [getShortcutTargetPath $fileName]
+
+        if {[string length $targetPath] > 0 && \
+            ([string length $pattern] == 0 || \
+            [string match -nocase $pattern $targetPath])} then {
+          lappend result $targetPath
+        }
+      }
+
+      return [lsort -nocase -unique $result]
+    }
+
+    proc getShortcutTargetPath { fileName } {
+      # <help>
+      # This procedure reads the target path stored inside a single
+      # Windows .lnk shortcut file by driving the Windows Script Host
+      # Shell COM object.  It is the single-shortcut workhorse called
+      # from getShortcutTargetPathNames.
+      #
+      # How it works: it validates the input -- the file name must be
+      # non-empty, the extension must be ".lnk" (case-insensitively),
+      # and the path must exist and refer to a file -- returning an
+      # empty string when any check fails.  It then loads
+      # "Interop.wshom.dll" from the hot-key plugin's directory (using
+      # object load with -loadtype File and -import -declare); a load
+      # failure also returns an empty string.  With the interop assembly
+      # in place, it instantiates WshShellClass, calls CreateShortcut on
+      # the file, and returns the resulting shortcut's TargetPath.
+      #
+      # Tricky details: the Interop.wshom.dll file must live next to the
+      # hot-key plugin binary; the procedure uses [hotkey directory] to
+      # locate it.  An ill-formed or non-existent shortcut is reported
+      # as an empty string rather than an error, so the caller can scan
+      # large lists without worrying about exceptions.
+      #
+      # Arguments:
+      #   fileName -- The path of the .lnk shortcut to inspect.
+      #
+      # Results:
+      #   Returns the shortcut's target path, or the empty string when
+      #   the input is invalid or the interop assembly cannot be loaded.
+      # </help>
+
+      if {[string length $fileName] == 0 || \
+          [string tolower [file extension $fileName]] ne ".lnk" || \
+          ![file exists $fileName] || ![file isfile $fileName]} then {
+        #
+        # NOTE: The LNK file name does not exist or is invalid,
+        #       just return an empty string.
+        #
+        return ""
+      }
+
+      #
+      # NOTE: If the Windows Script Host Runtime Library cannot be
+      #       loaded for some reason, just return an empty string.
+      #
+      if {[catch {object load -import -declare -loadtype File [file join \
+          [hotkey directory] Interop.wshom.dll]}]} then {
+        return ""
+      }
+
+      set shell [object create -alias WshShellClass]
+      set shortcut [$shell -alias CreateShortcut $fileName]
+
+      return [$shortcut TargetPath]
+    }
+
+    proc filterApplicationFileNames { fileNames } {
+      # <help>
+      # This procedure narrows a candidate list of file paths down to the
+      # ones Windows itself classifies as known applications, by
+      # cross-checking against three distinct registry-derived lists.
+      # The manager template uses it to filter discovered executables
+      # before showing them to the user, so junk files alongside real
+      # applications do not pollute the picker.
+      #
+      # How it works: it primes the three reference lists from
+      # getClassesRootOpenWithLists, getClassesRootApplications, and
+      # getWindowsExecutableAppPaths.  For each input path, the leaf
+      # name (file tail) is extracted and searched for case-insensitively
+      # in each list: list1 and list3 use -index 0 on tagged entries,
+      # list2 is a flat list of executable names.  When the leaf name
+      # matches in any of the three, the original full path is appended
+      # to the result.
+      #
+      # Tricky details: the comparison is exclusively on the leaf name;
+      # two executables with the same name in different directories will
+      # both pass even if only one is the real shell-registered
+      # application.  All three searches are independent OR conditions,
+      # so a match in any one is sufficient.
+      #
+      # Arguments:
+      #   fileNames -- The candidate paths to filter.
+      #
+      # Results:
+      #   Returns the subset of fileNames whose leaf name appears in any
+      #   of the three registry-derived lists.
+      # </help>
+
+      #
+      # NOTE: Initially, no file names qualify for the final list.
+      #
+      set result [list]
+
+      #
+      # NOTE: Query various lists of "well-known" application executable
+      #       files from the Windows registry, etc.
+      #
+      set list1 [getClassesRootOpenWithLists]
+      set list2 [getClassesRootApplications]
+      set list3 [getWindowsExecutableAppPaths]
+
+      #
+      # NOTE: Process the list of executable files.
+      #
+      foreach fileName $fileNames {
+        #
+        # NOTE: All of our searches are based on the file name without
+        #       the directory; therefore, grab it.
+        #
+        set fileNameOnly [file tail $fileName]
+
+        #
+        # NOTE: Search for the file name within several lists of "known"
+        #       applications used by Windows.  If it present in any of
+        #       these lists, add it to the final list of file names for
+        #       the user to select from.
+        #
+        if {[lsearch -exact -nocase -index 0 $list1 $fileNameOnly] != -1 || \
+            [lsearch -exact -nocase $list2 $fileNameOnly] != -1 || \
+            [lsearch -exact -nocase -index 0 $list3 $fileNameOnly] != -1} then {
+          #
+          # NOTE: The file appears to be present in one of the "well-known"
+          #       lists of applications present in the Windows registry;
+          #       therefore, add it to the final list to be selected from
+          #       by the user.
+          #
+          lappend result $fileName
+        }
+      }
+
+      return $result
+    }
+
+    proc getClassesRootOpenWithLists {} {
+      # <help>
+      # This procedure enumerates the "OpenWithList" subkeys under every
+      # top-level key in HKEY_CLASSES_ROOT and returns the executables
+      # they advertise, tagged with the file extensions or ProgIDs that
+      # nominate them.  Windows uses these lists to populate the "Open
+      # With" dialog for unknown file types, so this is a rich source of
+      # genuine application names.
+      #
+      # How it works: it walks every subkey name returned by
+      # Microsoft.Win32.Registry.ClassesRoot.GetSubKeyNames.  For each, it
+      # tries to open the "<subKey>\OpenWithList" subkey and, if present,
+      # enumerates its child subkey names (each one is an executable).
+      # If an executable already appears in the result, the current
+      # subKeyName is appended to its tag list via [lappendArgs];
+      # otherwise a new tagged entry of the form {exeName subKeyName} is
+      # appended.  The finally block makes sure the registry handle is
+      # cleaned up after each iteration.
+      #
+      # Arguments:
+      #   None.
+      #
+      # Results:
+      #   Returns a list of tagged entries in the form {exeName
+      #   sourceProgIds...}, where the source values are the
+      #   HKEY_CLASSES_ROOT subkey names that listed the executable.
+      # </help>
+
+      set result [list]
+
+      foreach subKeyName [object invoke \
+          Microsoft.Win32.Registry.ClassesRoot GetSubKeyNames] {
+
+        try {
+          set subKey [object invoke -alias \
+              Microsoft.Win32.Registry.ClassesRoot OpenSubKey \
+              [appendArgs $subKeyName \\ OpenWithList]]
+
+          if {[string length $subKey] > 0} then {
+            foreach subSubKeyName [$subKey GetSubKeyNames] {
+              set index [lsearch -exact -nocase -index 0 $result \
+                  $subSubKeyName]
+
+              if {$index != -1} then {
+                lset result $index [eval lappendArgs \
+                    [lindex $result $index] [list $subKeyName]]
+              } else {
+                lappend result [list $subSubKeyName $subKeyName]
+              }
+            }
+          }
+        } finally {
+          unset -nocomplain subKey
+        }
+      }
+
+      return $result
+    }
+
+    proc getClassesRootApplications {} {
+      # <help>
+      # This procedure returns the flat list of executable names listed
+      # under HKEY_CLASSES_ROOT\Applications.  This is the canonical
+      # Windows registry location for shell-registered applications, so
+      # the list is a strong indicator that a file name is a real
+      # application binary.
+      #
+      # How it works: it opens HKEY_CLASSES_ROOT\Applications, iterates
+      # its subkey names, and keeps each name that matches *.exe
+      # (case-insensitively).  Duplicates are skipped by checking the
+      # accumulator with [lsearch -exact -nocase].  The registry handle
+      # is released in the finally block.
+      #
+      # Arguments:
+      #   None.
+      #
+      # Results:
+      #   Returns a flat de-duplicated list of executable file names.
+      # </help>
+
+      set result [list]
+
+      try {
+        set subKey [object invoke -alias \
+            Microsoft.Win32.Registry.ClassesRoot OpenSubKey Applications]
+
+        if {[string length $subKey] > 0} then {
+          foreach subKeyName [$subKey GetSubKeyNames] {
+            if {[string match -nocase *.exe $subKeyName]} then {
+              if {[lsearch -exact -nocase $result $subKeyName] == -1} then {
+                lappend result $subKeyName
+              }
+            }
+          }
+        }
+      } finally {
+        unset -nocomplain subKey
+      }
+
+      return $result
+    }
+
+    proc getWindowsExecutableAppPaths {} {
+      # <help>
+      # This procedure walks the HKEY_LOCAL_MACHINE\Software\Microsoft\
+      # Windows\CurrentVersion\App Paths registry key and returns the
+      # executable names registered there along with their target paths.
+      # Shell uses App Paths to resolve bare executable invocations, so
+      # entries here are by definition real Windows applications.
+      #
+      # How it works: it opens the App Paths key and enumerates every
+      # *.exe subkey.  For each, the procedure opens the subkey and
+      # reads its "Path" string value; if that value is empty it falls
+      # back to reading the default (null) value.  A non-empty value
+      # yields an appended entry of the form {exeName path}.  All
+      # opened subkeys are released by the finally blocks regardless of
+      # failure.
+      #
+      # Tricky details: the App Paths convention puts the install
+      # directory in the Path value and the executable file name in
+      # the (default) value; this code prefers the Path value first and
+      # only consults the default value as a fallback.
+      #
+      # Arguments:
+      #   None.
+      #
+      # Results:
+      #   Returns a list of {exeName path} pairs harvested from App
+      #   Paths.
+      # </help>
+
+      set result [list]
+
+      try {
+        set subKey [object invoke -alias \
+            Microsoft.Win32.Registry.LocalMachine OpenSubKey \
+            "Software\\Microsoft\\Windows\\CurrentVersion\\App Paths"]
+
+        if {[string length $subKey] > 0} then {
+          foreach subKeyName [$subKey GetSubKeyNames] {
+            if {[string match -nocase *.exe $subKeyName]} then {
+              try {
+                set subSubKey [$subKey -alias OpenSubKey $subKeyName]
+
+                if {[string length $subSubKey] > 0} then {
+                  set path [$subSubKey GetValue Path]
+
+                  if {[string length $path] == 0} then {
+                    set path [$subSubKey GetValue null]
+                  }
+
+                  if {[string length $path] > 0} then {
+                    lappend result [list $subKeyName $path]
+                  }
+                }
+              } finally {
+                unset -nocomplain subSubKey
+              }
+            }
+          }
+        }
+      } finally {
+        unset -nocomplain subKey
+      }
+
+      return $result
+    }
+
+    proc getApplicationsFromAppPaths { appPaths } {
+      # <help>
+      # This procedure turns the {exeName path} pair list produced by
+      # getWindowsExecutableAppPaths into a concrete list of full file
+      # paths that exist on disk.  It exists because the App Paths
+      # registry entries may name either a fully qualified file or just
+      # a directory in which the executable lives; the caller wants a
+      # uniform list of file paths.
+      #
+      # How it works: for each input pair, the path field is inspected.
+      # If the path refers to an existing file, it is used as-is.  If
+      # it refers to an existing directory, the executable name (the
+      # first field of the pair) is joined to it and the result is
+      # required to exist and to be a file.  Anything else (missing
+      # path, non-file, non-directory, or join-not-found) causes
+      # [continue] to skip the entry.  Surviving paths are normalized
+      # and converted to native form before being appended to the
+      # result.
+      #
+      # Arguments:
+      #   appPaths -- A list of {exeName path} pairs as returned by
+      #               getWindowsExecutableAppPaths.
+      #
+      # Results:
+      #   Returns a list of normalized, native-format executable paths.
+      # </help>
+
+      set result [list]
+
+      foreach appPath $appPaths {
+        set path [lindex $appPath 1]
+
+        if {[string length $path] > 0} then {
+          if {[file exists $path]} then {
+            if {[file isfile $path]} then {
+              set fileName $path
+            } elseif {[file isdirectory $path]} then {
+              set subKeyName [lindex $appPath 0]
+
+              if {[string length $subKeyName] > 0} then {
+                set fileName [file join $path $subKeyName]
+
+                if {![file exists $fileName] || \
+                    ![file isfile $fileName]} then {
+                  continue
+                }
+              } else {
+                continue
+              }
+            } else {
+              continue
+            }
+          } else {
+            continue
+          }
+        } else {
+          continue
+        }
+
+        lappend result [file nativename [file normalize $fileName]]
+      }
+
+      return $result
+    }
+  }
+
+  #
+  # NOTE: Provide the package to the interpreter.
+  #
+  package provide HotKey.Template.Common 1.0
+}
+

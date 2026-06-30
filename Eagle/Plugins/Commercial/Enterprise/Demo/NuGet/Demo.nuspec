@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package>
+  <metadata>
+    <id>Demo</id>
+    <title>Eagle Enterprise Edition: Demo Plugin</title>
+    <version>1.0.X.X</version>
+    <authors>Eagle Development Team</authors>
+    <description>
+      Implements a custom host that allows for seamless command-driven product demonstrations.
+    </description>
+    <language>en-US</language>
+    <projectUrl>https://urn.to/r/eagle</projectUrl>
+    <iconUrl>https://eagle.to/images/eagle128.png</iconUrl>
+    <licenseUrl>https://eagle.to/enterprise/license.html</licenseUrl>
+    <requireLicenseAcceptance>true</requireLicenseAcceptance>
+    <tags>eagle script custom host automation command presentation demonstration</tags>
+    <copyright>Copyright &#x00A9; 2007-2012 by Joe Mistachkin.  All rights reserved.</copyright>
+    <dependencies>
+      <group>
+        <dependency id="Eagle.CLRv4.Core" version="[1.0.X.X,1.0.X.99999]" />
+        <dependency id="Harpy.CLRv4" version="[1.0.X.X,1.0.X.99999]" />
+      </group>
+    </dependencies>
+    <references />
+  </metadata>
+  <files>
+    <file src="lib\Demo1.0\Demo.dll" target="build\net40\lib\Demo1.0" />
+    <file src="lib\Demo1.0\pkgIndex.eagle" target="build\net40\lib\Demo1.0\pkgIndex_c339cf39bcc248dd.eagle" />
+    <file src="lib\Demo1.0\pkgIndex.eagle.harpy" target="build\net40\lib\Demo1.0\pkgIndex_c339cf39bcc248dd.eagle.harpy" />
+    <file src="lib\Demo1.0\trial-certificate.xml" target="build\net40\lib\Demo1.0\Certificates" />
+    <file src="build\Demo.NuGet.targets" target="build\net40\Demo.targets" />
+  </files>
+</package>

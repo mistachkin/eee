@@ -1,0 +1,70 @@
+<!--
+ *
+ * HotKey.Settings.targets -
+ *
+ * WARNING: Contains more evil MSBuild hacks than your doctor recommended.
+ *
+ * Copyright (c) 2007-2012 by Joe Mistachkin.  All rights reserved.
+ *
+ * See the file "license.terms" for information on usage and redistribution of
+ * this file, and for a DISCLAIMER OF ALL WARRANTIES.
+ *
+ * RCS: @(#) $Id: $
+ *
+-->
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!--
+  ******************************************************************************
+  **                          Load Per-User Settings                          **
+  ******************************************************************************
+  -->
+
+  <!--
+      NOTE: If the per-user settings file exists, import it now.  The contained
+            settings, if any, will override the default ones provided below.
+  -->
+  <Import Condition="'$(MSBuildProjectDirectory)' != '' And
+                     !HasTrailingSlash('$(MSBuildProjectDirectory)') And
+                     Exists('$(MSBuildProjectDirectory)\Targets\HotKey.Settings.targets.user')"
+          Project="$(MSBuildProjectDirectory)\Targets\HotKey.Settings.targets.user" />
+
+  <!--
+  ******************************************************************************
+  **                        HotKey Primary Properties                         **
+  ******************************************************************************
+  -->
+
+  <PropertyGroup>
+    <!--
+        NOTE: Do we want to enable support for script syntax highlighting using
+              the Scintilla editing component via the ScintillaNET control?  By
+              default, this is disabled.  If this is enabled, the hot-key script
+              editor will use the ScintillaNET control; however, the hot-key
+              template script support will also be disabled due to a bug in the
+              ScintillaNET control.
+    -->
+    <Scintilla Condition="'$(Scintilla)' == ''">false</Scintilla>
+
+    <!--
+        NOTE: Do we want to use the latest version of the ScintillaNET control?
+              By default, this is disabled.  This may not be supported on early
+              versions of the .NET Framework (e.g. v2.0 / v3.5).
+    -->
+    <Scintilla3 Condition="'$(Scintilla3)' == ''">false</Scintilla3>
+  </PropertyGroup>
+
+  <!--
+  ******************************************************************************
+  **                       HotKey Secondary Properties                        **
+  ******************************************************************************
+  -->
+
+  <PropertyGroup>
+    <!--
+        NOTE: What directory contains the managed assembly for the ScintillaNET
+              control?
+    -->
+    <EagleScintillaNetDirectory Condition="'$(EagleScintillaNetDirectory)' == '' And '$(Scintilla3)' == 'false'">$(MSBuildProjectDirectory)\..\..\..\..\Externals\ScintillaNET\v2</EagleScintillaNetDirectory>
+    <EagleScintillaNetDirectory Condition="'$(EagleScintillaNetDirectory)' == '' And '$(Scintilla3)' != 'false'">$(MSBuildProjectDirectory)\..\..\..\..\Externals\ScintillaNET\v3</EagleScintillaNetDirectory>
+  </PropertyGroup>
+</Project>

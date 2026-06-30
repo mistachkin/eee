@@ -1,0 +1,177 @@
+###############################################################################
+#
+# dotfuscator.eagle --
+#
+# Extensible Adaptable Generalized Logic Engine (Eagle)
+# Dotfuscator Community Edition Automation Tool
+#
+# Copyright (c) 2007-2012 by Joe Mistachkin.  All rights reserved.
+#
+# See the file "license.terms" for information on usage and redistribution of
+# this file, and for a DISCLAIMER OF ALL WARRANTIES.
+#
+# RCS: @(#) $Id: $
+#
+###############################################################################
+
+proc usage { error } {
+  # <help>
+  # This procedure prints the command-line usage summary for the Dotfuscator
+  # automation tool and then terminates the process, signaling failure to
+  # whatever invoked it.  It is the single entry point for the "you called me
+  # incorrectly" path, and is also reused later in the script to report
+  # automation failures (such as the absence of a "Build Finished" line in the
+  # captured output, or an invalid top-level window handle) before exiting.
+  #
+  # How it works: when the error argument is a non-empty string it is written
+  # to standard output first; the usage line is then printed, naming the host
+  # shell executable and this script followed by the supported positional
+  # arguments (devEnvFileName, dotfuscatorFileName, configuration,
+  # projectFileName, milliseconds, and the save flag).  Finally it calls
+  # [exit 1].
+  #
+  # Tricky details: this procedure never returns to its caller -- it always
+  # exits the process with a non-zero (failure) status, so it must only be
+  # used on terminal error paths.
+  #
+  # Arguments:
+  #   error -- An optional leading error message.  When non-empty it is shown
+  #            before the usage text; pass an empty string to show plain usage.
+  #
+  # Results:
+  #   Does not return; the process exits with status code 1.
+  # </help>
+
+  if {[string length $error] > 0} then {puts stdout $error}
+
+  puts stdout "usage: [file tail [getShellExecutableName]]\
+[file tail [info script]] <devEnvFileName> <dotfuscatorFileName>\
+<configuration> <projectFileName> <milliseconds> <save?>"
+
+  #
+  # NOTE: Indicate to the caller, if any, that we have failed.
+  #
+  exit 1
+}
+
+if {[llength $argv] == 6} then {
+  #
+  # NOTE: This tool requires Eagle.
+  #
+  package require Eagle
+
+  #
+  # NOTE: Save the full path of this script.
+  #
+  set path [file normalize [file dirname [info script]]]
+
+  #
+  # NOTE: Grab all the arguments we need from the command line.
+  #
+  set devEnvFileName [file normalize [lindex $argv 0]]
+  set dotfuscatorFileName [file normalize [lindex $argv 1]]
+  set configuration [lindex $argv 2]
+  set projectFileName [file nativename [file normalize [lindex $argv 3]]]
+  set milliseconds [lindex $argv 4]
+  set save [lindex $argv 5]
+
+  #
+  # NOTE: If Visual Studio is not running, launch it now.
+  #
+  if {[llength [info windows "*Microsoft Visual Studio*"]] == 0} then {
+    exec $devEnvFileName &
+    set pid [info previouspid]
+  }
+
+  #
+  # NOTE: Attempt to execute the Dotfuscator application.
+  #
+  exec $dotfuscatorFileName \
+      [appendArgs \" /p=configuration= $configuration ,version=1.0 \"] \
+      [appendArgs \" $projectFileName \"] &
+
+  #
+  # NOTE: Wait a while before attempting to find the top-level window.
+  #
+  puts -nonewline stdout [appendArgs \
+      "Waiting for " $milliseconds " milliseconds... "]
+
+  after $milliseconds; puts stdout "done."
+
+  #
+  # NOTE: Escape any backslashes in the project file name so that it can be
+  #       used as part of the window title pattern.
+  #
+  set windowPatterns [list \
+      [appendArgs "Dotfuscator * - " \
+          [string map [list \\ \\\\] $projectFileName] *] \
+      [appendArgs "Dotfuscator * - " \
+          [appendArgs *\\\\ [file tail $projectFileName]] *] \
+      [appendArgs "PreEmptive Dotfuscator * - " \
+          [string map [list \\ \\\\] $projectFileName] *] \
+      [appendArgs "PreEmptive Dotfuscator * - " \
+          [appendArgs *\\\\ [file tail $projectFileName]] *]]
+
+  #
+  # NOTE: Try to find the top-level window for the Dotfuscator application.
+  #       Fallback to the newer window title used with the Visual Studio 2012
+  #       "Dotfuscator and Analytics Community Edition".
+  #
+  foreach windowPattern $windowPatterns {
+    set windows [info windows $windowPattern]
+
+    if {[llength $windows] > 0} then {
+      break
+    }
+  }
+
+  #
+  # NOTE: Did we find the top-level window we were looking for?
+  #
+  if {[llength $windows] > 0} then {
+    set hWnd [lindex [lindex $windows 0] 0]
+
+    if {[string is wideinteger -strict $hWnd]} then {
+      #
+      # NOTE: Attempt to automate the Dotfuscator application using the
+      #       custom WPF hacking tool.
+      #
+      set toolFileName [file join $path DotfuscatorHack.exe]
+
+      if {[catch {exec -success Success -stdout output \
+          $toolFileName $hWnd $milliseconds $save} result] == 0} then {
+        #
+        # NOTE: If the Dotfuscator build process was not successful, emit
+        #       an error message and exit.
+        #
+        if {![string match "*\r\nBuild Finished.\r\n*" $result]} then {
+          usage [list \
+              Message "Could not find 'Build Finished' in output." \
+              [info newline] Result $result [info newline] Output \
+              $output]
+        }
+      } else {
+        #
+        # NOTE: Show the captured error message output from the custom WPF
+        #       hacking tool and then exit.
+        #
+        usage [list \
+            Message [appendArgs "Attempt to execute \"" $toolFileName \
+            "\" failed."] Result $result [info newline] Output $output]
+      }
+
+      #
+      # NOTE: If we previously launched Visual Studio, close it now.
+      #
+      if {[info exists pid]} then {
+        kill $pid
+      }
+    } else {
+      usage "invalid window handle"
+    }
+  } else {
+    usage "cannot find top-level window"
+  }
+} else {
+  usage ""
+}

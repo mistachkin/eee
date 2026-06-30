@@ -1,0 +1,75 @@
+<!--
+ *
+ * Kapok.targets -
+ *
+ * WARNING: Contains more evil MSBuild hacks than your doctor recommended.
+ *
+ * Copyright (c) 2007-2012 by Joe Mistachkin.  All rights reserved.
+ *
+ * See the file "license.terms" for information on usage and redistribution of
+ * this file, and for a DISCLAIMER OF ALL WARRANTIES.
+ *
+ * RCS: @(#) $Id: $
+ *
+-->
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!--
+  ******************************************************************************
+  **                          Load Per-User Settings                          **
+  ******************************************************************************
+  -->
+
+  <!--
+      NOTE: If the per-user settings file exists, import it now.  The contained
+            settings, if any, will override the default ones provided below.
+  -->
+  <Import Condition="'$(KapokDir)' != '' And
+                     !HasTrailingSlash('$(KapokDir)') And
+                     Exists('$(KapokDir)\Targets\Kapok.targets.user')"
+          Project="$(KapokDir)\Targets\Kapok.targets.user" />
+
+  <!--
+  ******************************************************************************
+  **                              Kapok Targets                               **
+  ******************************************************************************
+  -->
+
+  <Target Name="FixupWebConfig"
+          Condition="'$(FixupWebConfig)' != 'false' And
+                     '$(EagleDir)' != '' And
+                     !HasTrailingSlash('$(EagleDir)') And
+                     Exists('$(EagleDir)\bin\$(Configuration)$(EagleConfigurationSuffix)\bin\EagleShell.exe') And
+                     '$(KapokDir)' != '' And
+                     !HasTrailingSlash('$(KapokDir)') And
+                     Exists('$(KapokDir)\Tools\fixupWebConfig.eagle') And
+                     Exists('$(KapokDir)\Web.config')"
+          Inputs="$(TargetPath)"
+          Outputs="$(TargetPath).FixupWebConfig.done">
+    <Exec Command="&quot;$(EagleDir)\bin\$(Configuration)$(EagleConfigurationSuffix)\bin\EagleShell.exe&quot; -file &quot;$(KapokDir)\Tools\fixupWebConfig.eagle&quot;" />
+
+    <Touch AlwaysCreate="true"
+           Files="$(TargetPath).FixupWebConfig.done" />
+  </Target>
+
+  <!--
+  ******************************************************************************
+  -->
+
+  <Target Name="KapokCopyToProjectBin"
+          Condition="'$(KapokCopyToProjectBin)' != 'false' And
+                     '$(TargetPath)' != '' And
+                     !HasTrailingSlash('$(TargetPath)') And
+                     Exists('$(TargetPath)') And
+                     '$(MSBuildProjectDirectory)' != '' And
+                     !HasTrailingSlash('$(MSBuildProjectDirectory)') And
+                     '$(TargetFramework)' != ''"
+          Inputs="$(TargetPath)"
+          Outputs="$(TargetPath).CopyToProjectBin.done">
+    <Copy SourceFiles="$(TargetPath)"
+          DestinationFolder="$(MSBuildProjectDirectory)\bin\$(TargetFramework)"
+          ContinueOnError="true" />
+
+    <Touch AlwaysCreate="true"
+           Files="$(TargetPath).CopyToProjectBin.done" />
+  </Target>
+</Project>

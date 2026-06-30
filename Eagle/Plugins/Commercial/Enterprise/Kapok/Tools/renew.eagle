@@ -1,0 +1,1209 @@
+###############################################################################
+#
+# renew.eagle --
+#
+# Extensible Adaptable Generalized Logic Engine (Eagle)
+# Enterprise Edition Certificate Renewal Tool
+#
+# Copyright (c) 2007-2012 by Joe Mistachkin.  All rights reserved.
+#
+# See the file "license.terms" for information on usage and redistribution of
+# this file, and for a DISCLAIMER OF ALL WARRANTIES.
+#
+# RCS: @(#) $Id: $
+#
+###############################################################################
+
+proc usage { error } {
+  # <help>
+  # This procedure prints the command-line usage summary for the certificate
+  # renewal tool and then terminates the process, signaling failure to
+  # whatever invoked it.  It is invoked when the tool is called with the
+  # wrong number of positional arguments.
+  #
+  # How it works: when error is a non-empty string it is printed first; the
+  # usage line is then printed, naming the host shell executable and this
+  # script followed by the supported positional arguments (the seven
+  # required: requestId, requestTimeStamp, certificateId, requestHash,
+  # passThroughMode, scriptMode, embedded; and the six optional ones:
+  # certificateDatabaseFile, keyRingDatabaseFile, keyId, requestTimeout,
+  # entityName, entityValue).  Finally it calls exit 1.
+  #
+  # Tricky details: this procedure never returns to its caller; it always
+  # terminates the process with a non-zero (failure) status, so it must only
+  # be used on terminal error paths.
+  #
+  # Arguments:
+  #   error -- An optional leading error message.  When non-empty it is shown
+  #            before the usage text; pass an empty string for plain usage.
+  #
+  # Results:
+  #   Does not return; the process exits with status code 1.
+  # </help>
+
+  if {[string length $error] > 0} then {puts stdout $error}
+
+  puts stdout "usage: [file tail [getShellExecutableName]]\
+[file tail [info script]] <requestId> <requestTimeStamp>\
+<certificateId> <requestHash> <passThroughMode> <scriptMode>\
+<embedded> \[certificateDatabaseFile\] \[keyRingDatabaseFile\]\
+\[keyId\] \[requestTimeout\] \[entityName\] \[entityValue\]"
+
+  #
+  # NOTE: Indicate to the caller, if any, that we have failed.
+  #
+  exit 1
+}
+
+if {[llength $argv] >= 7 && [llength $argv] <= 13} then {
+  proc cleanup {} {
+    # <help>
+    # This procedure clears all of the script-local variables that the renewal
+    # tool may have created at the global level.  It exists so the tool does
+    # not leave stale state behind in a shared interpreter -- particularly
+    # important when another Kapok tool runs in the same interpreter
+    # afterwards and would otherwise see leftover values.
+    #
+    # How it works: it executes a single [uplevel #0] that does an
+    # [unset -nocomplain] against the full list of variables the tool defines
+    # during a renewal (the command-line arguments, the key and certificate
+    # handles, the database connection and transaction, the SQL working
+    # variables, the temporary buffer/stream objects, the XML rewriting
+    # helpers, and so on).  The -nocomplain flag makes the unset tolerant of
+    # variables that were never created (for example because the run failed
+    # early).
+    #
+    # Tricky details: this procedure is called both at the start of the tool
+    # (to prevent stale state from a prior run) and from the [finally] block
+    # at the end (to clean up after itself).  The list MUST remain in sync
+    # with the variables actually used by the tool.
+    #
+    # Arguments:
+    #   None.
+    #
+    # Results:
+    #   Returns the result of the [uplevel] (effectively empty); its purpose
+    #   is the side effect of unsetting the global variables.
+    # </help>
+
+    uplevel #0 {
+      unset -nocomplain requestId requestTimeStamp certificateId keyId \
+          requestHash passThroughMode scriptMode certificateDatabaseFile \
+          keyRingDatabaseFile publicKeyFile privateKeyFile requestTimeout \
+          entityName entityValue publicKey privateKey connection transaction \
+          sql subscriptions certificates utcNow utcRequest count names name \
+          value serialNumber dateFormat guidFormat hash guid certificate \
+          stream buffer data xmlDeclaration xmlNs xmlNsXsi xmlNsXsd timeSpan \
+          scripts scriptText fileName keyRing
+    }
+  }
+
+  proc getRawKeyBytes { keyId type } {
+    # <help>
+    # This procedure obtains the raw byte payload of a public or private
+    # signing key identified by its public-key token, from either the key
+    # ring SQLite database (when one is configured) or from a key file
+    # located via environment variables.  It exists as the single point that
+    # the certificate-signing code calls to materialize keys, so that the
+    # tool can transparently use either source.
+    #
+    # How it works: when keyRingDatabaseFile is non-empty, it opens that
+    # SQLite database under a transaction and selects the KeyBytes/KeyLength
+    # row from the Keys table whose KeyId matches; the bytes are read into a
+    # newly allocated Byte array via the data reader and returned.  When no
+    # database file is configured, it falls back to environment variables:
+    # EagleEnterprisePublicKey or EagleEnterprisePrivateKey (depending on
+    # type), with a further fallback to the Keys sub-directory under the
+    # Eagle installation; the named file must exist and its [keypair token]
+    # must match keyId, after which its bytes are read via
+    # System.IO.File.ReadAllBytes.
+    #
+    # Tricky and security details: every failure path -- missing key, wrong
+    # type, key not in the database, file not found, token mismatch -- is
+    # funnelled through [updateRequestStatus] with a descriptive status, so
+    # the calling renewal request is rejected with a useful reason rather
+    # than silently failing later.  The token-match check in the file path
+    # is what prevents an attacker who can influence environment variables
+    # from substituting a different signing identity.  The transaction is
+    # committed in the finally block; note the BUGBUG comment flagging that
+    # rollback might be more correct.
+    #
+    # Arguments:
+    #   keyId -- The public key token (formatted as "0x" followed by 16 hex
+    #            digits) identifying the key to retrieve.
+    #   type  -- Either "public" or "private", selecting which environment
+    #            variable (or which kind of key data) to use.
+    #
+    # Results:
+    #   Returns a newly allocated Byte array containing the raw key bytes.
+    #   Does not return on any error path -- the request is rejected via
+    #   [updateRequestStatus] instead.
+    # </help>
+
+    try {
+      variable keyRingDatabaseFile
+
+      if {[string length $keyRingDatabaseFile] > 0} then {
+        set connection [sql open -type SQLite \
+            [subst {Data Source=${keyRingDatabaseFile};}]]
+
+        set transaction [sql transaction begin $connection]
+
+        set sql {
+          SELECT KeyBytes, LENGTH(KeyBytes) AS KeyLength
+          FROM Keys WHERE KeyId = ?;
+        }
+
+        set dataReader [sql execute -transaction $transaction -verbatim \
+            -alias -execute reader -format datareader $connection $sql \
+            [list param0 String $keyId]]
+
+        if {![$dataReader Read]} then {
+          updateRequestStatus "" "" "" [string trim \
+              [appendArgs $type " key not present in database"]]
+        }
+
+        set length [$dataReader GetInt64 1]; # KeyLength
+        set buffer [object create -alias Byte\[\] $length]
+
+        $dataReader GetBytes 0 0 $buffer 0 $length; # KeyBytes
+        $dataReader Close; unset dataReader
+
+        return $buffer
+      } else {
+        global env
+
+        switch -exact -- $type {
+          public {
+            if {[info exists env(EagleEnterprisePublicKey)]} then {
+              set fileName $env(EagleEnterprisePublicKey)
+            } elseif {[info exists env(Eagle)]} then {
+              set fileName [file join \
+                  $env(Eagle) Keys EagleEnterprisePluginRootPublic.snk]
+            }
+          }
+          private {
+            if {[info exists env(EagleEnterprisePrivateKey)]} then {
+              set fileName $env(EagleEnterprisePrivateKey)
+            } elseif {[info exists env(Eagle)]} then {
+              set fileName [file join \
+                  $env(Eagle) Keys EagleEnterprisePluginRootPrivate.snk]
+            }
+          }
+          default {
+            updateRequestStatus "" "" "" "unrecognized key type"
+          }
+        }
+
+        if {![info exists fileName] || [string length $fileName] == 0} then {
+          updateRequestStatus "" "" "" [string trim \
+              [appendArgs $type " key file not set via environment"]]
+        }
+
+        if {![file exists $fileName]} then {
+          updateRequestStatus "" "" "" [string trim \
+              [appendArgs $type " key file missing"]]
+        }
+
+        if {[keypair token $fileName] ne $keyId} then {
+          updateRequestStatus "" "" "" [string trim \
+              [appendArgs $type " key file token does not match identifier"]]
+        }
+
+        set buffer [object invoke \
+            -create -alias System.IO.File ReadAllBytes $fileName]
+
+        return $buffer
+      }
+    } finally {
+      if {[info exists transaction]} then {
+        if {[llength [info transactions $transaction]] == 1} then {
+          #
+          # BUGBUG: Shouldn't this be commit instead of rollback?
+          #
+          sql transaction commit $transaction
+        }
+
+        unset transaction
+      }
+
+      if {[info exists connection]} then {
+        sql close $connection; unset connection
+      }
+    }
+  }
+
+  #############################################################################
+
+  proc getKeyRingDataAndSignature { keyId varName } {
+    # <help>
+    # This procedure looks up a trusted key ring record by key id and, when
+    # found, returns its data bytes and signature bytes (each as a Base64
+    # string) through a caller-supplied array.  It exists so the renewal
+    # server can include the key ring used to sign the renewed certificate
+    # in its reply, letting the client side establish trust in that signing
+    # identity.
+    #
+    # How it works: when keyRingDatabaseFile is non-empty, it opens that
+    # SQLite database under a transaction and selects DataBytes,
+    # SignatureBytes, and their lengths from the KeyRings table whose Id
+    # matches keyId.  If a row is read, the two byte buffers are loaded via
+    # the data reader, converted to Base64 strings with InsertLineBreaks for
+    # XML-friendly wrapping, and stored in the caller's array under the keys
+    # data and signature.  When no key ring database is configured, the
+    # procedure silently returns without touching the array.
+    #
+    # Tricky details: this is an optional best-effort lookup, hence the call
+    # site treats both fields as initially empty and lets this procedure
+    # overwrite them only when a row is found.  The transaction is committed
+    # in the finally block (the BUGBUG comment notes that rollback might be
+    # more appropriate semantically).
+    #
+    # Arguments:
+    #   keyId   -- The key ring Id (typically the public key token) to look
+    #              up.
+    #   varName -- The name of an array variable in the caller's frame to
+    #              receive the data and signature elements.
+    #
+    # Results:
+    #   Returns the empty string; its effect is populating varName(data) and
+    #   varName(signature) when a matching row exists.
+    # </help>
+
+    try {
+      variable keyRingDatabaseFile
+
+      if {[string length $keyRingDatabaseFile] > 0} then {
+        set connection [sql open -type SQLite \
+            [subst {Data Source=${keyRingDatabaseFile};}]]
+
+        set transaction [sql transaction begin $connection]
+
+        set sql {
+          SELECT DataBytes,
+                 LENGTH(DataBytes) AS DataLength,
+                 SignatureBytes,
+                 LENGTH(SignatureBytes) AS SignatureLength
+          FROM KeyRings WHERE Id = ?;
+        }
+
+        set dataReader [sql execute -transaction $transaction -verbatim \
+            -alias -execute reader -format datareader $connection $sql \
+            [list param0 String $keyId]]
+
+        if {[$dataReader Read]} then {
+          upvar 1 $varName keyRing
+
+          set length [$dataReader GetInt64 1]; # DataLength
+          set buffer [object create -alias Byte\[\] $length]
+
+          $dataReader GetBytes 0 0 $buffer 0 $length; # DataBytes
+
+          set keyRing(data) [object invoke \
+              Convert ToBase64String $buffer InsertLineBreaks]
+
+          set length [$dataReader GetInt64 3]; # SignatureLength
+          set buffer [object create -alias Byte\[\] $length]
+
+          $dataReader GetBytes 2 0 $buffer 0 $length; # SignatureBytes
+
+          set keyRing(signature) [object invoke \
+              Convert ToBase64String $buffer InsertLineBreaks]
+
+          $dataReader Close; unset dataReader
+        }
+      }
+    } finally {
+      if {[info exists transaction]} then {
+        if {[llength [info transactions $transaction]] == 1} then {
+          #
+          # BUGBUG: Shouldn't this be commit instead of rollback?
+          #
+          sql transaction commit $transaction
+        }
+
+        unset transaction
+      }
+
+      if {[info exists connection]} then {
+        sql close $connection; unset connection
+      }
+    }
+  }
+
+  #############################################################################
+
+  proc openPublicKey { keyId } {
+    # <help>
+    # This procedure opens a public signing key by id and returns a key pair
+    # handle suitable for use with [certificate verify].  It exists so the
+    # renewal code can re-verify the certificate it just signed without
+    # having to worry about where the key bytes came from.
+    #
+    # How it works: it fetches the raw public key bytes via [getRawKeyBytes]
+    # (which transparently consults either the key ring database or an
+    # environment-located key file), wraps them in a transient
+    # System.IO.MemoryStream, and asks [keypair open] to open it as a public
+    # key with the -alias, -public, and -usestream options.  The byte buffer
+    # and memory stream are disposed before returning so they cannot leak.
+    #
+    # Arguments:
+    #   keyId -- The public key token identifying the key to open.
+    #
+    # Results:
+    #   Returns an object alias for the opened public key pair.
+    # </help>
+
+    set memoryStream [object create \
+        -alias System.IO.MemoryStream [set buffer \
+        [getRawKeyBytes $keyId public]]]
+
+    set publicKey [keypair open \
+        -alias -public -usestream $memoryStream]
+
+    object dispose $buffer; object dispose $memoryStream
+    return $publicKey
+  }
+
+  #############################################################################
+
+  proc openPrivateKey { keyId } {
+    # <help>
+    # This procedure opens a private signing key by id and returns a key
+    # pair handle suitable for use with [certificate sign].  It exists so
+    # the renewal code can sign the updated certificate without having to
+    # worry about where the key bytes came from.
+    #
+    # How it works: it fetches the raw private key bytes via
+    # [getRawKeyBytes], wraps them in a transient System.IO.MemoryStream,
+    # and asks [keypair open] to open it with -alias, -public, -private, and
+    # -usestream so the returned handle exposes both halves of the key pair.
+    # The byte buffer and memory stream are disposed before returning so the
+    # raw key material does not linger as a managed object.
+    #
+    # Tricky and security details: even though the byte buffer is disposed,
+    # the key material is now held inside the returned key-pair object; the
+    # tool relies on the caller disposing of that handle (via [object
+    # cleanup] in the finally block) to release the private key.
+    #
+    # Arguments:
+    #   keyId -- The public key token identifying the key to open.
+    #
+    # Results:
+    #   Returns an object alias for the opened private key pair.
+    # </help>
+
+    set memoryStream [object create \
+        -alias System.IO.MemoryStream [set buffer \
+        [getRawKeyBytes $keyId private]]]
+
+    set privateKey [keypair open \
+        -alias -public -private -usestream $memoryStream]
+
+    object dispose $buffer; object dispose $memoryStream
+    return $privateKey
+  }
+
+  #############################################################################
+
+  proc generateSerialNumber { prefix requestHash entityName } {
+    # <help>
+    # This procedure derives a new serial number string for a renewed
+    # certificate, optionally retaining a vendor or product prefix from the
+    # original.  It exists so that passthrough-mode renewals can mint a
+    # fresh, hard-to-predict serial without disturbing the existing
+    # prefix-based naming convention used by certificate consumers.
+    #
+    # How it works: it starts with the given prefix followed by a dash (if
+    # any), then computes an HMAC-SHA512 hash over a value made of the
+    # request hash, a couple of short random strings, the current process
+    # id, and the current clock, keyed by the entity name.  Slices of the
+    # resulting hex digest (positions 0-2, 3-6, and 7-10) are appended to
+    # the prefix as dash-separated groups, producing a serial of the form
+    # "prefix-xxx-xxxx-xxxx".
+    #
+    # Tricky and security details: this is a generator, not a cryptographic
+    # commitment; the random inputs plus the request hash and entity name
+    # are intended to make collisions extremely unlikely between renewals,
+    # but the serial is treated as a shared secret elsewhere in the tool, so
+    # callers must store it carefully.
+    #
+    # Arguments:
+    #   prefix      -- Optional textual prefix prepended (with a trailing
+    #                  dash) to the generated number; pass the empty string
+    #                  to omit a prefix.
+    #   requestHash -- The renewal request's hash value, mixed into the
+    #                  generated number.
+    #   entityName  -- The certificate entity name, used as the HMAC key.
+    #
+    # Results:
+    #   Returns the newly generated serial number string.
+    # </help>
+
+    set result ""
+
+    if {[string length $prefix] > 0} then {
+      append result [appendArgs $prefix -]
+    }
+
+    set hashValue [hash mac hmacsha512 [appendArgs \
+        $requestHash [expr {randstr(2)}] [pid] [clock \
+        seconds] [expr {randstr(2)}]] $entityName]
+
+    append result [string range $hashValue 0 2]
+    append result - [string range $hashValue 3 6]
+    append result - [string range $hashValue 7 10]
+
+    return $result
+  }
+
+  #############################################################################
+
+  proc isRequestTimedOut {} {
+    # <help>
+    # This procedure reports whether the renewal request being processed
+    # has fallen outside the allowed time window relative to the server's
+    # current clock.  It is the gate that turns away requests whose
+    # timestamp is too old, so an attacker cannot replay an old request
+    # long after the legitimate operator has stopped expecting one.
+    #
+    # How it works: it consults the NoRequestTimeout environment variable
+    # as an explicit opt-out (returning false when set), then the
+    # requestTimeout namespace variable (a negative value also means "no
+    # timeout").  Otherwise it subtracts the request's UTC timestamp from
+    # the server's UTC timestamp using DateTime.Subtract and returns true
+    # when the resulting span exceeds requestTimeout seconds.
+    #
+    # Tricky and security details: this comparison uses the server clock,
+    # not the client clock, so a malicious client cannot extend its window
+    # by claiming a future timestamp -- a "future" request would still be
+    # within the window (or even appear newer).  The environment escape
+    # hatch is intended for debugging only and should not be used in
+    # production.
+    #
+    # Arguments:
+    #   None.  Inputs are taken from environment and namespace variables.
+    #
+    # Results:
+    #   Returns true when the request is too old, false otherwise.
+    # </help>
+
+    global env
+
+    if {[info exists env(NoRequestTimeout)]} then {
+      return false
+    }
+
+    variable requestTimeout
+
+    if {$requestTimeout < 0} then {
+      return false
+    }
+
+    variable utcNow
+    variable utcRequest
+
+    set timeSpan [$utcNow -create -alias Subtract $utcRequest]
+    return [expr {[$timeSpan TotalSeconds] > $requestTimeout}]
+  }
+
+  #############################################################################
+
+  proc updateRequestStatus { connection transaction requestId status } {
+    # <help>
+    # This procedure records the outcome of a renewal request in the
+    # Requests table and -- for any non-OK outcome -- raises a script error
+    # that aborts the renewal.  It is the single termination path the tool
+    # uses for every kind of failure (invalid arguments, missing keys,
+    # database mismatch, expired subscription, and so on), so every
+    # rejection is both logged and propagated consistently.
+    #
+    # How it works: it first writes a debug log entry naming the calling
+    # frame, for diagnostic traceability.  When all three of connection,
+    # transaction, and requestId are non-empty it executes an UPDATE on the
+    # Requests row, inside a [catch] so a database problem cannot mask the
+    # underlying status.  Finally, when status is not "OK" it raises a
+    # script error carrying the status text -- aborting the current call
+    # stack.
+    #
+    # Tricky and security details: this procedure does NOT return on any
+    # failed status; routing every failure through here is what makes the
+    # tool fail-closed (a rejected request never proceeds to sign a
+    # certificate).  Note that the parameter order in the SQL UPDATE is
+    # deliberate: param1 binds Status and param0 binds Id.
+    #
+    # Arguments:
+    #   connection  -- The open SQLite connection, or empty when database
+    #                  logging is not possible (very early failures).
+    #   transaction -- The current transaction handle, or empty.
+    #   requestId   -- The request to update, or empty.
+    #   status      -- "OK" for success or a short failure reason.
+    #
+    # Results:
+    #   Returns the empty string on "OK".  Raises a script error carrying
+    #   the status text on any other value, and therefore does not return.
+    # </help>
+
+    debug log [appendArgs [info level [info level]] \n]
+
+    if {[string length $connection] > 0 && \
+        [string length $transaction] > 0 && \
+        [string length $requestId] > 0} then {
+      catch {
+        set sql {
+          UPDATE Requests SET Status = ? WHERE Id = ?;
+        }
+
+        sql execute -transaction $transaction -verbatim $connection $sql \
+            [list param1 String $status] [list param0 String $requestId]
+      }
+    }
+
+    if {$status ne "OK"} then {
+      error $status
+    }
+  }
+
+  #############################################################################
+
+  package require Eagle
+  package require Licensing.Enterprise
+
+  #
+  # NOTE: If the tool base path does not already exist, set it to the
+  #       directory where this script is running from.
+  #
+  if {![info exists path]} then {
+    set path [file normalize [file dirname [info script]]]
+    set path_set true
+  }
+
+  #
+  # HACK: Make sure no stale script variables are present from other
+  #       Kapok tools.
+  #
+  cleanup
+
+  #
+  # NOTE: Grab the time now in UTC.
+  #
+  set utcNow [object invoke -create -alias DateTime UtcNow]
+
+  #
+  # NOTE: Grab the required command line arguments.
+  #
+  set requestId [string trim [lindex $argv 0]]
+  set requestTimeStamp [string trim [lindex $argv 1]]
+  set certificateId [string trim [lindex $argv 2]]
+  set requestHash [string trim [lindex $argv 3]]
+  set passThroughMode [string trim [lindex $argv 4]]
+  set scriptMode [string trim [lindex $argv 5]]
+  set embedded [string trim [lindex $argv 6]]
+
+  #
+  # NOTE: Figure out what SQLite database file contains the certificates.
+  #
+  if {[llength $argv] >= 8} then {
+    #
+    # NOTE: Use the certificate database file name supplied on the command
+    #       line.
+    #
+    set certificateDatabaseFile [string trim [lindex $argv 7]]
+  }
+
+  #
+  # NOTE: Was a valid looking certificate database file name supplied?
+  #
+  if {![info exists certificateDatabaseFile] || \
+      [string length $certificateDatabaseFile] == 0} then {
+    #
+    # NOTE: No, then default to "kapok.db" in this directory.
+    #
+    set certificateDatabaseFile [file join $path kapok.db]
+  }
+
+  #
+  # NOTE: Fail now if the certificate database file does not exist at
+  #       the specified location.
+  #
+  if {![file exists $certificateDatabaseFile]} then {
+    error [appendArgs \
+        "missing certificate database file \"" $certificateDatabaseFile \
+        "\", cannot continue"]
+  }
+
+  #
+  # NOTE: Figure out what SQLite database file contains the key ring.
+  #
+  if {[llength $argv] >= 9} then {
+    #
+    # NOTE: Use the key ring database file name supplied on the command
+    #       line.
+    #
+    set keyRingDatabaseFile [string trim [lindex $argv 8]]
+  }
+
+  #
+  # NOTE: Was a valid looking key ring database file name supplied?
+  #
+  if {![info exists keyRingDatabaseFile] || \
+      [string length $keyRingDatabaseFile] == 0} then {
+    #
+    # NOTE: No, then default to trying for key files using environment
+    #       variables.
+    #
+    set keyRingDatabaseFile ""
+  }
+
+  #
+  # NOTE: Get the request timeout specified on the command line.
+  #
+  if {[llength $argv] >= 10} then {
+    set keyId [string trim [lindex $argv 9]]
+  }
+
+  #
+  # NOTE: Was a valid looking key identifier supplied?
+  #
+  if {![info exists keyId] || \
+      [string length $keyId] == 0 || \
+      ![regexp -- {^0x[0-9a-f]{16}$} $keyId]} then {
+    #
+    # NOTE: No, then default to using the one specified within the
+    #       certificate itself, if any.  Failing that, things will
+    #       just fail, which is fine.
+    #
+    set keyId ""
+  }
+
+  #
+  # NOTE: Get the request timeout specified on the command line.
+  #
+  if {[llength $argv] >= 11} then {
+    set requestTimeout [string trim [lindex $argv 10]]
+  }
+
+  #
+  # NOTE: Was a valid looking request timeout supplied?
+  #
+  if {![info exists requestTimeout] || \
+      [string length $requestTimeout] == 0 || \
+      ![string is integer -strict $requestTimeout]} then {
+    #
+    # NOTE: No, then default to 60 seconds.
+    #
+    set requestTimeout 60
+  }
+
+  #
+  # NOTE: Grab the entity name from the command line.
+  #
+  if {[llength $argv] >= 12} then {
+    set entityName [string trim [lindex $argv 11]]
+  }
+
+  #
+  # NOTE: Was a valid looking entity name supplied?
+  #
+  if {![info exists entityName]} then {
+    #
+    # NOTE: No, then we will skip setting the property.
+    #
+    set entityName ""
+  }
+
+  #
+  # NOTE: Grab the entity value from the command line.
+  #
+  if {[llength $argv] >= 13} then {
+    set entityValue [string trim [lindex $argv 12]]
+  }
+
+  #
+  # NOTE: Was a valid looking entity value supplied?
+  #
+  if {![info exists entityValue]} then {
+    #
+    # NOTE: No, then we will skip setting the property.
+    #
+    set entityValue ""
+  }
+
+  #############################################################################
+
+  #
+  # NOTE: Sanity check all the command line arguments.
+  #
+  if {![guid isvalid $requestId]} then {
+    updateRequestStatus "" "" "" "invalid requestId"
+  }
+
+  if {![clock isvalid $requestTimeStamp]} then {
+    updateRequestStatus "" "" "" "invalid requestTimeStamp"
+  }
+
+  if {![guid isvalid $certificateId]} then {
+    updateRequestStatus "" "" "" "invalid certificateId"
+  }
+
+  if {![regexp -nocase -- {^0x[0-9A-F]+$} $requestHash]} then {
+    updateRequestStatus "" "" "" "invalid requestHash"
+  }
+
+  if {![string is integer -strict $requestTimeout]} then {
+    updateRequestStatus "" "" "" "invalid requestTimeout"
+  }
+
+  try {
+    set connection [sql open -type SQLite \
+        [subst {Data Source=${certificateDatabaseFile};}]]
+
+    set transaction [sql transaction begin $connection]
+
+    set sql {
+      SELECT COUNT(*) FROM Requests WHERE Id = ?;
+    }
+
+    #
+    # NOTE: First, make sure the requestId has not been used before.
+    #
+    if {[sql execute -transaction $transaction -execute scalar \
+        $connection $sql [list param0 String $requestId]] != 0} then {
+      #
+      # NOTE: Reject the request, it could be a replay attack.
+      #
+      updateRequestStatus "" "" "" "duplicate requestId"
+    }
+
+    set sql {
+      INSERT INTO Requests (
+        Id, Type, TimeStamp, CertificateId, Hash, Status
+      ) VALUES (
+        ?, ?, ?, ?, ?, ?
+      );
+    }
+
+    #
+    # NOTE: Now, before doing anything else, log this request.
+    #
+    sql execute -transaction $transaction -verbatim $connection $sql \
+        [list param0 String $requestId] [list param1 String RENEW] \
+        [list param2 String $requestTimeStamp] [list param3 String \
+        $certificateId] [list param4 String $requestHash] [list param5 \
+        String PENDING]
+
+    #
+    # NOTE: Next, grab the requestTimeStamp and make sure it is within the
+    #       allowed window of time (from now).
+    #
+    set utcRequest [object invoke \
+        -create -alias DateTime Parse $requestTimeStamp]
+
+    if {[isRequestTimedOut]} then {
+      #
+      # NOTE: Reject the request, it could be a [delayed?] replay attack.
+      #
+      updateRequestStatus $connection $transaction $requestId \
+          "expired requestTimeStamp"
+    }
+
+    #
+    # NOTE: Next, try to find the certificate and the associated
+    #       subscription.
+    #
+    set sql {
+      SELECT CertificateId, Duration, Active, Expires
+      FROM Subscriptions
+      WHERE CertificateId = ?;
+    }
+
+    sql execute -transaction $transaction -execute reader -rowsvar \
+        subscriptions $connection $sql [list param0 String $certificateId]
+
+    set count $subscriptions(count)
+
+    if {$count != 1} then {
+      updateRequestStatus $connection $transaction $requestId \
+          [appendArgs "found " $count " subscriptions, expected exactly 1"]
+    }
+
+    set sql {
+      SELECT Id, Protocol, ProtocolVersion, Vendor, Origin, Authority,
+             Agreement, Support, TimeStamp, Duration, Key, Number,
+             SerialNumber, HashAlgorithm, Signature, Type, EntityType,
+             EntityName, EntityValue, ExtraData, Quantity, Product,
+             Version, Features, Restrictions
+      FROM Certificates WHERE Id = ?;
+    }
+
+    sql execute -transaction $transaction -execute reader -rowsvar \
+        certificates $connection $sql [list param0 String $certificateId]
+
+    set count $certificates(count)
+
+    if {$count != 1} then {
+      updateRequestStatus $connection $transaction $requestId \
+          [appendArgs "found " $count " certificates, expected exactly 1"]
+    }
+
+    #
+    # NOTE: Grab the script text, if applicable.
+    #
+    if {$scriptMode} then {
+      set sql {
+        SELECT Text FROM Scripts WHERE CertificateId = ?;
+      }
+
+      sql execute -transaction $transaction -execute reader -rowsvar \
+          scripts $connection $sql [list param0 String $certificateId]
+
+      set count $scripts(count)
+
+      if {$count != 1} then {
+        updateRequestStatus $connection $transaction $requestId \
+            [appendArgs "found " $count " scripts, expected exactly 1"]
+      }
+
+      set scriptText [getColumnValue $scripts(1) Text]
+    } else {
+      set scriptText ""
+    }
+
+    #
+    # NOTE: Grab the Guid format used for the certificates.
+    #
+    set guidFormat [object invoke \
+        Licensing.Components.Public.Utility GetDefaultGuidFormat]
+
+    #
+    # NOTE: Grab the DateTime format used for the certificates.
+    #
+    set dateFormat [object invoke \
+        Licensing.Components.Public.Utility GetDefaultTimeStampFormat]
+
+    #
+    # NOTE: Grab the certificate serial number (i.e. the shared secret).
+    #       If there is none, use the certificate Id to generate the
+    #       hash key instead.
+    #
+    set serialNumber [getColumnValue $certificates(1) SerialNumber]
+    set guid(2) [object create -alias Guid $certificateId]
+
+    if {[string length $serialNumber] > 0} then {
+      set hashKey $serialNumber
+    } else {
+      set hashKey [$guid(2) ToString $guidFormat]
+    }
+
+    #
+    # NOTE: Calculate the proper hash value for the request, including the
+    #       "shared-secret" serial number value.
+    #
+    # TODO: If the request hash algorithm changes (again) in the Harpy core
+    #       assembly, it must also be changed here.
+    #
+    set hash [appendArgs 0x [string tolower [hash keyed hmacsha512 \
+        [string format -verbatim "{0}+{1}+{2}+{3}+{4}+{5}" [[set guid(1) \
+        [object create -alias Guid $requestId]] ToString $guidFormat] \
+        [$utcRequest ToUniversalTime.ToString $dateFormat] [$guid(2) \
+        ToString $guidFormat] $serialNumber $entityName $entityValue] \
+        $hashKey]]]
+
+    #
+    # NOTE: The hash from the request must match the one we just calculated.
+    #
+    if {![string is true -strict $passThroughMode] && \
+        $requestHash ne $hash} then {
+      updateRequestStatus $connection $transaction $requestId \
+          "wrong requestHash"
+    }
+
+    #
+    # NOTE: Make sure the subscription is active and not expired.
+    #
+    if {![getColumnValue $subscriptions(1) Active]} then {
+      updateRequestStatus $connection $transaction $requestId \
+          "subscription is inactive"
+    }
+
+    if {[[set timeSpan [$utcNow -create -alias Subtract \
+        [getColumnValue $subscriptions(1) Expires]]] \
+        TotalSeconds] >= 0} then {
+      updateRequestStatus $connection $transaction $requestId \
+          "subscription is expired"
+    }
+
+    #
+    # NOTE: Ok, create an instance of the existing certificate.
+    #
+    set names [list \
+        Id Protocol ProtocolVersion Vendor Origin Authority Agreement \
+        Support TimeStamp Duration Key Number SerialNumber HashAlgorithm \
+        Signature Type EntityType EntityName EntityValue ExtraData Quantity \
+        Product Version Features Restrictions]
+
+    set certificate [object create -alias \
+        Licensing.Components.Public.Certificate]
+
+    foreach name $names {
+      set value [getColumnValue $certificates(1) $name]
+
+      if {[string length $value] == 0} then {
+        set value [getDefaultValue [getReturnType $certificate $name]]
+
+        if {[string is true -strict $passThroughMode]} then {
+          switch -exact -- $name {
+            Number {
+              set value [appendArgs 0x [format %lx [expr random()]]]
+            }
+            EntityName {
+              if {[string length $entityName] > 0} then {
+                set value $entityName
+              } else {
+                continue; # Skip setting EntityName property.
+              }
+            }
+            EntityValue {
+              if {[string length $entityValue] > 0} then {
+                set value $entityValue
+              } else {
+                continue; # Skip setting EntityValue property.
+              }
+            }
+          }
+        }
+      } else {
+        if {[string is true -strict $passThroughMode]} then {
+          switch -exact -- $name {
+            SerialNumber {
+              set value [generateSerialNumber [lindex [split \
+                  $value -] 0] $requestHash [getColumnValue \
+                  $certificates(1) EntityName $entityName]]
+            }
+          }
+        }
+      }
+
+      switch -exact -- $name {
+        Key {
+          if {$value ne "null"} then {
+            set value [object invoke \
+                Licensing.Components.Public.Utility \
+                ParsePublicKeyToken $value]
+          }
+        }
+        Signature {
+          if {$value ne "null"} then {
+            if {$value eq "BAD_SIGNATURE"} then {
+              continue; # Skip setting Signature property.
+            } else {
+              set value [object invoke Convert FromBase64String $value]
+            }
+          }
+        }
+      }
+
+      $certificate $name $value
+    }
+
+    #
+    # NOTE: Update the duration for the certificate based on the
+    #       subscription.
+    #
+    $certificate Duration [object invoke TimeSpan Parse \
+        [getColumnValue $subscriptions(1) Duration]]
+
+    #
+    # NOTE: Is there a specific key identifier provided by the caller?
+    #       If not, attempt to obtain and use the key associated with
+    #       the certificate being renewed.
+    #
+    if {![info exists keyId] || [string length $keyId] == 0} then {
+      #
+      # NOTE: Create a properly formatted public key token string to use
+      #       for the key ring database lookup.
+      #
+      set keyId [object invoke \
+          Licensing.Components.Public.Utility FormatPublicKeyToken \
+          [$certificate Key]]
+    }
+
+    #
+    # NOTE: Grab public key we need to verify that certificate signing
+    #       worked correctly.
+    #
+    set publicKey [openPublicKey $keyId]
+
+    #
+    # NOTE: Grab private key we need to actually sign the certificate.
+    #
+    set privateKey [openPrivateKey $keyId]
+
+    #
+    # NOTE: Sign the certificate and update the timestamp.  Then, verify
+    #       it the signed certificate is (now) valid. For scripts, make
+    #       sure to use the appropriate sub-commands.  Signing scripts
+    #       requires the use of a temporary file here.
+    #
+    if {$scriptMode} then {
+      if {$embedded} then {
+        $certificate EntityValue $scriptText
+
+        certificate sign \
+            -settimestamp -setkey -hashflags {+Basic Embedded} \
+            $certificate $privateKey
+
+        certificate verify -hashflags {+Basic Embedded} \
+            $certificate $publicKey
+
+        $certificate EntityValue null
+      } else {
+        set fileName [file tempname]
+
+        try {
+          writeFile $fileName $scriptText
+
+          certificate signfile \
+              -settimestamp -setkey $certificate $privateKey $fileName
+
+          certificate verifyfile $certificate $publicKey $fileName
+        } finally {
+          if {[string length $fileName] > 0 && \
+              [file exists $fileName]} then {
+            catch {file delete $fileName}
+          }
+        }
+      }
+    } else {
+      certificate sign -settimestamp -setkey $certificate $privateKey
+      certificate verify $certificate $publicKey
+    }
+
+    #
+    # HACK: Make 100% sure that the key identifier we used to sign the
+    #       certificate makes it back into the database.  Technically,
+    #       this can be changed via [certificate sign*] sub-commands,
+    #       therefore, make sure to query it live from the certificate
+    #       object itself.
+    #
+    set keyId [object invoke \
+        Licensing.Components.Public.Utility FormatPublicKeyToken \
+        [$certificate Key]]
+
+    #
+    # NOTE: Update the certificate row in the database.
+    #
+    # BUGFIX: This was broken in passthrough mode.  In that case, this
+    #         must update ALL certificate columns that could have been
+    #         changed by this request, e.g. Number, SerialNumber, et al.
+    #
+    if {[string is true -strict $passThroughMode]} then {
+      set sql {
+        UPDATE Certificates
+        SET TimeStamp = ?, Duration = ?, Key = ?, Number = ?,
+            SerialNumber = ?, EntityName = ?, EntityValue = ?,
+            Signature = ?
+        WHERE Id = ?;
+      }
+
+      sql execute -transaction $transaction -verbatim $connection $sql \
+          [list param0 String [$certificate TimeStamp.ToString \
+          $dateFormat]] [list param1 String [$certificate Duration]] \
+          [list param2 String $keyId] [list param3 String [appendArgs \
+          0x [format %lx [$certificate Number]]]] [list param4 String \
+          [$certificate SerialNumber]] [list param5 String [$certificate \
+          EntityName]] [list param6 String [$certificate EntityValue]] \
+          [list param7 String [object invoke Convert ToBase64String \
+          [$certificate Signature]]] [list param8 String $certificateId]
+    } else {
+      set sql {
+        UPDATE Certificates
+        SET TimeStamp = ?, Duration = ?, Key = ?, Signature = ?
+        WHERE Id = ?;
+      }
+
+      sql execute -transaction $transaction -verbatim $connection $sql \
+          [list param0 String [$certificate TimeStamp.ToString \
+          $dateFormat]] [list param1 String [$certificate Duration]] \
+          [list param2 String $keyId] [list param3 String [object invoke \
+          Convert ToBase64String [$certificate Signature]]] [list param4 \
+          String $certificateId]
+    }
+
+    #
+    # NOTE: Update the request status to indicate success.
+    #
+    updateRequestStatus $connection $transaction $requestId OK
+
+    sql transaction commit $transaction
+
+    set stream [object create -alias System.IO.MemoryStream]
+    certificate export -usestream $certificate $stream
+    set buffer [$stream -create GetBuffer]
+
+    set data [encoding getstring $buffer utf-8]
+
+    set xmlDeclaration "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+
+    set data [string map [list \
+        $xmlDeclaration [appendArgs $xmlDeclaration [info newline] \
+        [lindex [regexp -inline -- {<!--.*-->} [certificate warning]] \
+        0]]] $data]
+
+    set xmlNs xmlns=\"https://eagle.to/2011/harpy\"
+    set xmlNsXsi xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"
+    set xmlNsXsd xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"
+
+    set data [string map [list \
+        [appendArgs $xmlNsXsd " " $xmlNsXsi " " $xmlNs] \
+        [appendArgs $xmlNs " " $xmlNsXsi " " $xmlNsXsd]]  $data]
+
+    set data [string map [list \
+        [appendArgs $xmlNsXsi " " $xmlNsXsd " " $xmlNs] \
+        [appendArgs $xmlNs " " $xmlNsXsi " " $xmlNsXsd]]  $data]
+
+    set data [string map [list \
+        "\" xmlns" [appendArgs \" [info newline] "             " \
+        xmlns]] $data]
+
+    #
+    # NOTE: If available, the Kapok server will also reply with the trusted
+    #       key ring file (signed up to the trust root), containing the key
+    #       pair that was used to sign the renewed certificate.
+    #
+    set keyRing(data) ""; set keyRing(signature) ""
+
+    getKeyRingDataAndSignature $keyId keyRing; # optional
+
+    return [list \
+        KeyRingData $keyRing(data) KeyRingSignature $keyRing(signature) \
+        CertificateData [object invoke Convert ToBase64String [object \
+        invoke System.Text.Encoding UTF8.GetBytes $data] InsertLineBreaks] \
+        ServerInfo [info hostname]]
+  } finally {
+    if {[info exists transaction]} then {
+      if {[llength [info transactions $transaction]] == 1} then {
+        #
+        # BUGBUG: Shouldn't this be commit instead of rollback?
+        #
+        sql transaction commit $transaction
+      }
+
+      unset transaction
+    }
+
+    if {[info exists connection]} then {
+      sql close $connection; unset connection
+    }
+
+    cleanup
+
+    if {[info exists path_set]} then {
+      unset -nocomplain path path_set
+    }
+
+    object cleanup
+  }
+} else {
+  usage ""
+}

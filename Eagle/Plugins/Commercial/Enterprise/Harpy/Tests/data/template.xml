@@ -1,0 +1,180 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  #
+  # WARNING: This "certificate" is really just a template; therefore, it is
+  #          not signed and cannot be verified.  However, it can be imported
+  #          and used as a template for other certificates.
+  #
+  #############################################################################
+  #                        Start Example Eagle Script                         #
+  #############################################################################
+
+  #
+  # NOTE: Creating certificates requires the "Eagle Enterprise Edition"
+  #       licensing plugin.
+  #
+  # package require Licensing.Enterprise
+  source enableSecurity; # HACK: Need signing keys metadata loaded.
+  package require Harpy.Test
+
+  #
+  # NOTE: To simplify this example, change to the parent directory of the
+  #       directory containing this template file.
+  #
+  cd [file normalize [file dirname [info script]]]
+
+  #
+  # NOTE: Import this certificate template file.
+  #
+  set cert [certificate import -alias template.xml]
+
+  #
+  # NOTE: Set the certificate properties to the desired values.
+  #
+  set num [appendArgs 0x [format %lx [expr random()]]]
+
+  $cert Vendor "Your Company Name Here";      # vendor name (recommended)
+  $cert Product "Magic Middleware";           # product name (recommended)
+  $cert Origin https://www.example.com/;      # origin (product/license URI)
+  $cert Authority https://certs.example.com/; # authority (cert management URI)
+  $cert EntityType Company;                   # customer type (recommended)
+  $cert EntityName "Acme Widgets";            # customer name (recommended)
+  $cert EntityValue null;                     # script data (do not use)
+  $cert ExtraData null;                       # script block type (do not use)
+  $cert Quantity 1;                           # quantity (optional)
+  $cert Number $num;                          # certificate sequence number
+  $cert SerialNumber TEST-001-XXX;            # serial number (shared secret)
+  $cert HashAlgorithm SHA512;                 # hash algorithm (recommended)
+  $cert Features QX;                          # product features (optional)
+  $cert Restrictions ERLU;                    # product restrictions (optional)
+
+  $cert Agreement \
+      https://urn.to/r/eee_license; # license/contract (optional)
+
+  set supportUri [appendArgs \
+      https://eagle.to/enterprise/support.html?id= [string tolower \
+      [string range [hash normal sha512 [$cert SerialNumber]] 0 9]]]
+
+  $cert Support $supportUri; # support/contract (optional)
+
+  #
+  # NOTE: Optionally, use a specific point-in-time as the TimeStamp, via:
+  #
+  set dateTimeValue 2022-10-04T07:35:37.6697840Z
+  set dateTimeFormat [getDefaultDateTimeFormat]
+
+  set timeStamp [object invoke -create -alias \
+      DateTime ParseExact $dateTimeValue $dateTimeFormat null \
+      AdjustToUniversal]
+
+  if {[$timeStamp ToString $dateTimeFormat] ne $dateTimeValue} then {
+    error [appendArgs \
+        "DateTime value for TimeStamp does not match " $dateTimeValue]
+  }
+
+  $cert TimeStamp $timeStamp
+  $cert TimeStamp.ToString $dateTimeFormat
+
+  #
+  # NOTE: Load the appropriate strong name key pair.
+  #
+  set pair [keypair open \
+      -alias -public -private $env(EagleEnterprisePrivateKey)]
+
+  # -OR-
+
+  set pair [keypair open -alias -public -private \
+      ../../../../../../Keys/EagleEnterprisePluginRootPrivate.snk]
+
+  #
+  # NOTE: Sign the (now modified) certificate.
+  #
+  certificate sign -setid -settimestamp -setkey $cert $pair
+
+  #
+  # NOTE: Verify the certificate and signature.
+  #
+  certificate verify $cert $pair
+
+  #
+  # NOTE: We need the public key token as a hexadecimal string.
+  #
+  set token [object invoke \
+      Utility ToHexadecimalString [$pair PublicKeyToken]]
+
+  #
+  # NOTE: Make sure the certificate passes the expiration check.
+  #
+  certificate expired -policytype License $cert $token
+
+  #
+  # NOTE: Make sure the certificate passes the revocation check.
+  #
+  certificate revoked -policytype License $cert
+
+  #
+  # NOTE: Figure out where to put the certificate to be exported.
+  #
+  set fileName [file join $env(TEMP) certificate.xml]
+
+  #
+  # NOTE: Export the certificate to a new file in the TEMP directory.
+  #
+  certificate export $cert $fileName
+
+  #
+  # NOTE: Optionally, add the warning banner to the new file in the TEMP
+  #       directory.
+  #
+  certificate warning -type License $fileName
+
+  #
+  # NOTE: Optionally, fix the issue with the "xmlns" attributes on the root
+  #       element being spaced on one huge line.
+  #
+  # HACK: Read the raw data from the certificate file data into memory, fix
+  #       the XML formatting how we want it, and then re-write the modified
+  #       data back out to the same certificate file in the TEMP directory.
+  #
+  reformatCertificateSpacing $fileName
+
+  #############################################################################
+  #                         End Example Eagle Script                          #
+  #############################################################################
+-->
+<Certificate xmlns="https://eagle.to/2011/harpy"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <Notes>
+    This field will NOT be included in the signature creation/validation
+    process; however, it will be loaded and saved along with the other
+    certificate data.
+  </Notes>
+  <Protocol>Local</Protocol>
+  <Vendor>Your company name here</Vendor>
+  <Id>00000000-0000-0000-0000-000000000000</Id>
+  <SerialNumber>Serial number here</SerialNumber>
+  <HashAlgorithm>SHA512</HashAlgorithm>
+  <Type>Single User</Type>
+  <EntityType>None</EntityType>
+  <EntityName>User or company name here</EntityName>
+  <EntityValue>Script data here (script certs only)</EntityValue>
+  <ExtraData>Script block type here (script certs only)</ExtraData>
+  <Quantity>0</Quantity>
+  <Product>Product name here</Product>
+  <Features>QX</Features>
+  <Restrictions>E</Restrictions>
+  <ProtocolVersion>4.0</ProtocolVersion>
+  <Origin>https://www.example.com/</Origin>
+  <Authority>https://certs.example.com/</Authority>
+  <Agreement>https://www.example.com/license.html</Agreement>
+  <Support>https://www.example.com/support.html?id=0123456789</Support>
+  <TimeStamp>2000-01-01T00:00:00.0000000Z</TimeStamp>
+  <Duration>-1.00:00:00</Duration>
+  <Key>0x0000000000000000</Key>
+  <Number>0x0000000000000000</Number>
+  <Signature>
+    VGhlIGJhc2U2NCBlbmNvZGVkIHNpZ25hdHVyZSB3aWxsIGdvIGhlcmU=
+  </Signature>
+  <Version>1.0</Version>
+</Certificate>

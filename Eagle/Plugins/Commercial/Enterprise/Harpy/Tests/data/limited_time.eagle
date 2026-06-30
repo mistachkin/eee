@@ -1,0 +1,77 @@
+###############################################################################
+#
+# limited_time.eagle --
+#
+# Extensible Adaptable Generalized Logic Engine (Eagle)
+# Enterprise Edition Configuration Script File (Harpy)
+#
+# Copyright (c) 2007-2012 by Joe Mistachkin.  All rights reserved.
+#
+# See the file "license.terms" for information on usage and redistribution of
+# this file, and for a DISCLAIMER OF ALL WARRANTIES.
+#
+# RCS: @(#) $Id: $
+#
+###############################################################################
+
+# <<swapCommands>>
+failOnError true; # Upon error, plugin will fail to load.
+requireVersion 0.0.0.0; # Set allowed versions.
+
+###############################################################################
+
+#
+# NOTE: Technically, this check is optional.  It allows variants of this
+#       configuration file to be locked to a particular customer.
+#
+requireData {00000000-0000-0000-0000-000000000002_{0}}
+
+###############################################################################
+
+#
+# NOTE: Modify the default (limited) license duration from 45 days to the
+#       value required for approximately 5 years.
+#
+changeDuration License 1830
+
+###############################################################################
+
+#
+# NOTE: The key usage here is being augmented with a couple extra flags
+#       so this key can be used for customers that are allowed to use a
+#       signed license certificate for a limited duration after it was
+#       issued even though it was originally authored and signed with
+#       an unlimited duration (e.g. legacy unlimited customers that are
+#       going through a pricing migration via a new license public key):
+#
+#       "O" (LimitedTimeOnly) - Key pair is forbidden from singing any
+#                               certificate with an unlimited duration.
+#
+#       "W" (ConvertToLimitedTime) - Certificate signed with key pair
+#                                    should automatically be converted
+#                                    from an unlimited duration to a
+#                                    limited duration that starts when
+#                                    the certificate was first issued
+#                                    and lasts approximately 45 days.
+#
+addRingPublicKey {
+  Kind          KeyPair
+  Id            0b2f6051-b1a9-4c12-83bd-f82ae2bbdf86
+  Name          TestPublic8.snk
+  Group         "Legacy Licensee Certificates"
+  Description   "Used to sign legacy license certificates."
+  KeyUsage      LCQEOW
+  KeyGroups     0x8bf43b4749e46a0b
+} {
+  0x00 0x24 0x00 0x00 0x04 0x80 0x00 0x00 0x94 0x00 0x00 0x00 0x06 0x02 0x00
+  0x00 0x00 0x24 0x00 0x00 0x52 0x53 0x41 0x31 0x00 0x04 0x00 0x00 0x01 0x00
+  0x01 0x00 0x8B 0x4B 0x07 0x40 0x41 0x1E 0x5A 0xC6 0xF2 0x73 0x57 0xE3 0xF8
+  0x37 0xAF 0xA6 0xA7 0xB7 0x29 0xB4 0xAB 0x60 0x44 0x92 0xB9 0x59 0x83 0x33
+  0x59 0x90 0xC8 0xFF 0x68 0x99 0xA1 0x52 0xF6 0x3D 0x6F 0xC1 0x9F 0x75 0xA7
+  0x97 0x20 0x34 0xD7 0x55 0x71 0x4B 0xD6 0x76 0x2C 0x77 0x2D 0xCD 0xA4 0xC6
+  0xA1 0x18 0x5D 0x5E 0x45 0xF7 0x98 0xEE 0x41 0x0D 0x99 0xCE 0xB8 0xAE 0x7D
+  0xB4 0x52 0xD1 0x4F 0x78 0x8F 0x4D 0x4C 0x61 0x86 0x69 0x72 0x4F 0xF9 0x40
+  0xC9 0x50 0x29 0x58 0xD3 0xB5 0x6F 0x8C 0xCF 0xC8 0xB1 0xAE 0x4C 0x1A 0x84
+  0xA0 0xA8 0x11 0xC8 0xA9 0xED 0x11 0x1E 0x9C 0x8E 0xA1 0x8A 0x98 0x8B 0x7E
+  0x8F 0x30 0xAF 0xEB 0xA8 0x43 0x68 0x48 0xA0 0xD2
+}

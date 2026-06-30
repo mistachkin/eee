@@ -1,0 +1,204 @@
+<!--
+ *
+ * Harpy.Settings.targets -
+ *
+ * WARNING: Contains more evil MSBuild hacks than your doctor recommended.
+ *
+ * Copyright (c) 2007-2012 by Joe Mistachkin.  All rights reserved.
+ *
+ * See the file "license.terms" for information on usage and redistribution of
+ * this file, and for a DISCLAIMER OF ALL WARRANTIES.
+ *
+ * RCS: @(#) $Id: $
+ *
+-->
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!--
+  ******************************************************************************
+  **                          Load Per-User Settings                          **
+  ******************************************************************************
+  -->
+
+  <!--
+      NOTE: If the per-user settings file exists, import it now.  The contained
+            settings, if any, will override the default ones provided below.
+  -->
+  <Import Condition="'$(HarpyDir)' != '' And
+                     !HasTrailingSlash('$(HarpyDir)') And
+                     Exists('$(HarpyDir)\Targets\Harpy.Settings.targets.user')"
+          Project="$(HarpyDir)\Targets\Harpy.Settings.targets.user" />
+
+  <!--
+  ******************************************************************************
+  **                             Harpy Properties                             **
+  ******************************************************************************
+  -->
+
+  <PropertyGroup>
+    <!--
+        NOTE: Do we want to enforce the license certificate checking via the
+              Harpy plugins (i.e. not when run via the command line)?  By
+              default, this is enabled.  If this is disabled, then no license
+              certificate checking will be performed by the Harpy plugins.
+    -->
+    <Licensing Condition="'$(Licensing)' == ''">true</Licensing>
+
+    <!--
+        NOTE: Should this build of Harpy enable special handling for "demo"
+              key pairs?  Without this, the "demo" key pairs may be useless
+              for signing license certificates for Harpy itself.  This will
+              also impact all license certificates returned from the public
+              Kapok server, e.g. by [requestLicenseCertificate] in the core
+              script library.  Currently, this feature has no effect unless
+              Harpy is (also) built with support for IPlugin and execution
+              policy enforcement; however, this may change in the future.
+    -->
+    <DemoKeyPairs Condition="'$(DemoKeyPairs)' == ''">false</DemoKeyPairs>
+
+    <!--
+        NOTE: Is this build of Harpy designed for demonstration use only?
+              If so, plugin commands should also be disabled.
+    -->
+    <DemoEdition Condition="'$(DemoEdition)' == ''">false</DemoEdition>
+
+    <!--
+        NOTE: Is this build of Harpy designed for execution policy use only?
+              If so, plugin commands should also be disabled.
+    -->
+    <LimitedEdition Condition="'$(LimitedEdition)' == ''">false</LimitedEdition>
+
+    <!--
+        NOTE: Does this build of Harpy include the extra diagnostic / testing
+              features?  Generally, this should only be enabled for the full
+              featured SKUs because it may present copy protection issues.
+    -->
+    <ExtraDiagnostics Condition="'$(ExtraDiagnostics)' == ''">false</ExtraDiagnostics>
+
+    <!--
+        NOTE: Do we want to obfuscate the built assembly using Dotfuscator
+              Community Edition?  By default, this is disabled.  This will
+              not function on Windows Vista or later unless Visual Studio
+              is running as an elevated administrator.
+    -->
+    <Obfuscate1 Condition="'$(Obfuscate1)' == ''">false</Obfuscate1>
+
+    <!--
+        NOTE: Do we want to obfuscate the built assembly using Gapotchenko
+              Eazfuscator.NET?  By default, this is disabled.
+    -->
+    <Obfuscate2 Condition="'$(Obfuscate2)' == ''">false</Obfuscate2>
+
+    <!--
+        NOTE: Do we want to obfuscate the built assembly using LogicNP
+              Software Crypto Obfuscator for .NET?  By default, this is
+              disabled.
+    -->
+    <Obfuscate3 Condition="'$(Obfuscate3)' == ''">false</Obfuscate3>
+
+    <!--
+        NOTE: Do we want to include the plugin commands in the built assembly?
+              By default, this is enabled.  If this is disabled, the commands
+              provided by the plugin will be unavailable (i.e. the code will
+              simply not be compiled into the built assembly).
+    -->
+    <PluginCommands Condition="'$(PluginCommands)' == ''">true</PluginCommands>
+
+    <!--
+        NOTE: Do we want to include the base license manager code in the built
+              assembly?  By default, this is enabled.  If this is disabled, the
+              license manager, including all its components and interfaces, will
+              be unavailable (i.e. the code will simply not be compiled into the
+              built assembly).
+    -->
+    <LicenseManager Condition="'$(LicenseManager)' == ''">true</LicenseManager>
+
+    <!--
+        NOTE: Do we want to include the certificate plugin code in the built
+              assembly?  By default, this is enabled.  If this is disabled, the
+              certificate plugin, including all its commands and policies, will
+              be unavailable (i.e. the code will simply not be compiled into the
+              built assembly).
+    -->
+    <CertificatePlugin Condition="'$(CertificatePlugin)' == ''">true</CertificatePlugin>
+
+    <!--
+        NOTE: Do we want to include certificate policy enforcement in the built
+              assembly?  By default, this is enabled.  If this is disabled, the
+              certificate policy mechanism will be unavailable (i.e. the code
+              will simply not be compiled into the built assembly).
+    -->
+    <CertificatePolicy Condition="'$(CertificatePolicy)' == ''">true</CertificatePolicy>
+
+    <!--
+        NOTE: Do we want to include automatic certificate renewal in the built
+              assembly?  By default, this is enabled.  If this is disabled, the
+              automatic certificate renewal mechanism will be unavailable (i.e.
+              the code will simply not be compiled into the built assembly).
+    -->
+    <CertificateRenewal Condition="'$(CertificateRenewal)' == ''">true</CertificateRenewal>
+
+    <!--
+        NOTE: Do we want to embed license certificates in the built assembly?
+              By default, this is disabled.  If this is enabled, there must be
+              existing license certificates in "Resources\Certificate";
+              otherwise, this property will be silently ignored.  If the license
+              certificate are successfully embedded at compile-time, they will
+              be used as the ultimate fallback in the event no external license
+              certificates can be located at runtime.
+    -->
+    <EmbedCertificates Condition="'$(EmbedCertificates)' == ''">true</EmbedCertificates>
+
+    <!--
+        NOTE: Do we want to use OpenSSL-based cryptography APIs on platforms
+              that may require it, e.g. macOS?  By default, this is disabled.
+              If this is enabled, some cryptography primities may be supplied
+              by the installed OpenSSL library.
+    -->
+    <EagleOpenSsl Condition="'$(EagleOpenSsl)' == ''">false</EagleOpenSsl>
+
+    <!--
+        NOTE: Do we want to use the ObfuscationAttribute class to mark various
+              interfaces, classes, and properties as immune from the obfuscation
+              processing, if any?  By default, this is enabled.  If this is
+              disabled, the built assembly may not function correctly because
+              there are some non-public classes that are referenced by name by
+              Eagle itself, the unit tests, and various other external callers
+              (typically via reflection).
+    -->
+    <EagleObfuscation Condition="'$(EagleObfuscation)' == ''">true</EagleObfuscation>
+
+    <!--
+        NOTE: Do we want to use the various extra "security" features that are
+              enabled to protect against casual copying and/or snooping?  By
+              default, this is enabled.  If this is disabled, extra security
+              measures will not be enabled, providing less protection against
+              casual copying and/or snooping.
+    -->
+    <EagleSecurity Condition="'$(EagleSecurity)' == ''">true</EagleSecurity>
+
+    <!--
+        NOTE: Force non-essential runtime diagnostic messages to be enabled in
+              release builds?  By default, this is enabled.  If disabled, this
+              will prevent many diagnostic trace messages from being emitted in
+              release builds.
+
+        HACK: This cannot be conditioned upon $(EagleForceTrace) being missing
+              or empty due to it being included in the core library settings.
+    -->
+    <EagleForceTrace>true</EagleForceTrace>
+
+    <!--
+        NOTE: In order to support larger key sizes on macOS, the RSA provider
+              from OpenSSL is required.
+    -->
+    <EagleOpenSsl Condition="'$(EagleOpenSsl)' == ''">false</EagleOpenSsl>
+
+    <!--
+        NOTE: Do we want to consider license certificates that are marked as
+              "For Test Use Only" as invalid?  By default, this is disabled
+              for debug builds and enabled for release builds.
+    -->
+    <EagleForTestUseOnly Condition="'$(EagleForTestUseOnly)' == '' And '$(Configuration)' == 'Debug'">false</EagleForTestUseOnly>
+    <EagleForTestUseOnly Condition="'$(EagleForTestUseOnly)' == '' And '$(Configuration)' == 'Release'">true</EagleForTestUseOnly>
+  </PropertyGroup>
+</Project>

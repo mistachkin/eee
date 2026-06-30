@@ -1,0 +1,40 @@
+###############################################################################
+#
+# Dockerfile-release --
+#
+# Extensible Adaptable Generalized Logic Engine (Eagle)
+#
+# Copyright (c) 2007-2012 by Joe Mistachkin.  All rights reserved.
+#
+# See the file "license.terms" for information on usage and redistribution of
+# this file, and for a DISCLAIMER OF ALL WARRANTIES.
+#
+# RCS: @(#) $Id: $
+#
+###############################################################################
+
+FROM mistachkin/eagle:release
+
+ADD Harpy.v1.eagle .
+ADD Harpy.v1.eagle.b64sig .
+
+USER root
+
+RUN apt-get update && \
+    apt-get -y install unzip && \
+    mkdir -p /harpy-bin && \
+    curl --location https://urn.to/r/harpy_bin_docker_nupkg > /harpy-bin/harpy_bin_docker_nupkg.zip && \
+    unzip /harpy-bin/harpy_bin_docker_nupkg.zip -d /harpy-bin/ && \
+    mkdir -p /opt/eagle/lib/Badge1.0 && \
+    cp -R /harpy-bin/build/netstandard2.1/lib/Badge1.0/* /opt/eagle/lib/Badge1.0 && \
+    mkdir -p /opt/eagle/lib/Harpy1.0 && \
+    cp -R /harpy-bin/build/netstandard2.1/lib/Harpy1.0/* /opt/eagle/lib/Harpy1.0 && \
+    rm -f /opt/eagle/lib/Harpy1.0/Configurations/Harpy.v1.eeagle* && \
+    cp /Harpy.v1.eagle* /opt/eagle/lib/Harpy1.0/Configurations && \
+    rm -rf /opt/eagle/lib/Badge.Basic1.0 && \
+    rm -rf /opt/eagle/lib/Harpy.Basic1.0 && \
+    chown -R eagle:eagle /opt/eagle/lib/Badge1.0 && \
+    chown -R eagle:eagle /opt/eagle/lib/Harpy1.0 && \
+    rm -rf /harpy-bin /Harpy.v1.eagle*
+
+USER eagle

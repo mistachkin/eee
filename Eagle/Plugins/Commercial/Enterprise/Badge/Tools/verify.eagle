@@ -1,0 +1,605 @@
+###############################################################################
+#
+# verify.eagle --
+#
+# Extensible Adaptable Generalized Logic Engine (Eagle)
+# Enterprise Edition Script Verification Tool
+#
+# Copyright (c) 2007-2012 by Joe Mistachkin.  All rights reserved.
+#
+# See the file "license.terms" for information on usage and redistribution of
+# this file, and for a DISCLAIMER OF ALL WARRANTIES.
+#
+# RCS: @(#) $Id: $
+#
+###############################################################################
+
+proc usage { error } {
+  # <help>
+  # This procedure prints the command-line usage summary for the script
+  # verification tool and then terminates the process, signaling failure to
+  # whatever invoked it.  It exists as the single entry point for the "you
+  # called me incorrectly" path, and is invoked when the tool is run with the
+  # wrong number of positional arguments.
+  #
+  # How it works: when the error argument is a non-empty string it is written
+  # to standard output first; the usage line is then printed, naming the host
+  # shell executable and this script followed by the supported positional
+  # arguments (baseDirectory plus the optional certificateDirectory, recursive,
+  # embedded, showFailedOnly, and showSkipped flags).  Finally it calls
+  # [exit 1].
+  #
+  # Tricky details: this procedure never returns to its caller -- it always
+  # exits the process with a non-zero (failure) status, so it must only be
+  # used on terminal error paths.
+  #
+  # Arguments:
+  #   error -- An optional leading error message.  When non-empty it is shown
+  #            before the usage text; pass an empty string to show plain usage.
+  #
+  # Results:
+  #   Does not return; the process exits with status code 1.
+  # </help>
+
+  if {[string length $error] > 0} then {puts stdout $error}
+
+  puts stdout "usage:\
+[file tail [getShellExecutableName]] [file tail [info script]]\
+<baseDirectory> \[certificateDirectory\] \[recursive\] \[embedded\]\
+\[showFailedOnly\] \[showSkipped\]"
+
+  #
+  # NOTE: Indicate to the caller, if any, that we have failed.
+  #
+  exit 1
+}
+
+proc getCertificate { fileName directory textVarName } {
+  # <help>
+  # This procedure locates and returns the Harpy certificate that covers a
+  # given file, trying a sequence of conventional locations and forms.  It
+  # exists so the verification driver can transparently handle the several
+  # ways a script or data file may be associated with its certificate: a
+  # sibling ".harpy" file, an embedded certificate inside the file itself, a
+  # ".harpy" named after the file's SHA1 hash, or an analogous file in an
+  # alternate certificate directory.
+  #
+  # How it works: it first looks for "<fileName>.harpy" next to the file; if
+  # present, the certificate is imported (with validation) and returned.  If no
+  # sibling certificate exists, it falls back to [certificate extract], which
+  # looks for an embedded certificate inside the file and, when found, returns
+  # both the certificate and the entity text via the upvar'd textVarName.  If
+  # that also fails, it tries a hash-named certificate ("0x<sha1>.harpy") in
+  # the file's own directory.  When a non-empty directory is supplied, the same
+  # two probes (tail name and hash name) are repeated against that alternate
+  # location.  As a final attempt it tries to fetch the certificate via the
+  # Eagle script policy machinery ([Interpreter.GetActive GetScript] with the
+  # NoXml, NoPolicy, and PackageRequiredFile flags), once for the sibling name
+  # and once for a hash-named path computed from the file's RuntimeOps hash;
+  # any XML obtained that way is fed through Certificate.CreateFromXml to
+  # materialize a certificate object.  At every step a [catch] failure is
+  # routed through [warning].
+  #
+  # Tricky details: the embedded path is the only one that populates the
+  # upvar'd text variable, and that text is later assigned to the certificate's
+  # EntityValue before verification.  The hash-name probes use a lowercased
+  # "0x"-prefixed SHA1 of the file contents and assume the on-disk certificate
+  # was named with that exact convention.  Every failed probe returns the empty
+  # string from this procedure rather than the literal word so the caller's
+  # [string length] check can distinguish "no certificate" from "found".
+  #
+  # Arguments:
+  #   fileName    -- The file whose certificate should be located.
+  #   directory   -- Optional alternate certificate directory; an empty string
+  #                  skips the alternate-location probes.
+  #   textVarName -- Name of a caller-side variable that receives the entity
+  #                  text recovered from an embedded certificate, when one is
+  #                  found via [certificate extract].
+  #
+  # Results:
+  #   Returns the certificate object handle when one is located and validated;
+  #   otherwise returns the empty string.
+  # </help>
+
+  upvar 1 $textVarName text
+
+  set certificateFile [appendArgs $fileName .harpy]
+
+  if {[file exists $certificateFile]} then {
+    if {[catch {
+      certificate import -alias -validate $certificateFile
+    } result] == 0} then {
+      return $result
+    } else {
+      warning $result
+    }
+
+    return ""
+  } else {
+    if {[catch {
+      certificate extract -alias -validate -textvar text $fileName
+    } result] == 0} then {
+      return $result
+    } else {
+      set hashDirectory [file dirname $fileName]
+
+      set hashCertificateFile [file join $hashDirectory [appendArgs \
+          0x [string tolower [hash normal -filename sha1 $fileName]] \
+          .harpy]]
+
+      if {[file exists $hashCertificateFile]} then {
+        if {[catch {
+          certificate import -alias -validate $hashCertificateFile
+        } result] == 0} then {
+          return $result
+        } else {
+          warning $result
+        }
+
+        return ""
+      }
+    }
+  }
+
+  if {[string length $directory] > 0} then {
+    set newCertificateFile [file join $directory [appendArgs \
+        [file tail $fileName] .harpy]]
+
+    if {[file exists $newCertificateFile]} then {
+      if {[catch {
+        certificate import -alias -validate $newCertificateFile
+      } result] == 0} then {
+        return $result
+      } else {
+        warning $result
+      }
+
+      return ""
+    } else {
+      set hashCertificateFile [file join $directory [appendArgs \
+          0x [string tolower [hash normal -filename sha1 $fileName]] \
+          .harpy]]
+
+      if {[file exists $hashCertificateFile]} then {
+        if {[catch {
+          certificate import -alias -validate $hashCertificateFile
+        } result] == 0} then {
+          return $result
+        } else {
+          warning $result
+        }
+
+        return ""
+      }
+    }
+  }
+
+  set scriptFlags [list NoXml NoPolicy PackageRequiredFile]
+  set clientData null
+  set result null
+
+  set code [object invoke Interpreter.GetActive GetScript \
+      $certificateFile scriptFlags clientData result]
+
+  if {$code ne "Ok"} then {
+    warning [getStringFromObjectHandle $result]
+
+    set certificateFile [file join \
+        [file dirname $fileName] [appendArgs 0x [object invoke Utility \
+        ToHexadecimalString [object invoke -flags +NonPublic \
+        Eagle._Components.Private.RuntimeOps HashString null [readFile \
+        $fileName] null result]] .harpy]]
+
+    set clientData null
+    set result null
+
+    set code [object invoke Interpreter.GetActive GetScript \
+        $certificateFile scriptFlags clientData result]
+
+    if {$code ne "Ok"} then {
+      warning [getStringFromObjectHandle $result]
+    }
+  }
+
+  if {$code eq "Ok"} then {
+    set xml [getStringFromObjectHandle $result]
+    set result null
+
+    set certificate [object invoke \
+        -flags +NonPublic -alias Licensing.Components.Public.Certificate \
+        CreateFromXml $certificateFile $xml true result]
+
+    if {![isNonNullObjectHandle $certificate]} then {
+      warning [getStringFromObjectHandle $result]
+    }
+
+    return $certificate
+  }
+
+  return ""
+}
+
+proc warning { message } {
+  # <help>
+  # This procedure reports a non-fatal warning to standard error and gives the
+  # operator a chance to break into the debugger.  It exists so that minor
+  # problems encountered while locating or importing a certificate (a failed
+  # import, an unreadable script, etc.) are surfaced without aborting the
+  # verification run.
+  #
+  # How it works: it consults the global "warnings" flag and does nothing
+  # unless it both exists and is true; when enabled, it writes the message to
+  # the standard error channel and then invokes [debug break] inside a [catch]
+  # so the call is harmless when no debugger is attached.
+  #
+  # Arguments:
+  #   message -- The warning text to display.
+  #
+  # Results:
+  #   Returns the empty string; its purpose is the side effect of printing the
+  #   warning and (optionally) triggering a debugger break.
+  # </help>
+
+  if {[info exists ::warnings] && $::warnings} then {
+    puts stderr $message; catch {debug break}
+  }
+}
+
+proc failure { fileName message } {
+  # <help>
+  # This procedure reports a per-file verification failure to standard error
+  # and gives the operator a chance to break into the debugger.  It is invoked
+  # when [certificate verifyfile] or [certificate verifystring] raises an
+  # error, so the failure is visible in real time even though the verification
+  # loop continues processing the remaining files.
+  #
+  # How it works: it consults the global "failures" flag and does nothing
+  # unless it both exists and is true; when enabled, it writes the message to
+  # the standard error channel and then invokes [debug break] inside a [catch]
+  # so the call is harmless when no debugger is attached.
+  #
+  # Tricky details: the fileName argument is accepted for context but is not
+  # itself written -- the caller is expected to have already incorporated any
+  # file identification into the message.  Note that the procedure looks at
+  # "failures" while [warning] looks at "warnings"; the two channels are gated
+  # by independent global flags.
+  #
+  # Arguments:
+  #   fileName -- The file that failed verification (informational only).
+  #   message  -- The failure text to display.
+  #
+  # Results:
+  #   Returns the empty string; its purpose is the side effect of printing the
+  #   failure and (optionally) triggering a debugger break.
+  # </help>
+
+  if {[info exists ::failures] && $::failures} then {
+    puts stderr $message; catch {debug break}
+  }
+}
+
+if {[llength $argv] >= 1 && [llength $argv] <= 7} then {
+  #
+  # NOTE: This tool requires Eagle.
+  #
+  package require Eagle
+
+  #
+  # NOTE: This tool always requires the "Enterprise Edition" security
+  #       features.
+  #
+  package require Security.Core
+
+  #
+  # NOTE: Load the default trusted key rings.
+  #
+  security true; keyring bootstrap
+
+  #
+  # NOTE: Grab the directory from the command line; this must be the Eagle
+  #       base directory (i.e. the one containing the "lib" and "Library"
+  #       sub-directories).
+  #
+  set baseDirectory [file normalize [lindex $argv 0]]
+
+  #
+  # NOTE: Grab the certificate directory, if any, from the command line.
+  #       if this is an empty string, it will not be used; otherwise, it
+  #       will be used as an alternative location for certificate files.
+  #
+  if {![info exists certificateDirectory]} then {
+    set certificateDirectory ""
+  }
+
+  if {[llength $argv] >= 2} then {
+    set certificateDirectory [file normalize [lindex $argv 1]]
+  }
+
+  #
+  # NOTE: Grab the recursion flag.  If this is non-zero, all files in the
+  #       specified directory tree will be checked; otherwise, only the
+  #       files directly within the specified directory will be checked.
+  #
+  if {![info exists recursive]} then {
+    set recursive false
+  }
+
+  if {[llength $argv] >= 3} then {
+    set recursive [lindex $argv 2]
+  }
+
+  #
+  # NOTE: Grab the embedded flag.  If this is non-zero, embedded script
+  #       certificates will always be considered; otherwise, only they
+  #       will only be considered if checking within "well-known" Eagle
+  #       source tree directories.
+  #
+  if {![info exists embedded]} then {
+    set embedded false
+  }
+
+  if {[llength $argv] >= 4} then {
+    set embedded [lindex $argv 3]
+  }
+
+  #
+  # NOTE: Grab the show-failed-only flag.  If this is non-zero, results
+  #       will only be shown for failed files.  This flag will work in
+  #       combination with the show-skipped flag.
+  #
+  if {![info exists showFailedOnly]} then {
+    set showFailedOnly true
+  }
+
+  if {[llength $argv] >= 5} then {
+    set showFailedOnly [lindex $argv 4]
+  }
+
+  #
+  # NOTE: Grab the show-skipped flag.  If this is non-zero, the results
+  #       will be shown for all skipped files; otherwise, only the files
+  #       with certificates will have their results shown.
+  #
+  if {![info exists showSkipped]} then {
+    set showSkipped false
+  }
+
+  if {[llength $argv] >= 6} then {
+    set showSkipped [lindex $argv 5]
+  }
+
+  #
+  # NOTE: Verify that all the necessary directories exist.
+  #
+  if {![file exists $baseDirectory] || \
+      ![file isdirectory $baseDirectory]} then {
+    error [appendArgs "base directory \"" $baseDirectory "\" must exist"]
+  }
+
+  #
+  # NOTE: Verify the recursion flag looks like a boolean.
+  #
+  if {![string is boolean -strict $recursive]} then {
+    error [appendArgs "cannot convert \"" $recursive "\" to a boolean"]
+  }
+
+  #
+  # NOTE: Enable warnings to the standard error channel?
+  #
+  if {![info exists warnings]} then {
+    set warnings false
+  }
+
+  #
+  # NOTE: If forced by the caller, load the Badge plugin now.
+  #
+  if {$embedded} then {
+    package require Security.Certificates
+  }
+
+  #
+  # NOTE: Initially, start with an empty list of files to verify.
+  #
+  set fileNames [list]
+
+  #
+  # NOTE: Figure out what the Eagle script library directory would be,
+  #       if it were to exist within the specified parent directory.
+  #
+  if {![info exists scriptLibraryDirectory]} then {
+    set scriptLibraryDirectory [file join $baseDirectory lib Eagle1.0]
+  }
+
+  if {[file exists $scriptLibraryDirectory] && \
+      [file isdirectory $scriptLibraryDirectory]} then {
+    #
+    # NOTE: This tool also requires the current script certificates for
+    #       each of the files we are going to hash (i.e. when we need to
+    #       verify the actual Eagle script library files).
+    #
+    package require Security.Certificates
+
+    #
+    # NOTE: Start out by adding all the Eagle core script library files
+    #       to the final list to be hashed.
+    #
+    eval lappend fileNames [findFilesRecursive \
+        [file join $scriptLibraryDirectory *]]
+  }
+
+  #
+  # NOTE: Figure out what the Eagle core library test directory would
+  #       be, if it were to exist within the specified parent directory.
+  #
+  if {![info exists testLibraryDirectory]} then {
+    set testLibraryDirectory [file join $baseDirectory lib Test1.0]
+  }
+
+  if {[file exists $testLibraryDirectory] && \
+      [file isdirectory $testLibraryDirectory]} then {
+    #
+    # NOTE: This tool also requires the current script certificates for
+    #       each of the files we are going to hash (i.e. when we need to
+    #       verify the actual Eagle core library test files).
+    #
+    package require Security.Certificates
+
+    #
+    # NOTE: Next, add the Eagle test library files to the final list to
+    #       be hashed.
+    #
+    eval lappend fileNames [findFilesRecursive \
+        [file join $testLibraryDirectory *]]
+  }
+
+  #
+  # NOTE: Finally, add the script files immediately within the specified
+  #       directory.
+  #
+  if {$recursive} then {
+    eval lappend fileNames [findFilesRecursive \
+        [file join $baseDirectory *.cs]]
+
+    eval lappend fileNames [findFilesRecursive \
+        [file join $baseDirectory *.db]]
+
+    eval lappend fileNames [findFilesRecursive \
+        [file join $baseDirectory *.tcl]]
+
+    eval lappend fileNames [findFilesRecursive \
+        [file join $baseDirectory *.eagle]]
+
+    eval lappend fileNames [findFilesRecursive \
+        [file join $baseDirectory *.resources]]
+
+    eval lappend fileNames [findFilesRecursive \
+        [file join $baseDirectory *.xml]]
+  } else {
+    eval lappend fileNames [findFiles [file join $baseDirectory *.cs]]
+    eval lappend fileNames [findFiles [file join $baseDirectory *.db]]
+    eval lappend fileNames [findFiles [file join $baseDirectory *.tcl]]
+    eval lappend fileNames [findFiles [file join $baseDirectory *.eagle]]
+    eval lappend fileNames [findFiles [file join $baseDirectory *.resources]]
+    eval lappend fileNames [findFiles [file join $baseDirectory *.xml]]
+  }
+
+  #
+  # NOTE: Figure out the maximum length for all the relative file names
+  #       we are going to hash.
+  #
+  set maxFileNameLength 0
+
+  foreach fileName $fileNames {
+    set relativeFileName [string range \
+        $fileName [expr {[string length $baseDirectory] + 1}] end]
+
+    set length [string length $relativeFileName]
+
+    if {$maxFileNameLength == 0 || $length > $maxFileNameLength} then {
+      set maxFileNameLength $length
+    }
+  }
+
+  #
+  # NOTE: Attempt to hash and verify each file and then store the result
+  #       for later output.
+  #
+  incr maxFileNameLength; set maxHashLength 0
+
+  foreach fileName $fileNames {
+    set fileName [file normalize $fileName]
+    set text ""
+
+    set certificate [getCertificate \
+        $fileName $certificateDirectory text]
+
+    if {[string length $certificate] > 0} then {
+      set publicKeyToken [object invoke Utility ToHexadecimalString \
+          [$certificate Key]]
+
+      set tokens($fileName) $publicKeyToken
+
+      set hashes($fileName) [object invoke Utility ToHexadecimalString \
+          [certificate hashfile $certificate $fileName]]
+
+      set length [string length $hashes($fileName)]
+
+      if {$maxHashLength == 0 || $length > $maxHashLength} then {
+        set maxHashLength $length
+      }
+
+      if {[catch {
+        set command [list certificate]
+
+        if {[string length $text] > 0} then {
+          $certificate EntityValue $text
+
+          lappend command verifystring -hashflags Embedded \
+              -encoding iso-8859-1 -- $certificate $publicKeyToken ""
+        } else {
+          set encoding [object invoke -alias -flags +NonPublic \
+              Engine GetEncoding $fileName None null]
+
+          if {[isNonNullObjectHandle $encoding]} then {
+            set encoding [$encoding WebName]
+          } else {
+            set encoding null
+          }
+
+          lappend command verifyfile -encoding $encoding \
+              $certificate $publicKeyToken $fileName
+        }
+
+        eval $command
+      } result] == 0} then {
+        set results($fileName) $result
+      } else {
+        set results($fileName) Failed
+
+        failure $fileName $result
+      }
+    } else {
+      set tokens($fileName) none
+      set hashes($fileName) none
+
+      set length [string length $hashes($fileName)]
+
+      if {$maxHashLength == 0 || $length > $maxHashLength} then {
+        set maxHashLength $length
+      }
+
+      set results($fileName) SkippedOk
+    }
+  }
+
+  #
+  # NOTE: Emit the stored results to the standard output channel.
+  #
+  foreach fileName $fileNames {
+    set fileName [file normalize $fileName]
+
+    if {($showFailedOnly && $results($fileName) eq "Failed") || \
+        ($showSkipped && $results($fileName) eq "SkippedOk") || \
+        (!$showFailedOnly && $results($fileName) ne "SkippedOk")} then {
+      set relativeFileName [string range \
+          $fileName [expr {[string length $baseDirectory] + 1}] end]
+
+      puts stdout [appendArgs \
+          [format [appendArgs % $maxFileNameLength s] $relativeFileName] " " \
+          [format [appendArgs % $maxHashLength s] $hashes($fileName)] " " \
+          [format %16s $tokens($fileName)] [format %11s $results($fileName)]]
+    }
+  }
+
+  #
+  # NOTE: Play nice and cleanup all the variables we created during
+  #       the whole the verification process.
+  #
+  unset -nocomplain baseDirectory certificateDirectory warnings \
+      fileNames scriptLibraryDirectory testLibraryDirectory \
+      maxFileNameLength maxHashLength fileName relativeFileName \
+      length certificate hashes tokens result results recursive \
+      embedded encoding publicKeyToken showSkipped showFailedOnly
+} else {
+  usage ""
+}

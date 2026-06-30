@@ -1,0 +1,6 @@
+proc stopNow {} { exit -force -nodispose }
+proc threadStart {} { after 6000 [list stopNow]; vwait forever }
+set t [createThread threadStart]
+startThread $t; puts stdout BEFORE
+demo shutdown
+puts stdout AFTER

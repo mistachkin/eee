@@ -1,0 +1,227 @@
+###############################################################################
+#
+# shared-storage-manager.eagle --
+#
+# Extensible Adaptable Generalized Logic Engine (Eagle)
+# Harpy Storage Manager Shared
+#
+# Copyright (c) 2007-2012 by Joe Mistachkin.  All rights reserved.
+#
+# See the file "license.terms" for information on usage and redistribution of
+# this file, and for a DISCLAIMER OF ALL WARRANTIES.
+#
+# RCS: @(#) $Id: $
+#
+###############################################################################
+
+namespace eval ::Harpy::StorageManager::Shared {
+  proc getNamePrefix { args } {
+    # <help>
+    # This procedure builds the common name prefix that every storage entry
+    # for the calling machine (and, when running under the test suite, the
+    # current test run) is required to carry.  It exists so that all four
+    # storage methods -- read, write, delete, and list -- can scope their
+    # operations to a single machine and a single test run, isolating one
+    # license host's storage from another's and one test run's storage from
+    # another's even when the underlying store is shared.
+    #
+    # How it works: it extracts the machineId entry from the request
+    # dictionary in args, requires it to be non-empty and to be a strict GUID,
+    # and then assembles the prefix as "storage." followed by the machine Id
+    # and a trailing period.  When the Eagle.Test helper procedure
+    # [getTestRunId] is available and yields a non-empty value, that test run
+    # Id (followed by another period) is appended to the prefix.
+    #
+    # Tricky and security details: the machine Id must pass [string is guid
+    # -strict] -- the strict form is what blocks an attacker or a buggy caller
+    # from injecting glob meta-characters that would later make [filterList]
+    # match across machines.  When [getTestRunId] is missing or errors, the
+    # prefix simply omits the test run segment rather than failing the whole
+    # request; this keeps non-test invocations from depending on Eagle.Test
+    # being loaded.
+    #
+    # Arguments:
+    #   args -- The flattened request dictionary forwarded from the storage
+    #           manager's processRequest procedure; it must contain a
+    #           "machineId" key whose value is a strict GUID.
+    #
+    # Results:
+    #   Returns the assembled name prefix string; raises an error when the
+    #   machine Id is missing or malformed.
+    # </help>
+
+    set machineId [getDictionaryValue $args machineId]
+
+    if {[string length $machineId] == 0} then {
+      error "invalid storage machine Id"
+    }
+
+    if {[string is not guid -strict $machineId]} then {
+      error "malformed storage machine Id"
+    }
+
+    set result [appendArgs storage. $machineId .]
+
+    if {[catch {getTestRunId} rid] == 0 && \
+        [string length $rid] > 0} then {; # requires Eagle.Test
+      append result $rid .
+    }
+
+    return $result
+  }
+
+  proc getName { args } {
+    # <help>
+    # This procedure builds the fully-qualified storage entry name by joining
+    # the machine-and-test-run prefix produced by [getNamePrefix] with the
+    # logical name supplied by the caller.  It exists so that the read, write,
+    # and delete branches of every storage manager can convert the public
+    # logical name (for example, the certificate name the licensing code asked
+    # for) into the actual key used inside the underlying store.
+    #
+    # How it works: it extracts the "name" entry from the request dictionary
+    # in args, requires it to be non-empty, and then returns the concatenation
+    # of [getNamePrefix args] and that name.
+    #
+    # Tricky details: the empty-name check is what keeps a stray request from
+    # collapsing into a key equal to the bare machine prefix, which would
+    # otherwise overlap the list operation's match space.
+    #
+    # Arguments:
+    #   args -- The flattened request dictionary forwarded from the storage
+    #           manager's processRequest procedure; it must contain a "name"
+    #           key whose value is non-empty, and the keys required by
+    #           [getNamePrefix].
+    #
+    # Results:
+    #   Returns the fully-qualified storage entry name; raises an error when
+    #   the logical name is missing or empty, or when [getNamePrefix] does.
+    # </help>
+
+    set name [getDictionaryValue $args name]
+
+    if {[string length $name] == 0} then {
+      error "invalid storage name"
+    }
+
+    return [appendArgs \
+        [eval getNamePrefix $args] $name]
+  }
+
+  proc filterList { list args } {
+    # <help>
+    # This procedure narrows a list of raw storage entry names down to those
+    # that belong to the calling machine (and current test run), stripping the
+    # common prefix so the returned values are the logical names the caller
+    # originally supplied.  It exists to service the "list" storage method:
+    # the underlying store may hold entries for many machines and many test
+    # runs, and only the slice that matches the request's prefix should be
+    # returned, and only as user-meaningful names.
+    #
+    # How it works: it computes the prefix via [getNamePrefix args], iterates
+    # over each element of list, and keeps the element only when it
+    # glob-matches the prefix followed by a wildcard.  For each kept element
+    # the prefix is removed (via [string range] from the prefix length to the
+    # end) before it is appended to the result.
+    #
+    # Tricky and security details: this prefix isolation is what keeps one
+    # machine's, or one test run's, storage names from leaking into another's
+    # list result.  The matching uses [string match], so the strict GUID check
+    # enforced by [getNamePrefix] is what prevents a hostile machine Id from
+    # widening the match.
+    #
+    # Arguments:
+    #   list -- The raw list of fully-qualified entry names returned by the
+    #           underlying store.
+    #   args -- The flattened request dictionary forwarded from the storage
+    #           manager's processRequest procedure; must contain the keys
+    #           required by [getNamePrefix].
+    #
+    # Results:
+    #   Returns a new list of logical names (prefix stripped) restricted to
+    #   the calling machine and test run.
+    # </help>
+
+    set result [list]
+    set prefix [eval getNamePrefix $args]
+
+    foreach element $list {
+      if {[string match \
+          [appendArgs $prefix *] $element]} then {
+        lappend result [string range $element \
+            [string length $prefix] end]
+      }
+    }
+
+    return $result
+  }
+
+  proc logRequest { varName args } {
+    # <help>
+    # This procedure emits a single trace message describing one phase of a
+    # storage request, optionally including the value of a named result
+    # variable that is visible in the caller's scope.  It exists so that
+    # every storage manager (local, remote, and any future variant) can
+    # surface uniform "before" and "after" trace lines around each request,
+    # which can then be saved to the Eagle trace log file for later review.
+    #
+    # How it works: when varName is non-empty, it links the caller's
+    # variable of that name to a local "result" variable.  It captures the
+    # name of the procedure that invoked it (the level zero entry from
+    # [info level]) and forms a list of that caller name and args.  When
+    # result exists and is non-empty, it appends " ==> " followed by the
+    # variable name and its current value.  The trimmed message is then
+    # passed to [dtrace] inside a [catch] so a missing or failing tracing
+    # subsystem does not derail the request.
+    #
+    # Tricky details: the level-zero capture happens inside this procedure,
+    # so the recorded "level" is this procedure's own invocation -- it
+    # records the [logRequest ... LOCAL_BEFORE ...] (or REMOTE_BEFORE) call
+    # the storage manager just made, which is exactly the phase label
+    # desired in the trace.  The [dtrace] call requires the Eagle.Test
+    # package; the [catch] silently no-ops when it is not loaded.
+    #
+    # Arguments:
+    #   varName -- Optional name of a caller-scope variable to include in the
+    #              trace; an empty string suppresses the value portion of the
+    #              message.
+    #   args    -- Additional message components (typically the request phase
+    #              label followed by the flattened request dictionary).
+    #
+    # Results:
+    #   Returns the result of the [catch] around [dtrace] (zero on success,
+    #   one when [dtrace] is unavailable or errors); its purpose is the side
+    #   effect of writing the trace message.
+    # </help>
+
+    if {[string length $varName] > 0} then {
+      upvar 1 $varName result
+    }
+
+    set level [lindex [info level [info level]] 0]
+    set message [list $level $args]
+
+    if {[info exists result] && \
+        [string length $result] > 0} then {
+      append message " ==> " [list $varName $result]
+    }
+
+    set message [string trim $message]
+
+    #
+    # HACK: Use the [dtrace] procedure from the test
+    #       package.  This will send trace messages
+    #       to the tracing subsystem.  This is nice
+    #       because that output can be saved to the
+    #       trace log file, for later review during
+    #       troubleshooting, etc.
+    #
+    catch {dtrace $message}; # requires Eagle.Test
+  }
+
+  package require Eagle.Test
+
+  namespace export getName filterList logRequest
+
+  package provide Harpy.StorageManager.Shared 1.0
+}

@@ -1,0 +1,117 @@
+<!--
+ *
+ * Featherlight.NuGet.targets -
+ *
+ * WARNING: This MSBuild file requires MSBuild 4.0 features.
+ *
+ * Written by Joe Mistachkin and David Archer.
+ * Released to the public domain, use at your own risk!
+ *
+-->
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!--
+  ******************************************************************************
+  **                     Featherlight Package Build Items                     **
+  ******************************************************************************
+  -->
+
+  <ItemGroup>
+    <FeatherlightFiles Condition="'$(MSBuildThisFileDirectory)' != '' And
+                           HasTrailingSlash('$(MSBuildThisFileDirectory)')"
+                Include="$(MSBuildThisFileDirectory)**"
+                Exclude="$(MSBuildThisFileDirectory)*.targets" />
+  </ItemGroup>
+
+  <!--
+  ******************************************************************************
+  **                  Featherlight Package Build Properties                   **
+  ******************************************************************************
+  -->
+
+  <PropertyGroup Condition="'$(NoFeatherlightDefineConstant)' != 'false'">
+    <DefineConstants>$(DefineConstants);FEATHERLIGHT</DefineConstants>
+  </PropertyGroup>
+
+  <!--
+  ******************************************************************************
+  **                    Featherlight Package Build Targets                    **
+  ******************************************************************************
+  -->
+
+  <Target Name="CopyFeatherlightFiles"
+          Condition="'$(CopyFeatherlightFiles)' != 'false' And
+                     '$(OutDir)' != '' And
+                     HasTrailingSlash('$(OutDir)') And
+                     Exists('$(OutDir)')"
+          Inputs="@(FeatherlightFiles)"
+          Outputs="@(FeatherlightFiles -> '$(OutDir)%(RecursiveDir)%(Filename)%(Extension)')">
+    <Copy SourceFiles="@(FeatherlightFiles)"
+          DestinationFiles="@(FeatherlightFiles -> '$(OutDir)%(RecursiveDir)%(Filename)%(Extension)')" />
+  </Target>
+
+  <!--
+  ******************************************************************************
+  -->
+
+  <Target Name="CleanFeatherlightFiles"
+          Condition="'$(CleanFeatherlightFiles)' != 'false' And
+                     '$(OutDir)' != '' And
+                     HasTrailingSlash('$(OutDir)') And
+                     Exists('$(OutDir)')">
+    <Delete Files="@(FeatherlightFiles -> '$(OutDir)%(RecursiveDir)%(Filename)%(Extension)')" />
+  </Target>
+
+  <!--
+  ******************************************************************************
+  -->
+
+  <Target Name="CollectFeatherlightFiles"
+          Condition="'$(CollectFeatherlightFiles)' != 'false'">
+    <ItemGroup>
+      <FilesForPackagingFromProject Include="@(FeatherlightFiles)">
+        <DestinationRelativePath>bin\%(RecursiveDir)%(Filename)%(Extension)</DestinationRelativePath>
+      </FilesForPackagingFromProject>
+    </ItemGroup>
+  </Target>
+
+  <!--
+  ******************************************************************************
+  **                  Featherlight Package Build Properties                   **
+  ******************************************************************************
+  -->
+
+  <PropertyGroup>
+    <PostBuildEventDependsOn>
+      $(PostBuildEventDependsOn);
+      CopyFeatherlightFiles;
+    </PostBuildEventDependsOn>
+    <BuildDependsOn>
+      $(BuildDependsOn);
+      CopyFeatherlightFiles;
+    </BuildDependsOn>
+    <CleanDependsOn>
+      $(CleanDependsOn);
+      CleanFeatherlightFiles;
+    </CleanDependsOn>
+  </PropertyGroup>
+
+  <!--
+  ******************************************************************************
+  **     Featherlight Package Publish Properties for Visual Studio 20xx       **
+  ******************************************************************************
+  -->
+
+  <PropertyGroup Condition="'$(VisualStudioVersion)' == '' Or
+                            '$(VisualStudioVersion)' == '10.0' Or
+                            '$(VisualStudioVersion)' == '11.0' Or
+                            '$(VisualStudioVersion)' == '12.0' Or
+                            '$(VisualStudioVersion)' == '14.0' Or
+                            '$(VisualStudioVersion)' == '15.0' Or
+                            '$(VisualStudioVersion)' == '16.0' Or
+                            '$(VisualStudioVersion)' == '17.0'">
+    <PipelineCollectFilesPhaseDependsOn>
+      CollectFeatherlightFiles;
+      $(PipelineCollectFilesPhaseDependsOn);
+    </PipelineCollectFilesPhaseDependsOn>
+  </PropertyGroup>
+</Project>

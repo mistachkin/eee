@@ -1,0 +1,11 @@
+kapok about	kapok about
+kapok access	kapok access ?type? apiKeyId ?value?
+kapok certificate	kapok certificate
+kapok cleanup	kapok cleanup ?apiKeyId?
+kapok done	kapok done action ?value?
+kapok evaluate	kapok evaluate ?options? script
+kapok isolated	kapok isolated
+kapok log	kapok log message ?priority?
+kapok options	kapok options
+kapok setting	kapok setting name ?flags?
+kapok source	kapok source

@@ -1,0 +1,34 @@
+###############################################################################
+#
+# request_license.eagle --
+#
+# Extensible Adaptable Generalized Logic Engine (Eagle)
+# Signed Script Test
+#
+# Copyright (c) 2007-2012 by Joe Mistachkin.  All rights reserved.
+#
+# See the file "license.terms" for information on usage and redistribution of
+# this file, and for a DISCLAIMER OF ALL WARRANTIES.
+#
+# RCS: @(#) $Id: $
+#
+###############################################################################
+
+requireComponent requireVersion
+requireComponent failOnError
+requireComponent notBefore
+requireComponent notAfter
+
+# <<swapCommands>>
+requireVersion 0.0.0.0; # NOTE: Lock to version range (0.0.0.0 is "any").
+failOnError true; # NOTE: Upon error, plugin will fail to load.
+notBefore 0001-01-01T00:00:00.0000000Z; # Unusable before this date/time.
+notAfter 9999-12-31T23:59:59.9999999Z; # Unusable after this date/time.
+
+#
+# HACK: This uses hard-coded certificate and subscription identifiers
+#       from the Kapok test suite.  Furthermore, it assumes the Kapok
+#       test server is available.
+#
+setPassword 1b40f0fe-a2fc-4c42-a644-45a851e1c75d "Eagle Development Team"
+requireLicense [requestLicense 1935f24a-18ee-49d9-9458-555bf2f39ba5]

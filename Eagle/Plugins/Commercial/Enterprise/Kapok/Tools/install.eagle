@@ -1,0 +1,804 @@
+###############################################################################
+#
+# install.eagle --
+#
+# Extensible Adaptable Generalized Logic Engine (Eagle)
+# Kapok Development Server Installation Tool
+#
+# Copyright (c) 2007-2012 by Joe Mistachkin.  All rights reserved.
+#
+# See the file "license.terms" for information on usage and redistribution of
+# this file, and for a DISCLAIMER OF ALL WARRANTIES.
+#
+# RCS: @(#) $Id: $
+#
+###############################################################################
+
+proc maybeWhatIf { args } {
+  # <help>
+  # This procedure conditionally executes a command, either really running it
+  # or merely printing what would have been run.  It exists so that all of the
+  # destructive filesystem operations in the installer (creating directories
+  # and copying files) can be funneled through a single switch that turns the
+  # whole install into a dry run when the global whatIf variable is true.
+  #
+  # How it works: it consults the namespace-scoped whatIf variable.  When that
+  # flag is true it writes the command words plus a newline to standard output
+  # and returns an empty string; otherwise it evaluates the command one level
+  # up (with [uplevel 1]) so that side effects happen in the caller's frame and
+  # the real result is returned.
+  #
+  # Arguments:
+  #   args -- The command and its arguments, given as separate words.  Either
+  #           printed (in dry-run mode) or evaluated in the caller's frame.
+  #
+  # Results:
+  #   Returns the empty string when whatIf is true; otherwise returns the
+  #   result of evaluating the command.
+  # </help>
+
+  variable whatIf
+
+  if {$whatIf} then {
+    puts stdout [appendArgs $args \n]; return ""
+  } else {
+    return [uplevel 1 $args]
+  }
+}
+
+###############################################################################
+
+proc extractRelativePath { path part } {
+  # <help>
+  # This procedure extracts the trailing portion of a path that comes after a
+  # named directory component.  It exists to support the installer's "starred"
+  # target-subdirectory rule: when a sub-directory entry in the manifest begins
+  # with an asterisk, the rest of that entry names the marker directory inside
+  # the package, and everything BELOW that marker is the relative path the
+  # file should occupy under the install target.
+  #
+  # How it works: it splits the input path with [file split], searches the
+  # resulting list for an exact match against part, and if found returns the
+  # rejoined sequence of components that follow it.  If part is not present,
+  # or the input is empty, it returns the empty string.
+  #
+  # Arguments:
+  #   path -- The package-relative file path to dissect.
+  #   part -- The directory component to search for; only what comes after it
+  #           is returned.
+  #
+  # Results:
+  #   Returns the joined path of all components after the matched part, or the
+  #   empty string when no match is found or the input was empty.
+  # </help>
+
+  if {[string length $path] > 0} then {
+    set parts [file split $path]
+
+    if {[llength $parts] > 0} then {
+      set index [lsearch -exact -- $parts $part]
+
+      if {$index != -1} then {
+        return [eval file join \
+            [lrange $parts [incr index] end]]
+      }
+    }
+  }
+
+  return ""
+}
+
+###############################################################################
+
+proc addPackageTemplateFileNames { packageName varName } {
+  # <help>
+  # This procedure appends extra package files to a list whose name is given,
+  # picking entries from the packageTemplateFileNames manifest array by glob
+  # pattern.  It exists so that the installer can include "templated" extra
+  # files (paths that depend on the target framework, platform, or processor)
+  # in the set of source file names already collected from packageFileNames.
+  #
+  # How it works: it iterates over the sorted keys of packageTemplateFileNames;
+  # each key is first run through [replaceTokens] to substitute the target
+  # tokens, then used as a glob pattern matched against packageName.  For every
+  # matching key, each templated file name in its list is also expanded via
+  # [replaceTokens] and appended to the caller's list (accessed via upvar).
+  #
+  # Arguments:
+  #   packageName -- The package being installed; matched against template-key
+  #                  glob patterns to decide which entries apply.
+  #   varName     -- The name of a list variable in the caller's frame that
+  #                  receives the additional file names.
+  #
+  # Results:
+  #   Returns the empty string; its effect is appending to the caller's list.
+  # </help>
+
+  variable packageTemplateFileNames
+
+  upvar 1 $varName fileNames
+
+  foreach name [lsort [array names packageTemplateFileNames]] {
+    set pattern [replaceTokens $name]
+
+    if {[string match $pattern $packageName]} then {
+      foreach fileName $packageTemplateFileNames($name) {
+        lappend fileNames [replaceTokens $fileName]
+      }
+    }
+  }
+}
+
+###############################################################################
+
+proc findPackageSubDirectory { fileName } {
+  # <help>
+  # This procedure determines the destination sub-directory (relative to the
+  # install target) that a given source file should be copied to, by matching
+  # the file path against the patterns in the packageSubDirectories manifest
+  # array.  It exists to drive the per-file placement decisions made during
+  # the install-packages phase.
+  #
+  # How it works: it walks the sorted keys of packageSubDirectories, expands
+  # each key with [replaceTokens] to substitute target tokens, and treats the
+  # expanded key as a glob pattern matched against fileName.  The value of the
+  # first matching key is also expanded with [replaceTokens] and returned.
+  #
+  # Tricky details: the returned value may begin with an asterisk; the
+  # installer treats that as a special signal (the asterisk-trimmed value is
+  # the marker directory passed to [extractRelativePath] to derive the target
+  # name, and the target sub-directory itself is cleared).  A return value of
+  # the empty string means no rule matched, so the file is placed directly
+  # under the target directory.
+  #
+  # Arguments:
+  #   fileName -- The (already-expanded) package-relative path of the source
+  #               file whose target sub-directory is being resolved.
+  #
+  # Results:
+  #   Returns the matching sub-directory (token-expanded), possibly with a
+  #   leading asterisk marker, or the empty string when no rule matches.
+  # </help>
+
+  variable packageSubDirectories
+
+  foreach name [lsort [array names packageSubDirectories]] {
+    set pattern [replaceTokens $name]
+
+    if {[string match $pattern $fileName]} then {
+      return [replaceTokens $packageSubDirectories($name)]
+    }
+  }
+
+  return ""
+}
+
+###############################################################################
+
+proc isPackageFileUsable { fileName } {
+  # <help>
+  # This procedure decides whether a candidate package file should actually be
+  # installed on the current host, based on the platform-specific path
+  # segments embedded in the file name.  It exists because some NuGet packages
+  # ship native binaries under runtime-identifier sub-directories
+  # (linux-x64, osx-x64, win-x64, win-x86) and only the ones matching the
+  # current operating system and processor should be copied.
+  #
+  # How it works: the rule only applies for netstandard target frameworks.
+  # The file name is checked for each known runtime-identifier sub-path; when
+  # such a segment is present the procedure verifies that the running host
+  # actually matches that runtime, returning false if it does not.  When no
+  # runtime sub-path appears, or when the host matches, true is returned.
+  #
+  # Tricky details: under net20 or net40 the cross-platform runtime-identifier
+  # convention does not apply, so the check is skipped and every file is
+  # treated as usable.  For Windows runtimes only the operating system is
+  # checked (via [isWindows]), not the processor word size.
+  #
+  # Arguments:
+  #   fileName -- The package-relative file path to evaluate.
+  #
+  # Results:
+  #   Returns true if the file is usable on the current host, false if it is a
+  #   runtime-identifier-specific file that does not match this host.
+  # </help>
+
+  global tcl_platform
+  variable targetFramework
+
+  if {$targetFramework in \
+      [list netstandard2.0 netstandard2.1]} then {
+    if {[string match */linux-x64/* $fileName]} then {
+      if {$tcl_platform(os) ne "Linux" || \
+          $tcl_platform(machine) ne "amd64"} then {
+        return false
+      }
+    }
+
+    if {[string match */osx-x64/* $fileName]} then {
+      if {$tcl_platform(os) ne "Darwin" || \
+          $tcl_platform(machine) ne "amd64"} then {
+        return false
+      }
+    }
+
+    if {[string match */win-x64/* $fileName]} then {
+      if {![isWindows]} then {
+        return false
+      }
+    }
+
+    if {[string match */win-x86/* $fileName]} then {
+      if {![isWindows]} then {
+        return false
+      }
+    }
+  }
+
+  return true
+}
+
+###############################################################################
+
+proc getTargetFramework {} {
+  # <help>
+  # This procedure picks a default target .NET framework moniker for the
+  # current host when one has not been supplied externally.  It exists so the
+  # installer can be invoked without arguments on a typical machine and still
+  # arrive at a reasonable target.
+  #
+  # How it works: on Windows it inspects the Eagle runtime version and returns
+  # net40 when the runtime is 4.x, otherwise net20.  On non-Windows hosts it
+  # returns netstandard2.0.
+  #
+  # Tricky details: this is only a default; the manifest constrains the set of
+  # allowed target frameworks, and an unsupported choice will be rejected by
+  # the surrounding script.
+  #
+  # Arguments:
+  #   None.
+  #
+  # Results:
+  #   Returns a target framework moniker such as net20, net40, or
+  #   netstandard2.0.
+  # </help>
+
+  global eagle_platform
+
+  if {[isWindows]} then {
+    if {[string match 4.* $eagle_platform(runtimeVersion)]} then {
+      return net40
+    } else {
+      return net20
+    }
+  } else {
+    return netstandard2.0; # TODO: Safe choice?
+  }
+}
+
+###############################################################################
+
+proc getTargetPlatform {} {
+  # <help>
+  # This procedure picks a default target runtime identifier (platform) for
+  # the current host when one has not been supplied externally.  It exists so
+  # the installer can be run with no arguments on a typical machine and still
+  # arrive at a reasonable platform string for path lookups and file filters.
+  #
+  # How it works: on Windows it inspects the tcl_platform machine value and
+  # returns win-x86 for intel or win-x64 for amd64.  On non-Windows hosts it
+  # returns linux-x64 for amd64 Linux and osx-x64 for amd64 macOS.  Any host
+  # that does not match these cases causes a script error so the caller is
+  # forced to supply an explicit targetPlatform.
+  #
+  # Arguments:
+  #   None.
+  #
+  # Results:
+  #   Returns one of win-x86, win-x64, linux-x64, or osx-x64.  Raises an error
+  #   when the host is not recognized.
+  # </help>
+
+  global tcl_platform
+
+  if {[isWindows]} then {
+    switch -exact -- $tcl_platform(machine) {
+      intel {
+        return win-x86
+      }
+      amd64 {
+        return win-x64
+      }
+    }
+
+    error "unknown Windows machine"
+  } else {
+    if {$tcl_platform(os) eq "Linux" && \
+        $tcl_platform(machine) eq "amd64"} then {
+      return linux-x64
+    }
+
+    if {$tcl_platform(os) eq "Darwin" && \
+        $tcl_platform(machine) eq "amd64"} then {
+      return osx-x64
+    }
+
+    error "unknown platform operating system or machine"
+  }
+}
+
+###############################################################################
+
+proc setupTargetTokens {} {
+  # <help>
+  # This procedure derives the auxiliary target tokens used by [replaceTokens]
+  # from the primary targetFramework and targetPlatform values, but only for
+  # tokens that have not already been provided by the caller.  It exists to
+  # make the manifest patterns and file lists parameterizable on the broader
+  # framework family (net20/net40, or netstandard2.0/netstandard2.1) and on
+  # the broader platform family (win-x86/win-x64, or just a single ID for
+  # Linux/macOS), without forcing every manifest user to define all of those
+  # variants explicitly.
+  #
+  # How it works: depending on the targetFramework value (net20/net40 or one
+  # of the netstandard monikers), targetFramework1 and targetFramework2 are
+  # populated with the matching pair.  Depending on the targetPlatform
+  # (win-x86 or win-x64, linux-x64, or osx-x64), targetPlatform1/2 and
+  # targetProcessor1/2 are populated to match; the Linux and macOS cases
+  # leave the "2" tokens as deliberate "invalid-*" sentinels.  Finally, if
+  # targetProcessor itself is not set, it is derived from the trailing
+  # processor portion of targetPlatform when that matches one of the resolved
+  # processor tokens.
+  #
+  # Tricky details: every assignment is gated on the corresponding variable
+  # not already existing -- caller-supplied overrides are preserved.  The
+  # sentinel values "invalid-platform" and "invalid-processor" are chosen so
+  # that any glob pattern that still references the unused token will simply
+  # fail to match, rather than silently match something unintended.
+  #
+  # Arguments:
+  #   None.  All inputs and outputs are namespace variables.
+  #
+  # Results:
+  #   Returns the empty string; its effect is populating the targetFramework1,
+  #   targetFramework2, targetPlatform1, targetPlatform2, targetProcessor,
+  #   targetProcessor1, and targetProcessor2 namespace variables.
+  # </help>
+
+  variable targetFramework
+  variable targetFramework1
+  variable targetFramework2
+  variable targetPlatform
+  variable targetPlatform1
+  variable targetPlatform2
+  variable targetProcessor
+  variable targetProcessor1
+  variable targetProcessor2
+
+  if {[info exists targetFramework]} then {
+    switch -exact -- $targetFramework {
+      net20 -
+      net40 {
+        if {![info exists targetFramework1]} then {
+          set targetFramework1 net20
+        }
+
+        if {![info exists targetFramework2]} then {
+          set targetFramework2 net40
+        }
+      }
+      netstandard2.0 -
+      netstandard2.1 {
+        if {![info exists targetFramework1]} then {
+          set targetFramework1 netstandard2.0
+        }
+
+        if {![info exists targetFramework2]} then {
+          set targetFramework2 netstandard2.1
+        }
+      }
+    }
+  }
+
+  if {[info exists targetPlatform]} then {
+    switch -exact -- $targetPlatform {
+      win-x86 -
+      win-x64 {
+        if {![info exists targetPlatform1]} then {
+          set targetPlatform1 win-x86
+        }
+
+        if {![info exists targetPlatform2]} then {
+          set targetPlatform2 win-x64
+        }
+
+        if {![info exists targetProcessor1]} then {
+          set targetProcessor1 x86
+        }
+
+        if {![info exists targetProcessor2]} then {
+          set targetProcessor2 x64
+        }
+      }
+      linux-x64 {
+        if {![info exists targetPlatform1]} then {
+          set targetPlatform1 linux-x64
+        }
+
+        if {![info exists targetPlatform2]} then {
+          set targetPlatform2 invalid-platform
+        }
+
+        if {![info exists targetProcessor1]} then {
+          set targetProcessor1 x64
+        }
+
+        if {![info exists targetProcessor2]} then {
+          set targetProcessor2 invalid-processor
+        }
+      }
+      osx-x64 {
+        if {![info exists targetPlatform1]} then {
+          set targetPlatform1 osx-x64
+        }
+
+        if {![info exists targetPlatform2]} then {
+          set targetPlatform2 invalid-platform
+        }
+
+        if {![info exists targetProcessor1]} then {
+          set targetProcessor1 x64
+        }
+
+        if {![info exists targetProcessor2]} then {
+          set targetProcessor2 invalid-processor
+        }
+      }
+    }
+
+    if {![info exists targetProcessor] && \
+        [regexp -nocase -skip 1 -- \
+            {^(?:[0-9A-Z]+)-([0-9A-Z]+)$} \
+            $targetPlatform processor]} then {
+      if {[info exists targetProcessor1] && \
+          $processor eq $targetProcessor1} then {
+        set targetProcessor $processor
+      } elseif {[info exists targetProcessor2] && \
+          $processor eq $targetProcessor2} then {
+        set targetProcessor $processor
+      }
+    }
+  }
+}
+
+###############################################################################
+
+proc replaceTokens { list } {
+  # <help>
+  # This procedure performs target-token substitution across every element of
+  # a list.  It exists so that the manifest's patterns and file paths -- which
+  # use placeholders such as %targetFramework%, %targetPlatform%, and
+  # %targetProcessor% -- can be specialized to the concrete framework,
+  # platform, and processor selected for this install run.
+  #
+  # How it works: for each element, [string map] replaces the nine
+  # placeholders (%targetFramework%, %targetFramework1%, %targetFramework2%,
+  # %targetPlatform%, %targetPlatform1%, %targetPlatform2%, %targetProcessor%,
+  # %targetProcessor1%, and %targetProcessor2%) with the values of the
+  # correspondingly named namespace variables; the substituted element is
+  # appended to the result list.  Elements that contain no placeholders pass
+  # through unchanged.
+  #
+  # Tricky details: the auxiliary "*1"/"*2" tokens are populated by
+  # [setupTargetTokens]; for platforms where they are unused they hold
+  # "invalid-*" sentinels so that any pattern still referencing them fails to
+  # match rather than substituting the empty string.
+  #
+  # Arguments:
+  #   list -- A list of strings (typically glob patterns or file paths) whose
+  #           target tokens should be substituted.
+  #
+  # Results:
+  #   Returns a new list with all target-token placeholders substituted in
+  #   each element.
+  # </help>
+
+  variable targetFramework
+  variable targetFramework1
+  variable targetFramework2
+  variable targetPlatform
+  variable targetPlatform1
+  variable targetPlatform2
+  variable targetProcessor
+  variable targetProcessor1
+  variable targetProcessor2
+
+  set result [list]
+
+  foreach element $list {
+    lappend result [string map [list \
+        %targetFramework% $targetFramework \
+        %targetFramework1% $targetFramework1 \
+        %targetFramework2% $targetFramework2 \
+        %targetPlatform% $targetPlatform \
+        %targetPlatform1% $targetPlatform1 \
+        %targetPlatform2% $targetPlatform2 \
+        %targetProcessor% $targetProcessor \
+        %targetProcessor1% $targetProcessor1 \
+        %targetProcessor2% $targetProcessor2] \
+        $element]
+  }
+
+  return $result
+}
+
+###############################################################################
+
+if {![info exists path]} then {
+  set path [file dirname [info script]]
+}
+
+###############################################################################
+
+if {![info exists manifestFileName]} then {
+  set manifestFileName [file join $path data manifest.eagle]
+
+  if {![file exists $manifestFileName]} then {
+    set manifestFileName [file join $path manifest.eagle]
+  }
+}
+
+source $manifestFileName
+
+###############################################################################
+
+if {![info exists pid]} then {
+  set pid [pid]
+}
+
+if {![info exists baseUri]} then {
+  set baseUri https://www.nuget.org/api/v2/package/
+}
+
+if {![info exists whatIf]} then {
+  set whatIf false
+}
+
+if {![info exists quiet]} then {
+  set quiet false
+}
+
+if {![info exists verbose]} then {
+  set verbose false
+}
+
+###############################################################################
+
+if {![info exists temporaryDirectory]} then {
+  package require Eagle.Test
+  set temporaryDirectory [getTemporaryPath]
+}
+
+set temporaryDirectory [file normalize $temporaryDirectory]
+
+if {![info exists targetDirectory]} then {
+  if {[info exists ::env(KAPOK_TARGET_DIRECTORY)]} then {
+    set targetDirectory [file join \
+        $::env(KAPOK_TARGET_DIRECTORY) [appendArgs install- $pid]]
+  } else {
+    set targetDirectory [file join \
+        $temporaryDirectory [appendArgs install- $pid]]
+  }
+}
+
+set targetDirectory [file normalize $targetDirectory]
+maybeWhatIf file mkdir $targetDirectory
+
+if {![info exists stagingDirectory]} then {
+  set stagingDirectory [file join \
+      $temporaryDirectory [appendArgs staging- $pid]]
+}
+
+set stagingDirectory [file normalize $stagingDirectory]
+file mkdir $stagingDirectory; # EXEMPT (TEMPORARY)
+
+if {![info exists downloadDirectory]} then {
+  set downloadDirectory [file join $stagingDirectory download]
+}
+
+set downloadDirectory [file normalize $downloadDirectory]
+file mkdir $downloadDirectory; # EXEMPT (TEMPORARY)
+
+if {![info exists extractDirectory]} then {
+  set extractDirectory [file join $stagingDirectory extract]
+}
+
+set extractDirectory [file normalize $extractDirectory]
+file mkdir $extractDirectory; # EXEMPT (TEMPORARY)
+
+###############################################################################
+
+if {![info exists targetFramework]} then {
+  set targetFramework [getTargetFramework]
+}
+
+if {$targetFramework ni $targetFrameworks} then {
+  error [appendArgs \
+      "unsupported target framework, must be one of the following: " \
+      $targetFrameworks]
+}
+
+if {![info exists targetPlatform]} then {
+  set targetPlatform [getTargetPlatform]
+}
+
+if {$targetPlatform ni $targetPlatforms} then {
+  error [appendArgs \
+      "unsupported target platform, must be one of the following: " \
+      $targetPlatforms]
+}
+
+setupTargetTokens
+
+###############################################################################
+
+if {![info exists no(downloadPackages)]} then {
+  if {[info exists packageNames($targetFramework)]} then {
+    foreach packageName $packageNames($targetFramework) {
+      if {[info exists packageVersions($packageName)]} then {
+        set packageVersion $packageVersions($packageName)
+
+        set fileName [file normalize [file join \
+            $downloadDirectory [appendArgs $packageName \
+            .nupkg]]]
+
+        set uri [appendArgs \
+            $baseUri $packageName / $packageVersion]
+
+        host result Continue [appendArgs \
+            "DOWNLOADING: \"" $uri \"...\n]
+
+        uri download -timeouttype network $uri $fileName
+
+        if {!$quiet} then {
+          host result Continue [appendArgs \
+              "DOWNLOADED PACKAGE: " $packageName \n]
+        }
+
+        extractZipArchive $fileName [file normalize \
+            [file join $extractDirectory $packageName]] true
+
+        if {!$quiet} then {
+          host result Continue [appendArgs \
+              "EXTRACTED PACKAGE: " $packageName \n]
+        }
+      }
+    }
+  }
+}
+
+###############################################################################
+
+if {![info exists no(verifyPackages)]} then {
+  set errorCount 0
+
+  if {[info exists packageNames($targetFramework)]} then {
+    foreach packageName $packageNames($targetFramework) {
+      if {[info exists packageFileNames($packageName)]} then {
+        set sourceFileNames [replaceTokens \
+            $packageFileNames($packageName)]
+
+        addPackageTemplateFileNames \
+            $packageName sourceFileNames
+
+        set packageErrorCount 0
+
+        foreach packageFileName $sourceFileNames {
+          set sourceFileName [file normalize [file join \
+              $extractDirectory $packageName $packageFileName]]
+
+          if {![file exists $sourceFileName]} then {
+            incr packageErrorCount
+
+            host result Error [appendArgs \
+                "MISSING PACKAGE " $packageName \
+                " FILE: " $sourceFileName \n]
+          }
+        }
+
+        if {$packageErrorCount > 0} then {
+          incr errorCount $packageErrorCount
+        } else {
+          if {!$quiet} then {
+            host result Continue [appendArgs \
+                "VERIFIED PACKAGE: " $packageName \n]
+          }
+        }
+      }
+    }
+  }
+
+  if {$errorCount > 0} then {
+    error "hit one or more package errors, cannot continue"
+  }
+}
+
+###############################################################################
+
+if {![info exists no(installPackages)]} then {
+  if {[info exists packageNames($targetFramework)]} then {
+    foreach packageName $packageNames($targetFramework) {
+      if {[info exists packageFileNames($packageName)]} then {
+        set sourceFileNames [replaceTokens \
+            $packageFileNames($packageName)]
+
+        addPackageTemplateFileNames \
+            $packageName sourceFileNames
+
+        set packageCopyCount 0
+
+        foreach packageFileName $sourceFileNames {
+          if {![isPackageFileUsable $packageFileName]} then {
+            continue
+          }
+
+          set sourceFileName [file normalize [file join \
+              $extractDirectory $packageName $packageFileName]]
+
+          if {![file exists $sourceFileName]} then {
+            continue
+          }
+
+          set targetSubDirectory \
+              [findPackageSubDirectory $sourceFileName]
+
+          if {[string index $targetSubDirectory 0] eq "*"} then {
+            set targetFileNameOnly [extractRelativePath \
+                $packageFileName [string range $targetSubDirectory \
+                1 end]]
+
+            set targetSubDirectory ""
+          } else {
+            set targetFileNameOnly [file tail $sourceFileName]
+          }
+
+          set targetFileName [file join \
+              $targetDirectory $targetSubDirectory \
+              $targetFileNameOnly]
+
+          if {[file exists $targetFileName]} then {
+            if {!$quiet && $verbose} then {
+              host result Continue [appendArgs \
+                  "SKIPPED PACKAGE " $packageName \
+                  " FILE: " $targetFileName \n]
+            }
+          } else {
+            incr packageCopyCount
+
+            maybeWhatIf file mkdir [file dirname $targetFileName]
+            maybeWhatIf file copy $sourceFileName $targetFileName
+
+            if {!$quiet && $verbose} then {
+              host result Continue [appendArgs \
+                  "COPIED PACKAGE " $packageName \
+                  " FILE: " $targetFileName \n]
+            }
+          }
+        }
+
+        if {$packageCopyCount > 0} then {
+          if {!$quiet} then {
+            host result Continue [appendArgs \
+                "INSTALLED PACKAGE: " $packageName \n]
+          }
+        }
+      }
+    }
+  }
+
+  set fileName [file join $targetDirectory Web.config]
+  source [file join $path fixupWebConfig.eagle]
+
+  host result Ok [appendArgs \
+      "KAPOK INSTALLED: " $targetDirectory \n]
+}

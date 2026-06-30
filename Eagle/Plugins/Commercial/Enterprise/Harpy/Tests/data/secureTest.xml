@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<blocks xmlns="https://eagle.to/2009/schema">
+  <block id="2bcc2bfc-e8f7-47be-b93c-510fb9f7ce7b"
+         type="automatic"
+         name="Secure XML Script Test"
+         timeStamp="2009-11-22T09:49:10.4995000Z"
+         publicKeyToken="9559f6017247e3e2"
+         signature="JKeoMZ3K0wDFaRgknPoLPwtYWX9w93kuCkJgmXNnoaxdUy8447I6DTG7XLoZ
+                    8K1GHpUY0fMmxERDoi18yYFWOlBB+HtLc0rfF39ikj2Cr5NcP8Tph/HSSDvZ
+                    dgYs2+puNLb5DJ4gPr3LM1Xf1ov+A24AqLNmnGqKE0PQEqO7z8I5iAg+72rb
+                    w51RQbGkjc9HJ0cc0L1h0xSm0x5UBV24Mx9+jeSz894ImE7D0iWKKLnoFExC
+                    MkOLB9bg0XF92qo1MLa9LZJobE0OY1MEwPigTyrHIwGA+Kkl3tCNUrzAscl4
+                    OcWG1PUuKhCryE7JNx9SNdNjoxP6vSPxmjn8xG2zlx+g8a07+4RbKhHnrHES
+                    JWBKgOhzJCcO61uWJ+QeFNdkoWJpnGf/AQpaSM1lVXt0B4xVIYPAW+oAnzS1
+                    AuxJE6hHbqtNMNCgjNJHT6oJn0ypOEFhh0KtsfG8j+DaCWeF+k10/SpuwNqe
+                    jBpc6W4vHFiRsik7Lucna7YTNZE837PUjr9GIKMzSkuMD3jqR+BNQAHtkP9L
+                    SyyZc6n2R5RNMq1RpWr6CikiQ4CrjTQ4PUeqj2qit+S/ApRT5AfqIo1fUGKr
+                    mUwMwmPBaLiXheyO0Ks6va3MfXNlLXwfF2xU0BYWWxxPzZWDOniws2ZM/Rgc
+                    Xi/XzHmQBvV/tFg6qJtpwkt6vNOebBFlBascLf1JQ5AZR8tmj8s7sKfGgkfU
+                    yd7F+t3PSUAMjr76rzLW9OivntKfTGmUDClVOH9ikNMh6iMRZaE9c+64na20
+                    YzaZ14QqfvxJSY5YbGwF+xvfglpHviuizr9aO/BOtQRx0KZrjErv7Lojj2QH
+                    18VKb4zmqTOYU+EcBxYgNSNrKx0EvAriHJ78lWICeIdN170J5CvN1XrWHEe2
+                    T7rd7BQhMU804K0JPiao54obFQ+FadhO10mk48tbUv0FBSbvPYGnBXAYrDzH
+                    P8J5vxqHl267sB00DJNyl0aIMYJNYXyk1nheLmfmkTzBy7Hy+QKw3+iztwKE
+                    fEbAgM9gpRXieXK3SaqCyWAZJAN+8/NONkkZN7RL0h5fDeiHPRAciPAqIXDB
+                    ydXhCt/WGHg2q5SNyO8jBkUCqbC+KDzsCaOc7UmRLA6mt2676IPvAkPZthD9
+                    ZOQ+uLhk1vTPgBh2HjlsSPepWMT32IEBzbhFQ9hPsIQhIwSVXWJNUU2fnch+
+                    lTTqPjIoh3jmAB1tZV7J2vkOctV+pPAN2hzbJutGmro/G8dXIIrMKg/YsQX0
+                    3+Jz1FSr/rrZO8I8yYVI4UihrwoN46ITIKvDH6XK5Ew4OnzvrH9SgkhPAxDo
+                    G4yfUDmz/llWh7UjG+gQXJcGq/iRrfYA+87/5gaf1VjsLQfCOCL0mMOVdpQN
+                    C8RIyAmT8jWg4SdvZXw5pIZw4SnTF84lH4TMCoULCrf26z5Alekmra1dZZpA
+                    6htRhbN0oJGVJbwL27CbB1+qwEl4lbHFkodbAR7mPxvS+JJXJlEwXNOEEKvM
+                    MP1JFVnWdndwqY2Uz6AqSTsXQ98nK3fpDvid3um9GpH1wJwI7bbzKfdEEIYU
+                    7CtZvLzEXn6PAs9IvCukmrgUL5RPOwuXp4pRgd3Bjmy8mmKTExDnrM1C3i7a
+                    e0QAa/SgG7F3Z78PtJ5FRwAfMjP6jFbS7RI/zqoff4c6yy+oIc6TZf8TF11U
+                    dmb6bncr5ki/5q+aEDxkHi72aERUhcJCHNXR1k4G+qD0BmBdCtI5D/f2hegt
+                    qrcTwRGlN1Ykh+ZzK0FJm6zKtqc6BAC1TgEPPqvplfIxgOiakR8OF8lh0hP3
+                    Dkz/cbPOxBEfJLLzKJx47H1+5D20pF8043AcjZr6UpqUOn3Fqjqojyj7/cNt
+                    PeviH8gCrd4dx2nFXTMIlRdWGAkct6QVohXmeWucP0JtMTG1aKbOOh2oX4bc
+                    sm7/1GFh74OW7MVpjf96hyY2hdsT/V3osSBEC073S8z2cmR8pFVXnhM3Tj+9
+                    1iJyEiTEC7Xs5sdBNDhqbkBCaXGNEXr7HFSaNlCuNGGcjLU0xepY2i3C7edx
+                    1z71u0BQ5EL3kayLhwsszwvidni6IQPDZK/W6FQBtbBgqsDhxcphl+u6nNbL
+                    oxx8t84w+Upw+YRAseOx7zG5xFxUSzqHFHjr7zOkXGKSs0rF+zNzyxBaWE+p
+                    iQ0Nm3OpfwumsGSObx+IVDJCJH6Qjh/Dk4LINAVO79n7qvQ2HQVmuZ5Bc7UU
+                    3YEAKYhYwJpL349Rf9pWP0lAcPVaGZNJut5lLstXnA0cZowumSKvf5YHfSic
+                    d393vzkHOT/h81agKAJancq/hhfzqlTVyZ/0MLtEO/mtmFGS2849mX9S+Tqh
+                    SIkZv85E8nrPU5Q4H/uq2v3lMB7i1pbcJRg/CldZQ6/w4gV2KpOKXyETQ5Rc
+                    /fxYPzMWGHcct/zrrwpxS33VJeDvYTYRWcCC93VfTaLuC2Fcetc+Ymr6BLP9
+                    DWWhLaxPeVkzoHTSOrImNfXSwyQDUrnv5Iq9ybTodr7l+XA/V55VWeuKwfXr
+                    FfNL36uOhTR6zHGXkDZc81C3p5d6621lvayMmx8IjlC2ae42IP023WkrJo/l
+                    WhOHtTdzj5LPY2Yvuwt59IOB9j+WSXlNjqdOZAuoR8t16ItqUf5taEJRe249
+                    QrG7NyS8GQzmoie8mmiEuK7W0aP5Xtkdmval0r7NmP+nnco1IIoOmXNIkufj
+                    5iT7WWg2ZIvdBgnhVvwl1g/kKuaK17w=">
+  <![CDATA[###############################################################################
+#
+# secureTest.eagle --
+#
+# Extensible Adaptable Generalized Logic Engine (Eagle)
+# Signed Script Test
+#
+# Copyright (c) 2007-2012 by Joe Mistachkin.  All rights reserved.
+#
+# See the file "license.terms" for information on usage and redistribution of
+# this file, and for a DISCLAIMER OF ALL WARRANTIES.
+#
+# RCS: @(#) $Id: $
+#
+###############################################################################
+
+#
+# WARNING: This script is signed using the public key of the package
+#          assembly.  If this script file is modified in any way, it
+#          will no longer validate as signed.
+#
+proc helloWorld {} {
+  puts stdout [appendArgs "Hello World - " [info script]]
+}
+
+helloWorld
+]]>
+  </block>
+</blocks>

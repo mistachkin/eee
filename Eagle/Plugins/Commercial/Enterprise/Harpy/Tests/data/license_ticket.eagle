@@ -1,0 +1,27 @@
+###############################################################################
+#
+# license_ticket.eagle --
+#
+# Extensible Adaptable Generalized Logic Engine (Eagle)
+# Signed Script Test
+#
+# Copyright (c) 2007-2012 by Joe Mistachkin.  All rights reserved.
+#
+# See the file "license.terms" for information on usage and redistribution of
+# this file, and for a DISCLAIMER OF ALL WARRANTIES.
+#
+# RCS: @(#) $Id: $
+#
+###############################################################################
+
+# <<swapCommands>>
+failOnError true; # Upon error, plugin will fail to load.
+requireVersion 0.0.0.0; # Set allowed versions.
+
+writeWithoutFail "Issued test process license ticket: " \
+    [setVariable ticket [issueTicket Process License \
+    YBdgIg50a30= 4b97b7f9-4dd5-4be4-9fef-00ddb64b9839]] \n
+
+writeWithoutFail "Redeemed test process license ticket: " \
+    [redeemTicket Process License [setVariable ticket] \
+    YBdgIg50a30=] \n

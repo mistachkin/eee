@@ -1,0 +1,1925 @@
+###############################################################################
+#
+# basic.eagle --
+#
+# Extensible Adaptable Generalized Logic Engine (Eagle)
+# Enterprise Edition Package Tests
+#
+# Copyright (c) 2007-2012 by Joe Mistachkin.  All rights reserved.
+#
+# See the file "license.terms" for information on usage and redistribution of
+# this file, and for a DISCLAIMER OF ALL WARRANTIES.
+#
+# RCS: @(#) $Id: $
+#
+###############################################################################
+
+package require Eagle.Library
+package require Eagle.Test
+
+runTestPrologue
+
+###############################################################################
+
+package require Harpy.Test
+
+tryToLoadKapok
+
+###############################################################################
+
+if {![info exists no(serverEnvironmentVariables)]} then {
+  saveServerEnvironmentVariables savedKapokEnv true
+
+  if {[info exists testKapokEnv(RootBaseUri)]} then {
+    resetServerEnvironmentVariables testKapokEnv false \
+        [shouldUseLocalRelativeUris] false false \
+        $testKapokEnv(RootBaseUri)
+  } elseif {[info exists env(RootBaseUri)]} then {
+    resetServerEnvironmentVariables testKapokEnv false \
+        [shouldUseLocalRelativeUris] false false \
+        $env(RootBaseUri)
+  } else {
+    resetServerEnvironmentVariables testKapokEnv false \
+        [shouldUseLocalRelativeUris]
+  }
+}
+
+###############################################################################
+
+if {![info exists useLocalHost]} then {
+  set useLocalHost [haveConstraint configuration.Debug]
+  set setUseLocalHost true
+}
+
+###############################################################################
+
+if {![info exists authorityBaseUri]} then {
+  if {[info exists testKapokEnv(AuthorityBaseUri)]} then {
+    set authorityBaseUri $testKapokEnv(AuthorityBaseUri)
+    set setAuthorityBaseUri true
+  } elseif {[info exists env(AuthorityBaseUri)]} then {
+    set authorityBaseUri $env(AuthorityBaseUri)
+    set setAuthorityBaseUri true
+  }
+}
+
+###############################################################################
+
+if {![info exists serverPort]} then {
+  if {[info exists testKapokEnv(ServerPort)]} then {
+    set serverPort $testKapokEnv(ServerPort)
+  } elseif {[info exists env(ServerPort)]} then {
+    set serverPort $env(ServerPort)
+  } elseif {[info exists testKapokEnv(UseLocalHost)] && \
+      [info exists testKapokEnv(LocalServerPort)]} then {
+    set serverPort $testKapokEnv(LocalServerPort)
+  } elseif {[info exists env(UseLocalHost)] && \
+      [info exists env(LocalServerPort)]} then {
+    set serverPort $env(LocalServerPort)
+  } else {
+    set baseUri [info engine Uri]; # TODO: Good default?
+
+    if {[regexp -nocase -- {^https://} $baseUri]} then {
+      set serverPort 443
+    } else {
+      set serverPort 80
+    }
+
+    unset baseUri
+  }
+
+  set setServerPort true
+}
+
+###############################################################################
+
+if {![info exists pingBaseUri]} then {
+  if {[info exists testKapokEnv(PingBaseUri)]} then {
+    set pingBaseUri $testKapokEnv(PingBaseUri)
+  } elseif {[info exists env(PingBaseUri)]} then {
+    set pingBaseUri $env(PingBaseUri)
+  } elseif {[info exists testKapokEnv(UseLocalHost)] && \
+      [info exists testKapokEnv(LocalServerPort)]} then {
+    set pingBaseUri [appendArgs \
+        http://localhost : $testKapokEnv(LocalServerPort) /]
+  } elseif {[info exists env(UseLocalHost)] && \
+      [info exists env(LocalServerPort)]} then {
+    set pingBaseUri [appendArgs \
+        http://localhost : $env(LocalServerPort) /]
+  } else {
+    set pingBaseUri [info engine Uri]; # TODO: Good default?
+  }
+
+  set setPingBaseUri true
+}
+
+###############################################################################
+
+if {![info exists provisionBaseUri]} then {
+  if {[info exists testKapokEnv(ProvisionBaseUri)]} then {
+    set provisionBaseUri $testKapokEnv(ProvisionBaseUri)
+  } elseif {[info exists env(ProvisionBaseUri)]} then {
+    set provisionBaseUri $env(ProvisionBaseUri)
+  } elseif {[info exists testKapokEnv(UseLocalHost)] && \
+      [info exists testKapokEnv(LocalServerPort)]} then {
+    set provisionBaseUri [appendArgs \
+        http://localhost : $testKapokEnv(LocalServerPort) /]
+  } elseif {[info exists env(UseLocalHost)] && \
+      [info exists env(LocalServerPort)]} then {
+    set provisionBaseUri [appendArgs \
+        http://localhost : $env(LocalServerPort) /]
+  } else {
+    set provisionBaseUri [info engine Uri]; # TODO: Good default?
+  }
+
+  set setProvisionBaseUri true
+}
+
+###############################################################################
+
+if {![info exists provisionRelativeUri]} then {
+  if {[info exists testKapokEnv(ProvisionRelativeUri)]} then {
+    set provisionRelativeUri $testKapokEnv(ProvisionRelativeUri)
+  } elseif {[info exists env(ProvisionRelativeUri)]} then {
+    set provisionRelativeUri $env(ProvisionRelativeUri)
+  } else {
+    set provisionRelativeUri cgi-bin/provision.cgi?; # TODO: Good default?
+  }
+
+  set setProvisionRelativeUri true
+}
+
+###############################################################################
+
+if {![info exists renewalBaseUri]} then {
+  if {[info exists testKapokEnv(RenewalBaseUri)]} then {
+    set renewalBaseUri $testKapokEnv(RenewalBaseUri)
+  } elseif {[info exists env(RenewalBaseUri)]} then {
+    set renewalBaseUri $env(RenewalBaseUri)
+  } elseif {[info exists testKapokEnv(UseLocalHost)] && \
+      [info exists testKapokEnv(LocalServerPort)]} then {
+    set renewalBaseUri [appendArgs \
+        http://localhost : $testKapokEnv(LocalServerPort) /]
+  } elseif {[info exists env(UseLocalHost)] && \
+      [info exists env(LocalServerPort)]} then {
+    set renewalBaseUri [appendArgs \
+        http://localhost : $env(LocalServerPort) /]
+  } else {
+    set renewalBaseUri [info engine Uri]; # TODO: Good default?
+  }
+
+  set setRenewalBaseUri true
+}
+
+###############################################################################
+
+if {![info exists renewalRelativeUri]} then {
+  if {[info exists testKapokEnv(RenewalRelativeUri)]} then {
+    set renewalRelativeUri $testKapokEnv(RenewalRelativeUri)
+  } elseif {[info exists env(RenewalRelativeUri)]} then {
+    set renewalRelativeUri $env(RenewalRelativeUri)
+  } else {
+    set renewalRelativeUri cgi-bin/renew.cgi?; # TODO: Good default?
+  }
+
+  set setRenewalRelativeUri true
+}
+
+###############################################################################
+
+if {![info exists requestBaseUri]} then {
+  if {[info exists testKapokEnv(RequestBaseUri)]} then {
+    set requestBaseUri $testKapokEnv(RequestBaseUri)
+  } elseif {[info exists env(RequestBaseUri)]} then {
+    set requestBaseUri $env(RequestBaseUri)
+  } elseif {[info exists testKapokEnv(UseLocalHost)] && \
+      [info exists testKapokEnv(LocalServerPort)]} then {
+    set requestBaseUri [appendArgs \
+        http://localhost : $testKapokEnv(LocalServerPort) /]
+  } elseif {[info exists env(UseLocalHost)] && \
+      [info exists env(LocalServerPort)]} then {
+    set requestBaseUri [appendArgs \
+        http://localhost : $env(LocalServerPort) /]
+  } else {
+    set requestBaseUri [info engine Uri]; # TODO: Good default?
+  }
+
+  set setRequestBaseUri true
+}
+
+###############################################################################
+
+if {![info exists requestRelativeUri]} then {
+  if {[info exists testKapokEnv(RequestRelativeUri)]} then {
+    set requestRelativeUri $testKapokEnv(RequestRelativeUri)
+  } elseif {[info exists env(RequestRelativeUri)]} then {
+    set requestRelativeUri $env(RequestRelativeUri)
+  } else {
+    set requestRelativeUri cgi-bin/request.cgi?; # TODO: Good default?
+  }
+
+  set setRequestRelativeUri true
+}
+
+###############################################################################
+
+if {![info exists revocationBaseUri]} then {
+  if {[info exists testKapokEnv(RevocationBaseUri)]} then {
+    set revocationBaseUri $testKapokEnv(RevocationBaseUri)
+  } elseif {[info exists env(RevocationBaseUri)]} then {
+    set revocationBaseUri $env(RevocationBaseUri)
+  } elseif {[info exists testKapokEnv(UseLocalHost)] && \
+      [info exists testKapokEnv(LocalServerPort)]} then {
+    set revocationBaseUri [appendArgs \
+        http://localhost : $testKapokEnv(LocalServerPort) /]
+  } elseif {[info exists env(UseLocalHost)] && \
+      [info exists env(LocalServerPort)]} then {
+    set revocationBaseUri [appendArgs \
+        http://localhost : $env(LocalServerPort) /]
+  } else {
+    set revocationBaseUri [info engine Uri]; # TODO: Good default?
+  }
+
+  set setRevocationBaseUri true
+}
+
+###############################################################################
+
+if {![info exists revocationRelativeUri]} then {
+  if {[info exists testKapokEnv(RevocationRelativeUri)]} then {
+    set revocationRelativeUri $testKapokEnv(RevocationRelativeUri)
+  } elseif {[info exists env(RevocationRelativeUri)]} then {
+    set revocationRelativeUri $env(RevocationRelativeUri)
+  } else {
+    set revocationRelativeUri cgi-bin/revoked.cgi?; # TODO: Good default?
+  }
+
+  set setRevocationRelativeUri true
+}
+
+###############################################################################
+
+if {![info exists supportBaseUri]} then {
+  if {[info exists testKapokEnv(SupportBaseUri)]} then {
+    set supportBaseUri $testKapokEnv(SupportBaseUri)
+  } elseif {[info exists env(SupportBaseUri)]} then {
+    set supportBaseUri $env(SupportBaseUri)
+  } elseif {[info exists testKapokEnv(UseLocalHost)] && \
+      [info exists testKapokEnv(LocalServerPort)]} then {
+    set supportBaseUri [appendArgs \
+        http://localhost : $testKapokEnv(LocalServerPort) /]
+  } elseif {[info exists env(UseLocalHost)] && \
+      [info exists env(LocalServerPort)]} then {
+    set supportBaseUri [appendArgs \
+        http://localhost : $env(LocalServerPort) /]
+  } else {
+    set supportBaseUri [info engine Uri]; # TODO: Good default?
+  }
+
+  set setSupportBaseUri true
+}
+
+###############################################################################
+
+if {![info exists supportRelativeUri]} then {
+  if {[info exists testKapokEnv(SupportRelativeUri)]} then {
+    set supportRelativeUri $testKapokEnv(SupportRelativeUri)
+  } elseif {[info exists env(SupportRelativeUri)]} then {
+    set supportRelativeUri $env(SupportRelativeUri)
+  } else {
+    set supportRelativeUri cgi-bin/support.cgi?; # TODO: Good default?
+  }
+
+  set setSupportRelativeUri true
+}
+
+###############################################################################
+
+if {![info exists scriptBaseUri]} then {
+  if {[info exists testKapokEnv(ScriptBaseUri)]} then {
+    set scriptBaseUri $testKapokEnv(ScriptBaseUri)
+  } elseif {[info exists env(ScriptBaseUri)]} then {
+    set scriptBaseUri $env(ScriptBaseUri)
+  } elseif {[info exists testKapokEnv(UseLocalHost)] && \
+      [info exists testKapokEnv(LocalServerPort)]} then {
+    set scriptBaseUri [appendArgs \
+        http://localhost : $testKapokEnv(LocalServerPort) /]
+  } elseif {[info exists env(UseLocalHost)] && \
+      [info exists env(LocalServerPort)]} then {
+    set scriptBaseUri [appendArgs \
+        http://localhost : $env(LocalServerPort) /]
+  } else {
+    set scriptBaseUri [info engine Uri]; # TODO: Good default?
+  }
+
+  set setScriptBaseUri true
+}
+
+###############################################################################
+
+if {![info exists scriptRelativeUri]} then {
+  if {[info exists testKapokEnv(ScriptRelativeUri)]} then {
+    set scriptRelativeUri $testKapokEnv(ScriptRelativeUri)
+  } elseif {[info exists env(ScriptRelativeUri)]} then {
+    set scriptRelativeUri $env(ScriptRelativeUri)
+  } else {
+    set scriptRelativeUri cgi-bin/script.cgi?; # TODO: Good default?
+  }
+
+  set setScriptRelativeUri true
+}
+
+###############################################################################
+
+if {![info exists storageBaseUri]} then {
+  if {[info exists testKapokEnv(StorageBaseUri)]} then {
+    set storageBaseUri $testKapokEnv(StorageBaseUri)
+  } elseif {[info exists env(StorageBaseUri)]} then {
+    set storageBaseUri $env(StorageBaseUri)
+  } elseif {[info exists testKapokEnv(UseLocalHost)] && \
+      [info exists testKapokEnv(LocalServerPort)]} then {
+    set storageBaseUri [appendArgs \
+        http://localhost : $testKapokEnv(LocalServerPort) /]
+  } elseif {[info exists env(UseLocalHost)] && \
+      [info exists env(LocalServerPort)]} then {
+    set storageBaseUri [appendArgs \
+        http://localhost : $env(LocalServerPort) /]
+  } else {
+    set storageBaseUri [info engine Uri]; # TODO: Good default?
+  }
+
+  set setStorageBaseUri true
+}
+
+###############################################################################
+
+if {![info exists storageRelativeUri]} then {
+  if {[info exists testKapokEnv(StorageRelativeUri)]} then {
+    set storageRelativeUri $testKapokEnv(StorageRelativeUri)
+  } elseif {[info exists env(StorageRelativeUri)]} then {
+    set storageRelativeUri $env(StorageRelativeUri)
+  } else {
+    set storageRelativeUri cgi-bin/storage.cgi?; # TODO: Good default?
+  }
+
+  set setStorageRelativeUri true
+}
+
+###############################################################################
+
+if {![info exists testBaseUri]} then {
+  if {[info exists testKapokEnv(TestBaseUri)]} then {
+    set testBaseUri $testKapokEnv(TestBaseUri)
+  } elseif {[info exists env(TestBaseUri)]} then {
+    set testBaseUri $env(TestBaseUri)
+  } elseif {[info exists testKapokEnv(UseLocalHost)] && \
+      [info exists testKapokEnv(LocalServerPort)]} then {
+    set testBaseUri [appendArgs \
+        http://localhost : $testKapokEnv(LocalServerPort) /]
+  } elseif {[info exists env(UseLocalHost)] && \
+      [info exists env(LocalServerPort)]} then {
+    set testBaseUri [appendArgs \
+        http://localhost : $env(LocalServerPort) /]
+  } else {
+    set testBaseUri [info engine Uri]; # TODO: Good default?
+  }
+
+  set setTestBaseUri true
+}
+
+###############################################################################
+
+if {![info exists testRelativeUri]} then {
+  if {[info exists testKapokEnv(TestRelativeUri)]} then {
+    set testRelativeUri $testKapokEnv(TestRelativeUri)
+  } elseif {[info exists env(TestRelativeUri)]} then {
+    set testRelativeUri $env(TestRelativeUri)
+  } else {
+    set testRelativeUri cgi-bin/page.cgi?; # TODO: Good default?
+  }
+
+  set setTestRelativeUri true
+}
+
+###############################################################################
+
+if {![haveConstraint kapokDataFromPackage]} then {
+  tputs $test_channel "---- checking for use of Kapok package data... "
+
+  if {[info exists env(KapokDataFromPackage)]} then {
+    addConstraint kapokDataFromPackage
+
+    tputs $test_channel yes\n
+  } else {
+    tputs $test_channel no\n
+  }
+}
+
+###############################################################################
+
+set package_path [file dirname [file normalize $path]]
+set package_key_path $key_path; # TODO: Support multiple?
+
+if {[haveConstraint kapokDataFromPackage]} then {
+  set certificateFile(1) [file join $path data good-certificate-package.xml]
+  set certificateFile(2) [file join $path data bad-certificate-package.xml]
+} else {
+  set certificateFile(1) [file join $path data good-certificate-test.xml]
+  set certificateFile(2) [file join $path data bad-certificate-test.xml]
+}
+
+set certificateFile(3) [file join [getTemporaryPath] test-certificate.xml]
+set scriptFile(1) [file join $path data wrapped.eagle]
+
+if {[info exists env(KAPOK_TEST_PATH)]} then {
+  set databaseFile(1) [file join $env(KAPOK_TEST_PATH) Data kapok.db]
+  set databaseFile(2) [file join $env(KAPOK_TEST_PATH) Data var.db]
+} else {
+  if {[haveConstraint kapokDataFromPackage]} then {
+    set databaseFile(1) [file join $package_path Data package kapok.db]
+    set databaseFile(2) [file join $package_path Data package var.db]
+  } else {
+    set databaseFile(1) [file join $package_path Data test kapok.db]
+    set databaseFile(2) [file join $package_path Data test var.db]
+  }
+}
+
+set privateKeyFile [file join $path data private.snk]
+set templateFile [file join $path data template.xml]
+
+if {[haveConstraint kapokDataFromPackage]} then {
+  set keyRingFile(1) [file join \
+      $package_path Keys package keyRing.License.enterprise.eagle]
+
+  set keyRingFile(2) [file join \
+      $package_path Keys package keyRing.enterprise.eagle]
+} else {
+  unset -nocomplain keyRingFile
+}
+
+###############################################################################
+
+if {[haveConstraint kapokDataFromPackage]} then {
+  set databaseFile(3) [file join $package_path Keys package kapok.db]
+} elseif {[info exists custom_package_key_path]} then {
+  set databaseFile(3) [file join $custom_package_key_path keyRing.db]
+} else {
+  set databaseFile(3) [file join $package_key_path keyRing.db]
+}
+
+###############################################################################
+
+if {[info exists env(EagleEnterprisePublicKey)]} then {
+  if {[haveConstraint kapokDataFromPackage]} then {
+    set publicKeyFile [file join \
+        $package_path Keys test KapokTestPublic.snk]
+  } else {
+    set publicKeyFile [file normalize $env(EagleEnterprisePublicKey)]
+  }
+} elseif {[info exists custom_package_key_path]} then {
+  set publicKeyFile [file join \
+      $custom_package_key_path EagleEnterprisePluginRootPublic.snk]
+} else {
+  set publicKeyFile [file join \
+      $package_key_path EagleEnterprisePluginRootPublic.snk]
+}
+
+###############################################################################
+
+set openAiPromptFile [file join $path data openAI-prompt-raw.txt]
+
+set fakeOpenAiResponseFile [file join \
+    $path data fake-openAI-response-signed.json]
+
+###############################################################################
+
+#
+# NOTE: Check test constraints specific to tests in this file.
+#
+if {![haveConstraint file_good.certificate.xml]} then {
+  checkForFile $test_channel $certificateFile(1) good.certificate.xml
+}
+
+if {![haveConstraint file_bad.certificate.xml]} then {
+  checkForFile $test_channel $certificateFile(2) bad.certificate.xml
+}
+
+if {![haveConstraint file_test.certificate.xml]} then {
+  checkForFile $test_channel $certificateFile(3) test.certificate.xml
+}
+
+if {![haveConstraint [appendArgs file_ [file tail $databaseFile(1)]]]} then {
+  checkForFile $test_channel $databaseFile(1)
+}
+
+if {![haveConstraint [appendArgs file_ [file tail $databaseFile(2)]]]} then {
+  checkForFile $test_channel $databaseFile(2)
+}
+
+if {![haveConstraint [appendArgs file_ [file tail $databaseFile(3)]]]} then {
+  checkForFile $test_channel $databaseFile(3)
+}
+
+if {![haveConstraint [appendArgs file_ [file tail $scriptFile(1)]]]} then {
+  checkForFile $test_channel $scriptFile(1)
+}
+
+if {![haveConstraint [appendArgs file_ [file tail $publicKeyFile]]]} then {
+  checkForFile $test_channel $publicKeyFile
+}
+
+if {![haveConstraint [appendArgs file_ [file tail $privateKeyFile]]]} then {
+  checkForFile $test_channel $privateKeyFile
+}
+
+if {![haveConstraint [appendArgs file_ [file tail $templateFile]]]} then {
+  checkForFile $test_channel $templateFile
+}
+
+if {![haveConstraint file_openAI.prompt.raw.txt]} then {
+  checkForFile $test_channel $openAiPromptFile openAI.prompt.raw.txt
+}
+
+if {![haveConstraint file_fake.openAI.response.json]} then {
+  checkForFile $test_channel $fakeOpenAiResponseFile fake.openAI.response.json
+}
+
+###############################################################################
+
+#
+# NOTE: Check to see if the remote certificate server is available and is
+#       apparently responding to requests.
+#
+if {![info exists no(checkForRemoteCertificateServer)]} then {
+  if {[info exists testKapokEnv(RootBaseUri)]} then {
+    checkForRemoteCertificateServer $test_channel false \
+        [shouldUseLocalRelativeUris] $testKapokEnv(RootBaseUri)
+  } elseif {[info exists env(RootBaseUri)]} then {
+    checkForRemoteCertificateServer $test_channel false \
+        [shouldUseLocalRelativeUris] $env(RootBaseUri)
+  } else {
+    checkForRemoteCertificateServer $test_channel false \
+        [shouldUseLocalRelativeUris]
+  }
+}
+
+###############################################################################
+
+proc fixSnkConstraints { constraints } {
+  global publicKeyFile
+
+  return [fixConstraints [string map [list \
+      \$publicKeyFile [appendArgs file_ [file tail $publicKeyFile]]] \
+      $constraints]]
+}
+
+###############################################################################
+
+proc resetTestCertificateData { fileName } {
+  set constraintName [appendArgs file_ [file tail $fileName]]
+
+  if {![haveConstraint $constraintName]} then {
+    tputs $::test_channel [appendArgs \
+        "---- local certificate database \"" $fileName \
+        "\" not found, skipping reset...\n"]
+
+    return
+  }
+
+  #
+  # WARNING: This data was stolen from the file "Harpy\Tools\data\test.sql".
+  #          If that file is ever updated, this data will need to be updated
+  #          as well.
+  #
+  if {[haveConstraint kapokDataFromPackage]} then {
+    set sql(1) {
+      INSERT OR REPLACE INTO Certificates (
+          Id, Protocol, ProtocolVersion, Vendor, Origin, Authority,
+          Agreement, Support, TimeStamp, Duration, Key, Number,
+          SerialNumber, HashAlgorithm, Signature, Type, EntityType,
+          EntityName, EntityValue, ExtraData, Quantity, Product,
+          Version, Features, Restrictions
+      ) VALUES (
+          'fb7bcbea-ec1c-4bdf-a2a3-c5b8687172e4', 'Local', '4.0',
+          'Eagle Development Team', NULL, NULL,
+          'https://eagle.to/enterprise/license.html',
+          'https://eagle.to/enterprise/support.html',
+          '2009-11-22T09:45:09.0307500Z', '-1.00:00:00', '0x6d5df9dbdd9098fd',
+          '0x462dac418c93cd81', 'EEE-001-000', 'SHA512', '
+SjSeURd1MKqePFFlq+dhqOLqso5A3Avu/dHHlRYylWTSYotTp45+Gig9KkIHe9sYohCPYOc+UWIn
+Wp3ppMwIYLMaQd07NuRGKbHMuA+gLMhRYYI1beSTRcAPVpHlYW6dI1L1aE2N3pZakmbNkmXf0bSc
+BS3y2y5TSS+iJWd5GPUUWLtBzwpWJNCGbbZtL7BwV1YN9jl+obTfpLy8Bw1SgQPRA+O8ln1slDIp
+m6gVQRI6uGqZ2kYCWaQXywI7K9no6jniygJVwVNxS9F9GTYP6nY19LGQQra+xPRvO9PNlKbQ1CuZ
+MCYcChHwmIQr986x7kjX9yGR0M2PVBBeMOvN8pSzvN3abgdTVK7fbyU6049Kfaa0TeLepVTwB8rA
+Q6P85CyySAmvNbOxnNxg53EvcJSjbFhdTVn6LyCgNCjgwqvVIW5c1I4yXZQJYldTbB56/0zQvTFq
+iRj3HJNvS2dUaYmoVNv5ylQ7NKAUDOzWlHOYdh8vKJMs4yhkWWfz4VeqCoLaQPaJN/OxKJFlXkSG
+YS9vP4U8VoAkf6EmvizAhh0FM4i4q3ZQ8lgfGFiGwboXw89fgu7eymUmqtN3JJ9iiOc4SRY2XPOh
+Vhe9zGEXkyWpoOWi/InQ2K8Pf7eGuORzymy610GeOVDZ5om+pSRL2OGSRZFIb5EZJvXFLwuP2sU=',
+          'Single User', 'Team', 'Eagle Development Team', NULL, NULL, 1,
+          'Eagle Enterprise Edition', '1.0', 'QXR', NULL
+      );
+    }
+  } else {
+    set sql(1) {
+      INSERT OR REPLACE INTO Certificates (
+          Id, Protocol, ProtocolVersion, Vendor, Origin, Authority,
+          Agreement, Support, TimeStamp, Duration, Key, Number,
+          SerialNumber, HashAlgorithm, Signature, Type, EntityType,
+          EntityName, EntityValue, ExtraData, Quantity, Product,
+          Version, Features, Restrictions
+      ) VALUES (
+          '1b40f0fe-a2fc-4c42-a644-45a851e1c75d', 'Local', '4.0',
+          'Eagle Development Team', NULL, NULL,
+          'https://eagle.to/enterprise/license.html',
+          'https://eagle.to/enterprise/support.html',
+          '2009-11-22T09:45:09.0307500Z', '-1.00:00:00', '0x8bf43b4749e46a0b',
+          '0x462dac418c93cd81', 'EEE-001-000', 'SHA512', '
+d5On+Cvw0Syf6gm1mnXxja4O+K6qjQU7Hbh5eLq+Ex4xnCSYyjHwGu9IAY79tpDJvCHJm+PK1sUE
+xZxo+Jea1/G7IRM4bd0cvqUlMII3Ad7Or1KR8oBYaaRBiCEKoPN/zJaPxH3nl8KeReU2lMCtB3s6
+tG8/IoxVmOdMVF7qbRXwsPIan6FAbab4daBlFSszstIfYQ65ckzCmfIzmJBx8VRPwyRNrF9ijdGC
+p78ejWD+8ex45id6FgZ5ULVCIXpf7bIl5Xi/M6Rdcrw2uHzhOVVc+/H03V8lgAon4JXprH3BkrTm
+bTRG3NgFxv5joYcsTzFzewLlp1WBWNukjKTFFTdD9+SNWsClgawDaTcYh3rCwrHg2zlvg/YD+bxp
+Nffn7pLj14Oax9dzPaDQx9KCaQ0g4HHns/GbBZJTGpsfZwga00uZQXdG/f6BXkym2jkyue4y0dCE
+x0PIdaFp2YKGTq6BE5hv7/Q4t45IY/wOxmaoTqOsRA5ifAfi+HsSW+ZAnXb0mFOSF7B6Ai4YICv7
+C6HvzetvSvyRLlMuciFoTCRycdneTKCqbTu+8vB1R18CmkCKZhc6V/hU3DBDp6KnBdM8tMn/C0vv
+Ht4xC2V/IlK4OWyuqN89xysLwxZJgiPTjhXdn/XJixnJ9Et/2Cdvi1AuICWyMk/GNrjZ+WAnNAg=',
+          'Single User', 'Team', 'Eagle Development Team', NULL, NULL, 1,
+          'Eagle Enterprise Edition', '1.0', 'QXR', NULL
+      );
+    }
+  }
+
+  #
+  # WARNING: This data was stolen from the file "Harpy\Tools\data\test.sql".
+  #          If that file is ever updated, this data will need to be updated
+  #          as well.
+  #
+  if {[haveConstraint kapokDataFromPackage]} then {
+    set sql(2) {
+      INSERT OR REPLACE INTO Subscriptions (
+          Id, CertificateId, Duration, Active, Expires
+      ) VALUES (
+          'd4411027-c21d-4697-a1d7-b7f798f799f9',
+          'fb7bcbea-ec1c-4bdf-a2a3-c5b8687172e4',
+          '30.00:00:00', 1, '2030-01-01 00:00:00'
+      );
+    }
+  } else {
+    set sql(2) {
+      INSERT OR REPLACE INTO Subscriptions (
+          Id, CertificateId, Duration, Active, Expires
+      ) VALUES (
+          '1935f24a-18ee-49d9-9458-555bf2f39ba5',
+          '1b40f0fe-a2fc-4c42-a644-45a851e1c75d',
+          '30.00:00:00', 1, '2030-01-01 00:00:00'
+      );
+    }
+  }
+
+  #
+  # WARNING: This data was stolen from the file "Harpy\Tools\data\test.sql".
+  #          If that file is ever updated, this data will need to be updated
+  #          as well.
+  #
+  if {[haveConstraint kapokDataFromPackage]} then {
+    set sql(3) {
+      INSERT OR REPLACE INTO Support (
+          Id, CertificateId, Active, Expires
+      ) VALUES (
+          '22e1976a87ab1b44ee5e49349f0e1654b5b7170025acce8f292b8768016eedea' ||
+          '70d0079db13c1c2e3d41e628b14bab1686c2b1cab1949ec9b426f20db25dd92a',
+          'fb7bcbea-ec1c-4bdf-a2a3-c5b8687172e4',
+          1, '2030-01-01 00:00:00'
+      );
+    }
+  } else {
+    set sql(3) {
+      INSERT OR REPLACE INTO Support (
+          Id, CertificateId, Active, Expires
+      ) VALUES (
+          '22e1976a87ab1b44ee5e49349f0e1654b5b7170025acce8f292b8768016eedea' ||
+          '70d0079db13c1c2e3d41e628b14bab1686c2b1cab1949ec9b426f20db25dd92a',
+          '1b40f0fe-a2fc-4c42-a644-45a851e1c75d',
+          1, '2030-01-01 00:00:00'
+      );
+    }
+  }
+
+  set connection ""
+
+  try {
+    set connection [sql open -type SQLite [subst {Data Source=$fileName;}]]
+
+    foreach name [lsort -integer [array names sql]] {
+      sql execute $connection $sql($name)
+    }
+  } finally {
+    if {[string length $connection] > 0} then {
+      sql close $connection; unset connection
+    }
+  }
+}
+
+###############################################################################
+
+proc nullIfEmptyOrDbNull { value } {
+  if {[string length $value] == 0} then {
+    return null
+  }
+
+  if {[object invoke Convert IsDBNull $value]} then {
+    return null
+  }
+
+  return $value
+}
+
+###############################################################################
+
+proc parseExactUtcDateTime { value } {
+  set dateTime(1) [object invoke -create -alias \
+      DateTime ParseExact $value "yyyy-MM-ddTHH:mm:ss.fffffffK" null]
+
+  set dateTime(2) [$dateTime(1) -create ToUniversalTime]
+  set dateTime(3) [object invoke -create DateTime SpecifyKind $dateTime(2) Utc]
+
+  return $dateTime(3)
+}
+
+###############################################################################
+
+proc byteListToArray { value reverse } {
+  set length [llength $value]
+  set result [object create -alias Byte\[\] $length]
+
+  for {set index 0} {$index < $length} {incr index} {
+    set byte [object invoke -create Byte Parse [lindex $value $index]]
+    $result SetValue $byte $index
+  }
+
+  if {$reverse && [object invoke BitConverter IsLittleEndian]} then {
+    object invoke Array Reverse $result
+  }
+
+  return $result
+}
+
+###############################################################################
+
+proc dumpCertificateData { certificate channel } {
+  if {[isNonNullObjectHandle $certificate]} then {
+    set result [list]
+
+    foreach fieldName [list \
+        Id Protocol ProtocolVersion Vendor Origin Authority \
+        Agreement Support TimeStamp Duration Key Number \
+        SerialNumber HashAlgorithm Signature Type EntityType \
+        EntityName EntityValue ExtraData Quantity Product \
+        Version Features Restrictions] {
+      set fieldValue [certificate metadata $certificate $fieldName]
+
+      if {$fieldName eq "Signature"} then {
+        set fieldValue [object invoke Convert ToBase64String \
+            $fieldValue InsertLineBreaks]
+      } elseif {$fieldName eq "Key"} then {
+        set fieldValue [format 0x%lx [object invoke BitConverter \
+            ToUInt64 [byteListToArray $fieldValue true] 0]]
+      } elseif {$fieldName eq "Number"} then {
+        set fieldValue [format 0x%lx $fieldValue]
+      }
+
+      if {[string length $fieldValue] > 0} then {
+        lappend result [list $fieldName $fieldValue]
+      } else {
+        lappend result [list $fieldName <empty>]
+      }
+    }
+
+    if {[llength $result] == 0} then {
+      set result [list <empty>]; # IMPOSSIBLE
+    }
+
+    tputs $channel [appendArgs "---- dumpCertificateData: " $result \n]
+  } else {
+    tputs $channel "---- dumpCertificateData: <none>\n"
+  }
+}
+
+###############################################################################
+
+proc verifyTestCertificateData { fileName publicKey } {
+  set count 0
+  set connection ""
+
+  try {
+    set publicKeyToken [eval format \
+        0x%02x%02x%02x%02x%02x%02x%02x%02x \
+        [keypair metadata $publicKey PublicKeyToken]]
+
+    set connection [sql open -type SQLite [subst {Data Source=$fileName;}]]
+
+    set sql {
+      SELECT Id, Protocol, ProtocolVersion, Vendor, Origin, Authority,
+             Agreement, Support, TimeStamp, Duration, Key, Number,
+             SerialNumber, HashAlgorithm, Signature, Type, EntityType,
+             EntityName, EntityValue, ExtraData, Quantity, Product,
+             Version, Features, Restrictions FROM Certificates;
+    }
+
+    set dataReader [sql execute -execute reader -format datareader -alias \
+        $connection $sql]
+
+    while {[$dataReader Read]} {
+      #
+      # HACK: Only verify the data for the primary test certificates.  This
+      #       is necessary because the test database now contains data used
+      #       for other test suites (e.g. Harpy).
+      #
+      if {[$dataReader GetString 10] ne $publicKeyToken} then {
+        continue
+      }
+
+      if {[$dataReader GetString 14] eq "BAD_SIGNATURE"} then {
+        continue
+      }
+
+      #
+      # HACK: Fetch the original (mostly System.String) values from the data
+      #       reader.  Then, convert empty strings and DBNull values to the
+      #       special opaque object handle name "null".  This is necessary
+      #       because these values are going to be used verbatim to set the
+      #       property values of a Certificate object (just below).
+      #
+      for {set index 0} {$index < [$dataReader FieldCount]} {incr index} {
+        set f1($index) [$dataReader -create GetValue $index]
+        set f2($index) [nullIfEmptyOrDbNull $f1($index)]
+      }
+
+      set certificate [object create \
+          -alias Licensing.Components.Public.Certificate]
+
+      $certificate Id $f2(0)
+      $certificate Protocol $f2(1)
+      $certificate ProtocolVersion $f2(2)
+      $certificate Vendor $f2(3)
+      $certificate Origin $f2(4)
+      $certificate Authority $f2(5)
+      $certificate Agreement $f2(6)
+      $certificate Support $f2(7)
+
+      set f3(8) [parseExactUtcDateTime $f2(8)]
+
+      $certificate TimeStamp $f3(8)
+      $certificate Duration $f2(9)
+
+      set f3(10) [object invoke -create \
+          Licensing.Components.Public.Utility \
+          ParsePublicKeyToken $f2(10)]
+
+      $certificate Key $f3(10)
+
+      if {$f2(11) ne "null"} then {
+        $certificate Number $f2(11)
+      }
+
+      $certificate SerialNumber $f2(12)
+      $certificate HashAlgorithm $f2(13)
+
+      set f3(14) [object invoke -create Convert FromBase64String $f2(14)]
+
+      $certificate Signature $f3(14)
+      $certificate Type $f2(15)
+      $certificate EntityType $f2(16)
+      $certificate EntityName $f2(17)
+      $certificate EntityValue $f2(18)
+      $certificate ExtraData $f2(19)
+      $certificate Quantity $f2(20)
+      $certificate Product $f2(21)
+      $certificate Version $f2(22)
+      $certificate Features $f2(23)
+      $certificate Restrictions $f2(24)
+
+      #
+      # HACK: This is not strictly necessary; however, this nested loop
+      #       prevents the opaque object handles used by this procedure
+      #       from "leaking".
+      #
+      foreach arrayName [list f3 f2 f1] {
+        foreach name [array names $arrayName] {
+          set value [set [appendArgs [set arrayName] ( $name )]]
+
+          if {$value ne "null"} then {
+            catch {object dispose $value}
+          }
+
+          unset [appendArgs [set arrayName] ( $name )]
+        }
+      }
+
+      dumpCertificateData $certificate $::test_channel
+      certificate verify $certificate $publicKey; # error?
+      incr count; # another one was successfully verified.
+    }
+  } finally {
+    if {[string length $connection] > 0} then {
+      sql close $connection; unset connection
+    }
+  }
+
+  return $count
+}
+
+###############################################################################
+
+proc resetTestApiKeys { fileName } {
+  set constraintName [appendArgs file_ [file tail $fileName]]
+
+  if {![haveConstraint $constraintName]} then {
+    tputs $::test_channel [appendArgs \
+        "---- local database \"" $fileName \
+        "\" not found, skipping reset...\n"]
+
+    return
+  }
+
+  if {[haveConstraint kapokDataFromPackage]} then {
+    set sql(1) {
+      INSERT OR REPLACE INTO apiKeys (
+          apiKey, active
+      ) VALUES (
+          '3cfcd953f9dc470db5e5087cd24b90d0', 1
+      );
+    }
+  } else {
+    set sql(1) {
+      INSERT OR REPLACE INTO apiKeys (
+          apiKey, active
+      ) VALUES (
+          '0908279b1d8f437e9420ce4642bbfad6', 1
+      );
+    }
+  }
+
+  set connection ""
+
+  try {
+    set connection [sql open \
+        -type SQLite [subst {Data Source=$fileName;}]]
+
+    foreach name [lsort -integer [array names sql]] {
+      sql execute $connection $sql($name)
+    }
+  } finally {
+    if {[string length $connection] > 0} then {
+      sql close $connection; unset connection
+    }
+  }
+}
+
+###############################################################################
+
+#
+# NOTE: This test requires the [certificate] and [keypair] commands from
+#       Harpy; however, they cannot be checked before loading the plugin
+#       into the isolated interpreter and it would involve quite a bit of
+#       extra code to setup and perform the necessary constraint checking
+#       within the isolated interpreter.
+#
+runTest {test kapok-1.1 {verify test certificate data} -setup {
+  saveCertificateEnvironment
+
+  set interp [interp create -isolated -nosecurity]
+  interp set $interp databaseFile(1) $databaseFile(1)
+  interp set $interp publicKeyFile $publicKeyFile
+  interp set $interp test_channel $test_channel
+
+  #
+  # NOTE: Copy the procedures to the created interpreter for use by the
+  #       test body.
+  #
+  foreach procName [list \
+      nullIfEmptyOrDbNull \
+      parseExactUtcDateTime \
+      byteListToArray \
+      dumpCertificateData \
+      verifyTestCertificateData] {
+    interp eval $interp [list \
+        proc $procName [info args $procName] \
+        [info body $procName]]
+  }; unset procName
+
+  resetTestCertificateData $databaseFile(1)
+} -body {
+  set code [catch {interp eval $interp {
+    unset -nocomplain env(UseLocalHost)
+    unset -nocomplain env(ServerPort)
+    unset -nocomplain env(AlwaysExpires)
+    unset -nocomplain env(Override_Certificate)
+    unset -nocomplain env(NoBackupCertificateFile)
+    unset -nocomplain env(NoNetworkTime)
+    unset -nocomplain env(RenewalRelativeUri)
+    unset -nocomplain env(UseDefaultRenewCallback)
+    package require Eagle.Test
+    package require Licensing.Enterprise
+    set publicKey [keypair open -public $publicKeyFile]
+    set count [verifyTestCertificateData $databaseFile(1) $publicKey]
+    if {$count != 2} then {
+      unset -nocomplain publicKey count
+      error "expected to verify 2 rows of certificate data"
+    }
+    unset -nocomplain publicKey count
+  }} result]
+
+  list $code $result
+} -cleanup {
+  catch {interp delete $interp}
+
+  restoreCertificateEnvironment
+
+  unset -nocomplain result code interp
+} -constraints [fixSnkConstraints {eagle compile.APPDOMAINS\
+compile.ISOLATED_INTERPRETERS $publicKeyFile file_kapok.db}] -result {0 {}}}
+
+###############################################################################
+
+runTest {test kapok-1.2 {license certificate renewal success} -setup {
+  saveCertificateEnvironment
+  saveLicenseEnvironment true
+
+  set interp [interp create -isolated -nosecurity]
+  file copy -force $certificateFile(1) $certificateFile(3)
+
+  if {[info exists authorityBaseUri]} then {
+    interp set $interp authorityBaseUri $authorityBaseUri
+  }
+
+  interp set $interp useLocalHost $useLocalHost
+  interp set $interp serverPort $serverPort
+  interp set $interp renewalBaseUri $renewalBaseUri
+  interp set $interp renewalRelativeUri $renewalRelativeUri
+  interp set $interp certificateFile(3) $certificateFile(3)
+
+  interp set $interp useDataFromPackage \
+      [haveConstraint kapokDataFromPackage]
+
+  if {[info exists keyRingFile(1)]} then {
+    interp set $interp keyRingFile(1) $keyRingFile(1)
+  }
+
+  resetTestCertificateData $databaseFile(1)
+} -body {
+  set code [catch {interp eval $interp {
+    if {[info exists authorityBaseUri]} then {
+      set env(AuthorityBaseUri) $authorityBaseUri
+    } else {
+      unset -nocomplain env(AuthorityBaseUri)
+    }
+    if {$useLocalHost && \
+        [regexp -nocase -- {//localhost[:/]} $renewalBaseUri]} then {
+      set env(UseLocalHost) 1
+    } else {
+      unset -nocomplain env(UseLocalHost)
+    }
+    set env(ServerPort) $serverPort
+    set env(AlwaysExpires) 1
+    set env(Override_Certificate) $certificateFile(3)
+    set env(NoBackupCertificateFile) 1
+    set env(NoNetworkTime) 1
+    set env(RenewalRelativeUri) $renewalRelativeUri
+    set env(UseDefaultRenewCallback) 1
+    if {[info exists keyRingFile(1)]} then {
+      set env(BootstrapDirectories) [file dirname $keyRingFile(1)]
+    }
+    if {$useDataFromPackage} then {
+      package require Harpy.Test
+      enableTestMode true false
+      enableSkipLicense true true false
+    }
+    package require Licensing.Enterprise
+  }} result]
+
+  list $code $result
+} -cleanup {
+  catch {file delete $certificateFile(3)}
+  catch {interp delete $interp}
+
+  restoreCertificateEnvironment
+  restoreLicenseEnvironment true
+
+  unset -nocomplain result code interp
+} -constraints [fixConstraints {eagle compile.APPDOMAINS\
+compile.ISOLATED_INTERPRETERS kapok.server file_good.certificate.xml\
+!file_test.certificate.xml file_kapok.db}] -match regexp -result \
+{^0 1\.0\.\d+\.\d+$}}
+
+###############################################################################
+
+runTest {test kapok-1.3 {license certificate renewal request failure} -setup {
+  saveCertificateEnvironment
+  saveLicenseEnvironment true
+
+  set interp [interp create -isolated -nosecurity]
+  file copy -force $certificateFile(1) $certificateFile(3)
+
+  if {[info exists authorityBaseUri]} then {
+    interp set $interp authorityBaseUri $authorityBaseUri
+  }
+
+  interp set $interp useLocalHost $useLocalHost
+  interp set $interp serverPort $serverPort
+  interp set $interp renewalBaseUri $renewalBaseUri
+  interp set $interp renewalRelativeUri $renewalRelativeUri
+  interp set $interp certificateFile(3) $certificateFile(3)
+
+  interp set $interp useDataFromPackage \
+      [haveConstraint kapokDataFromPackage]
+
+  if {[info exists keyRingFile(1)]} then {
+    interp set $interp keyRingFile(1) $keyRingFile(1)
+  }
+
+  resetTestCertificateData $databaseFile(1)
+} -body {
+  set code [catch {interp eval $interp {
+    if {[info exists authorityBaseUri]} then {
+      set env(AuthorityBaseUri) $authorityBaseUri
+    } else {
+      unset -nocomplain env(AuthorityBaseUri)
+    }
+    if {$useLocalHost && \
+        [regexp -nocase -- {//localhost[:/]} $renewalBaseUri]} then {
+      set env(UseLocalHost) 1
+    } else {
+      unset -nocomplain env(UseLocalHost)
+    }
+    set env(ServerPort) $serverPort
+    set env(AlwaysExpires) 1
+    set env(Override_Certificate) $certificateFile(3)
+    set env(NoBackupCertificateFile) 1
+    set env(NoNetworkTime) 1
+    set env(RenewalRelativeUri) bogus/renew.cgi?; # NOTE: Not a typo.
+    set env(UseDefaultRenewCallback) 1
+    if {[info exists keyRingFile(1)]} then {
+      set env(BootstrapDirectories) [file dirname $keyRingFile(1)]
+    }
+    if {$useDataFromPackage} then {
+      package require Harpy.Test
+      enableTestMode true false
+      enableSkipLicense true true false
+    }
+    package require Licensing.Enterprise
+  }} result]
+
+  list $code $result
+} -cleanup {
+  catch {file delete $certificateFile(3)}
+  catch {interp delete $interp}
+
+  restoreCertificateEnvironment
+  restoreLicenseEnvironment true
+
+  unset -nocomplain result code interp
+} -constraints [fixConstraints {eagle compile.APPDOMAINS\
+compile.ISOLATED_INTERPRETERS kapok.server file_good.certificate.xml\
+!file_test.certificate.xml file_kapok.db}] -match regexp -result {^1 \{FlagOk\
+AlwaysExpires \{?(?:\{Retried web request \d+ time\(s\)\.\}\
+)?\{System\.Net\.WebException: .*$}}
+
+###############################################################################
+
+runTest {test kapok-1.4 {license certificate renewal response failure} -setup {
+  saveCertificateEnvironment
+  saveLicenseEnvironment true
+
+  set interp [interp create -isolated -nosecurity]
+  file copy -force $certificateFile(2) $certificateFile(3)
+
+  if {[info exists authorityBaseUri]} then {
+    interp set $interp authorityBaseUri $authorityBaseUri
+  }
+
+  interp set $interp useLocalHost $useLocalHost
+  interp set $interp serverPort $serverPort
+  interp set $interp renewalBaseUri $renewalBaseUri
+  interp set $interp renewalRelativeUri $renewalRelativeUri
+  interp set $interp certificateFile(3) $certificateFile(3)
+
+  interp set $interp useDataFromPackage \
+      [haveConstraint kapokDataFromPackage]
+
+  if {[info exists keyRingFile(1)]} then {
+    interp set $interp keyRingFile(1) $keyRingFile(1)
+  }
+
+  resetTestCertificateData $databaseFile(1)
+} -body {
+  set code [catch {interp eval $interp {
+    if {[info exists authorityBaseUri]} then {
+      set env(AuthorityBaseUri) $authorityBaseUri
+    } else {
+      unset -nocomplain env(AuthorityBaseUri)
+    }
+    if {$useLocalHost && \
+        [regexp -nocase -- {//localhost[:/]} $renewalBaseUri]} then {
+      set env(UseLocalHost) 1
+    } else {
+      unset -nocomplain env(UseLocalHost)
+    }
+    set env(ServerPort) $serverPort
+    set env(AlwaysExpires) 1
+    set env(Override_Certificate) $certificateFile(3)
+    set env(NoBackupCertificateFile) 1
+    set env(NoNetworkTime) 1
+    set env(RenewalRelativeUri) $renewalRelativeUri
+    set env(UseDefaultRenewCallback) 1
+    if {[info exists keyRingFile(1)]} then {
+      set env(BootstrapDirectories) [file dirname $keyRingFile(1)]
+    }
+    if {$useDataFromPackage} then {
+      package require Harpy.Test
+      enableTestMode true false
+      enableSkipLicense true true false
+    }
+    package require Licensing.Enterprise
+  }} result]
+
+  list $code $result
+} -cleanup {
+  catch {file delete $certificateFile(3)}
+  catch {interp delete $interp}
+
+  restoreCertificateEnvironment
+  restoreLicenseEnvironment true
+
+  unset -nocomplain result code interp
+} -constraints [fixConstraints {eagle compile.APPDOMAINS\
+compile.ISOLATED_INTERPRETERS kapok.server file_bad.certificate.xml\
+!file_test.certificate.xml file_kapok.db}] -match regexp -result {^1 \{FlagOk\
+AlwaysExpires \{malformed response text: bad list|malformed response text: bad\
+dictionary|response missing certificate data\}\}$}}
+
+###############################################################################
+
+runTest {test kapok-1.5 {generic script wrapper usage} -setup {
+  set interp [interp create -isolated -nosecurity]
+  interp set $interp scriptBaseUri $scriptBaseUri
+  interp set $interp scriptRelativeUri $scriptRelativeUri
+  interp set $interp scriptFile(1) $scriptFile(1)
+} -body {
+  set code [catch {interp eval $interp {
+    uri upload \
+        -trusted -timeouttype network -inline -retries 0 \
+        -data [list nop true var1 val1 var2 val2] -- \
+        [appendArgs $scriptBaseUri $scriptRelativeUri \
+        ping=true]
+  }} result]
+
+  list $code $result
+} -cleanup {
+  catch {interp delete $interp}
+
+  unset -nocomplain result code interp
+} -constraints {eagle compile.APPDOMAINS compile.ISOLATED_INTERPRETERS\
+kapok.server file_wrapped.eagle} -match regexp -result {^0 \{address\
+(127\.\d+\.\d+\.\d+|::1) form \{nop true var1 val1 var2 val2\} query \{ping\
+true\}\}$}}
+
+###############################################################################
+
+runTest {test kapok-1.6 {OpenAI proxy server success (fake)} -setup {
+  set interp [interp create -isolated -nosecurity]
+  interp set $interp scriptBaseUri $scriptBaseUri
+  interp set $interp scriptRelativeUri $scriptRelativeUri
+  interp set $interp scriptFile(1) $scriptFile(1)
+} -body {
+  set prompt [readFile $openAiPromptFile]
+  interp set $interp prompt $prompt
+
+  set code(1) [catch {interp eval $interp {
+    set apiKey e0b4e81d-05c6-480a-b271-d5e826522740; # Test
+
+    set response [uri upload \
+        -trusted -timeouttype network -inline -retries 0 \
+        -data [list nop false fake true apiKey $apiKey \
+        prompt $prompt] -- [appendArgs $scriptBaseUri \
+        $scriptRelativeUri]]
+  }} result(1)]
+
+  #
+  # HACK: Was the response an actual script that was the signed by
+  #       the server and can (now) be evaluated?  In that case, we
+  #       attempt to evaluate it; otherwise, we cannot.
+  #
+  if {[string first <<CERTIFICATE-1.0>> $result(1)] != -1} then {
+    set script [getOrSetViaJsonPaths \
+        $result(1) [openAI_getJsonPaths $result(1)]]
+
+    set fileName(1) [appendArgs [file tempname] .eagle]
+
+    writeFile $fileName(1) $script
+    interp set $interp fileName $fileName(1)
+
+    set code(2) [catch {interp eval $interp {
+      package require Eagle.Test
+
+      source enableSecurity
+
+      keyring merge [file join \
+          [openAI_getKeyRingDirectory] \
+          keyRing.two.eagle]; # 0x180558840e482cda
+
+      source $fileName
+    }} result(2)]
+  } else {
+    set result(2) skipped; set code(2) 0
+  }
+
+  if {[hasRuntimeOption verboseOpenAiTests]} then {
+    tputs $test_channel [appendArgs \
+        "---- fake success response for OpenAI: " $result(1) \n]
+  } else {
+    tlog [appendArgs \
+        "---- fake success response for OpenAI: " $result(1) \n]
+  }
+
+  list $code(1) [string equal [string map [list \r\n \n] $result(1)] \
+      [string map [list \r\n \n] [readFile $fakeOpenAiResponseFile]]] \
+      $code(2) $result(2)
+} -cleanup {
+  catch {file delete $fileName(1)}
+  catch {interp delete $interp}
+
+  unset -nocomplain prompt script fileName result code interp
+} -constraints {eagle compile.APPDOMAINS compile.ISOLATED_INTERPRETERS\
+kapok.server file_wrapped.eagle file_openAI.prompt.raw.txt\
+file_fake.openAI.response.json} -match regexp -result \
+{^0 True 0 \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{7}Z$}}
+
+###############################################################################
+
+runTest {test kapok-1.7 {OpenAI proxy server failure (fake)} -setup {
+  set interp [interp create -isolated -nosecurity]
+  interp set $interp scriptBaseUri $scriptBaseUri
+  interp set $interp scriptRelativeUri $scriptRelativeUri
+  interp set $interp scriptFile(1) $scriptFile(1)
+} -body {
+  set prompt [readFile $openAiPromptFile]
+  interp set $interp prompt $prompt
+
+  set code(1) [catch {interp eval $interp {
+    set apiKey a0b5ba6b-2357-46a2-8912-4ff869339997; # BANNED
+
+    set response [uri upload \
+        -trusted -timeouttype network -inline -retries 0 \
+        -data [list nop false fake true apiKey $apiKey \
+        prompt $prompt] -- [appendArgs $scriptBaseUri \
+        $scriptRelativeUri]]
+  }} result(1)]
+
+  if {[hasRuntimeOption verboseOpenAiTests]} then {
+    tputs $test_channel [appendArgs \
+        "---- fake failure response for OpenAI: " $result(1) \n]
+  } else {
+    tlog [appendArgs \
+        "---- fake failure response for OpenAI: " $result(1) \n]
+  }
+
+  if {$code(1) == 0} then {
+    set result(1)
+  } else {
+    error $result(1)
+  }
+} -cleanup {
+  catch {interp delete $interp}
+
+  unset -nocomplain prompt result code interp
+} -constraints {eagle compile.APPDOMAINS compile.ISOLATED_INTERPRETERS\
+kapok.server file_wrapped.eagle file_openAI.prompt.raw.txt} -match regexp \
+-result {: unknown or denied API key identifier\
+a0b5ba6b-2357-46a2-8912-4ff869339997\s}}
+
+###############################################################################
+
+runTest {test kapok-1.8 {OpenAI proxy server success (real)} -setup {
+  set interp [interp create -isolated -nosecurity]
+  interp set $interp scriptBaseUri $scriptBaseUri
+  interp set $interp scriptRelativeUri $scriptRelativeUri
+  interp set $interp scriptFile(1) $scriptFile(1)
+} -body {
+  set prompt [readFile $openAiPromptFile]
+  interp set $interp prompt $prompt
+
+  set code(1) [catch {interp eval $interp {
+    set apiKey 4620f75f-480e-400c-ae9d-81b43f5c4565; # Standard, RuleSet
+
+    set response [uri upload \
+        -trusted -timeouttype network -inline -retries 0 \
+        -data [list nop false fake false apiKey $apiKey \
+        prompt $prompt options [list deterministic true]] -- \
+        [appendArgs $scriptBaseUri $scriptRelativeUri]]
+  }} result(1)]
+
+  #
+  # HACK: Was the response an actual script that was the signed by
+  #       the server and can (now) be evaluated?  In that case, we
+  #       attempt to evaluate it; otherwise, we cannot.
+  #
+  if {[string first <<CERTIFICATE-1.0>> $result(1)] != -1} then {
+    set script [getOrSetViaJsonPaths \
+        $result(1) [openAI_getJsonPaths $result(1)]]
+
+    set fileName(1) [appendArgs [file tempname] .eagle]
+
+    writeFile $fileName(1) $script
+    interp set $interp fileName $fileName(1)
+
+    set code(2) [catch {interp eval $interp {
+      package require Eagle.Test
+
+      source enableSecurity
+
+      keyring merge [file join \
+          [openAI_getKeyRingDirectory] \
+          keyRing.two.eagle]; # 0x180558840e482cda
+
+      source $fileName
+    }} result(2)]
+
+    if {$code(2) == 0} then {
+      if {[hasRuntimeOption verboseOpenAiTests]} then {
+        tputs $test_channel [appendArgs \
+            "---- real success response for OpenAI script result: " \
+            $result(2) \n]
+      } else {
+        tlog [appendArgs \
+            "---- real success response for OpenAI script result: " \
+            $result(2) \n]
+      }
+    } else {
+      error $result(2); # NOTE: Script error?
+    }
+  } else {
+    if {[regexp -- {^Error, line \d+: } $result(1)]} then {
+      error $result(1); # NOTE: Server error?
+    }
+  }
+
+  if {[hasRuntimeOption verboseOpenAiTests]} then {
+    tputs $test_channel [appendArgs \
+        "---- real success response for OpenAI: " $result(1) \n]
+  } else {
+    tlog [appendArgs \
+        "---- real success response for OpenAI: " $result(1) \n]
+  }
+
+  set code(1)
+} -cleanup {
+  catch {file delete $fileName(1)}
+  catch {interp delete $interp}
+
+  unset -nocomplain prompt script fileName result code interp
+} -constraints {eagle compile.APPDOMAINS compile.ISOLATED_INTERPRETERS\
+kapok.server file_wrapped.eagle file_openAI.prompt.raw.txt} \
+-constraintExpression {[info exists env(OPENAI_API_KEY)] || \
+[info exists env(OPENAI_API_KEY_FILE)]} -result {0}}
+
+###############################################################################
+
+runTest {test kapok-1.9 {support script} -setup {
+  set interp [interp create -isolated -nosecurity]
+  interp set $interp supportBaseUri $supportBaseUri
+  interp set $interp supportRelativeUri $supportRelativeUri
+
+  resetTestCertificateData $databaseFile(1)
+} -body {
+  set code [catch {interp eval $interp {
+    uri upload \
+        -trusted -timeouttype network -inline -retries 0 \
+        -- [appendArgs $supportBaseUri $supportRelativeUri \
+        id=22e1976a87]
+  }} result]
+
+  list $code $result
+} -cleanup {
+  catch {interp delete $interp}
+
+  unset -nocomplain result code interp
+} -constraints {eagle compile.APPDOMAINS compile.ISOLATED_INTERPRETERS\
+kapok.server file_kapok.db} -match regexp -result {^0 \{SupportInfo \{support\
+contact phone: \(800\)555-1212\} ServerInfo (?:.*?)\}$}}
+
+###############################################################################
+
+runTest {test kapok-1.10 {storage script} -setup {
+  set interp [interp create -isolated -nosecurity]
+  interp set $interp storageBaseUri $storageBaseUri
+  interp set $interp storageRelativeUri $storageRelativeUri
+
+  interp set $interp storageApiKey [expr {
+    [haveConstraint kapokDataFromPackage] ? \
+        "3cfcd953f9dc470db5e5087cd24b90d0" : \
+        "0908279b1d8f437e9420ce4642bbfad6"
+  }]
+
+  resetTestApiKeys $databaseFile(2)
+} -body {
+  set code [catch {interp eval $interp {
+    proc checkArr {} {
+      lappend ::results [array exists ::netvar]
+      lappend ::results [array size ::netvar]
+      lappend ::results [array names ::netvar]
+      lappend ::results [array names ::netvar *no*]
+      lappend ::results [array names ::netvar *o*]
+      lappend ::results [array values ::netvar]
+      lappend ::results [array values ::netvar *no*]
+      lappend ::results [array values ::netvar *1*]
+      lappend ::results [array get ::netvar]
+    }
+
+    set results [list]
+    set encoding [object invoke Interpreter DefaultEncoding]
+
+    set networkVariable [object invoke -alias NetworkVariable Create \
+        null null null [appendArgs $storageBaseUri $storageRelativeUri] \
+        null null $encoding null $storageApiKey null null null varName \
+        varValue BeforeVariable]
+
+    set result null
+    set code [$networkVariable AddVariable "" netvar result]
+
+    if {$code eq "Ok"} then {
+      checkArr
+
+      lappend results [catch {set netvar(one)} error] $error
+      lappend results [catch {unset netvar(one)} error] $error
+
+      checkArr
+
+      lappend results [set netvar(one) 1]
+      lappend results [set netvar(one)]
+
+      checkArr
+
+      lappend results [set netvar(two) 2]
+      lappend results [incr netvar(two)]
+      lappend results [set netvar(two)]
+
+      checkArr
+
+      lappend results [unset netvar(one)]
+      lappend results [unset -purge netvar(two)]
+
+      checkArr
+
+      unset -remove -- netvar; debug collect
+    } else {
+      lappend results [getStringFromObjectHandle $result]
+    }
+
+    set results
+  }} result]
+
+  list $code $result
+} -cleanup {
+  catch {interp delete $interp}
+
+  unset -nocomplain result code interp
+} -constraints {eagle compile.APPDOMAINS compile.ISOLATED_INTERPRETERS\
+kapok.server file_var.db} -result {0 {True 0 {} {} {} {} {} {} {} 1 {variable\
+not found} 1 {cannot verify data was successfully written} True 0 {} {} {} {}\
+{} {} {} 1 1 True 1 one {} one 1 {} 1 {one 1} 2 3 3 True 2 {one two} {} {one\
+two} {1 3} {} 1 {one 1 two 3} {} {} True 0 {} {} {} {} {} {} {}}}}
+
+###############################################################################
+
+runTest {test kapok-1.11 {license certificate provisioning} -setup {
+  saveEnvironmentVariables [list KAPOK_TOOL_PATH]
+  unset -nocomplain env(KAPOK_TOOL_PATH)
+
+  resetTestApiKeys $databaseFile(2)
+} -body {
+  set directory(1) [file join [getTemporaryPath] \
+      [appendArgs kapok_provisioning_tests [clock seconds]]]
+
+  set directory(2) [file join $directory(1) Certificates]
+
+  set fileName(1) [file join $directory(1) [file tail $privateKeyFile]]
+  set fileName(2) [file join $directory(1) [file tail $templateFile]]
+  set fileName(3) [file join $directory(1) serial.num]
+
+  file mkdir $directory(1)
+
+  file copy $privateKeyFile $fileName(1)
+  file copy $templateFile $fileName(2)
+
+  set uri [appendArgs $provisionBaseUri $provisionRelativeUri]
+
+  foreach {name value} [list \
+      provisionType License \
+      apiKey [expr {
+        [haveConstraint kapokDataFromPackage] ? \
+            "3cfcd953f9dc470db5e5087cd24b90d0" : \
+            "0908279b1d8f437e9420ce4642bbfad6"
+      }] entityName "KAPOK TEST 1.11" duration -1] {
+    if {[string first ? $uri] != -1} then {
+      append uri &
+    } else {
+      append uri ?
+    }
+
+    append uri [uri escape data $name] = [uri escape data $value]
+  }
+
+  uri download -trusted -timeouttype network -inline $uri
+} -cleanup {
+  catch {file delete $fileName(3)}
+  catch {file delete $fileName(2)}
+  catch {file delete $fileName(1)}
+  catch {file delete -recursive $directory(2)}
+  catch {file rmdir $directory(1)}
+
+  unset -nocomplain directory fileName uri name value
+
+  restoreEnvironmentVariables [list KAPOK_TOOL_PATH]
+} -constraints {eagle kapok.server file_private.snk file_template.xml\
+file_var.db} -match regexp -result {^! EncryptedData: v1\.0
+! symmetricAlgorithmName: Rijndael
+! salt: [0-9A-Za-z+/]{22,24}={0,2}
+
+(?:[0-9A-Za-z+/]{76,}\n)*[0-9A-Za-z+/]{0,74}={0,2}$}}
+
+###############################################################################
+
+runTest {test kapok-1.12 {ThrottleDictionary stress} -setup {
+  proc tryExceeded { throttle host readOnly waitBefore waitAfter } {
+    set count $::count; set seconds $::seconds; set value null
+    set milliseconds [expr {1000 * ($seconds + 1)}]
+    if {$waitBefore} then {after $milliseconds}
+
+    if {$readOnly} then {
+      set result [list [$throttle \
+          IsExceeded $host null $count $seconds true value]]
+    } else {
+      set result [list [$throttle \
+          TryIncrement $host null $count $seconds true value]]
+    }
+
+    if {$waitAfter} then {after $milliseconds}
+    lappend result $value
+
+    return $result
+  }
+} -body {
+  set count 2; set seconds 5; # NOTE: See [tryExceeded].
+  set maximumSeconds [expr {($seconds + 1) * 10}]
+
+  set throttle [object create -alias ThrottleDictionary]
+
+  set host(1) some.host.local
+  set host(2) other.host.local
+
+  lappend result [tryExceeded $throttle $host(1) true false false]; # False
+  lappend result [tryExceeded $throttle $host(1) false false false]; # True 1
+  lappend result [tryExceeded $throttle $host(1) true false true]; # False 1
+  lappend result [tryExceeded $throttle $host(1) false false false]; # True 1
+  lappend result [tryExceeded $throttle $host(1) false false false]; # True 2
+  lappend result [tryExceeded $throttle $host(1) false false true]; # False 2
+  lappend result [tryExceeded $throttle $host(1) true false false]; # False
+
+  lappend result [tryExceeded $throttle $host(2) true false false]; # False
+  lappend result [tryExceeded $throttle $host(2) false false false]; # True 1
+  lappend result [tryExceeded $throttle $host(2) false false false]; # True 2
+  lappend result [tryExceeded $throttle $host(2) true false false]; # True 2
+
+  lappend result [$throttle ToString]
+  lappend result [$throttle Reset $host(1) null null]
+  lappend result [$throttle ToString]
+  lappend result [$throttle Reset null null null]
+
+  set count 600; set seconds 10; # NOTE: See [tryExceeded].
+  set maximumSeconds [expr {($seconds + 1) * 10}]
+
+  set iterations 0
+  set now [clock seconds]
+
+  while {true} {
+    set elapsedSeconds [expr {abs($now - [clock seconds])}]
+
+    if {$elapsedSeconds >= $maximumSeconds} then {
+      lappend result Timeout_Exceeded $elapsedSeconds; break
+    }
+
+    if {![lindex [tryExceeded \
+        $throttle $host(1) false false false] 0]} then {
+      tputs $test_channel [appendArgs \
+          "---- throttle exceeded after " $iterations \
+          " iteration(s) in " $elapsedSeconds " second(s)\n"]
+
+      lappend result Exceeded $elapsedSeconds
+      incr iterations; break
+    } else {
+      incr iterations
+    }
+  }
+
+  set iterations 0
+  set now [clock seconds]
+
+  while {true} {
+    set elapsedSeconds [expr {abs($now - [clock seconds])}]
+
+    if {$elapsedSeconds >= $maximumSeconds} then {
+      lappend result Timeout_NotExceeded $elapsedSeconds; break
+    }
+
+    if {[lindex [tryExceeded \
+        $throttle $host(1) false false false] 0]} then {
+      tputs $test_channel [appendArgs \
+          "---- throttle not exceeded after " $iterations \
+          " iteration(s) in " $elapsedSeconds " second(s)\n"]
+
+      lappend result NotExceeded $elapsedSeconds
+      incr iterations; break
+    } else {
+      incr iterations
+    }
+  }
+
+  set result
+} -cleanup {
+  rename tryExceeded ""
+
+  unset -nocomplain count seconds elapsedSeconds maximumSeconds
+  unset -nocomplain iterations now throttle host result
+} -constraints {eagle} -match regexp -result {^\{False \{\}\} \{True 1\}\
+\{False 1\} \{True 1\} \{True 2\} \{False 2\} \{False \{\}\} \{False \{\}\}\
+\{True 1\} \{True 2\} \{True 2\} \{\{some\.host\.local\
+\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:(?:[012345][05])\.\d{7}Z\} 1 \{some\.host\.local\
+\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:(?:[012345][05])\.\d{7}Z\} 2 \{other\.host\.local\
+\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:(?:[012345][05])\.\d{7}Z\} 2 TOTAL 5\} 3\
+\{\{other\.host\.local \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:(?:[012345][05])\.\d{7}Z\}\
+2 TOTAL 2\} 2 Exceeded \d+ NotExceeded \d+$}}
+
+###############################################################################
+
+rename resetTestApiKeys ""
+rename verifyTestCertificateData ""
+rename dumpCertificateData ""
+rename byteListToArray ""
+rename parseExactUtcDateTime ""
+rename nullIfEmptyOrDbNull ""
+rename resetTestCertificateData ""
+rename fixSnkConstraints ""
+
+###############################################################################
+
+unset -nocomplain publicKeyFile scriptFile databaseFile certificateFile \
+    package_key_path package_path privateKeyFile templateFile keyRingFile \
+    openAiPromptFile fakeOpenAiResponseFile
+
+###############################################################################
+
+if {[info exists setUseLocalHost]} then {
+  unset -nocomplain useLocalHost setUseLocalHost
+}
+
+###############################################################################
+
+if {[info exists setTestRelativeUri]} then {
+  unset -nocomplain testRelativeUri setTestRelativeUri
+}
+
+###############################################################################
+
+if {[info exists setTestBaseUri]} then {
+  unset -nocomplain testBaseUri setTestBaseUri
+}
+
+###############################################################################
+
+if {[info exists setStorageRelativeUri]} then {
+  unset -nocomplain storageRelativeUri setStorageRelativeUri
+}
+
+###############################################################################
+
+if {[info exists setStorageBaseUri]} then {
+  unset -nocomplain storageBaseUri setStorageBaseUri
+}
+
+###############################################################################
+
+if {[info exists setScriptRelativeUri]} then {
+  unset -nocomplain scriptRelativeUri setScriptRelativeUri
+}
+
+###############################################################################
+
+if {[info exists setScriptBaseUri]} then {
+  unset -nocomplain scriptBaseUri setScriptBaseUri
+}
+
+###############################################################################
+
+if {[info exists setSupportRelativeUri]} then {
+  unset -nocomplain supportRelativeUri setSupportRelativeUri
+}
+
+###############################################################################
+
+if {[info exists setSupportBaseUri]} then {
+  unset -nocomplain supportBaseUri setSupportBaseUri
+}
+
+###############################################################################
+
+if {[info exists setRevocationRelativeUri]} then {
+  unset -nocomplain revocationRelativeUri setRevocationRelativeUri
+}
+
+###############################################################################
+
+if {[info exists setRevocationBaseUri]} then {
+  unset -nocomplain revocationBaseUri setRevocationBaseUri
+}
+
+###############################################################################
+
+if {[info exists setRequestRelativeUri]} then {
+  unset -nocomplain requestRelativeUri setRequestRelativeUri
+}
+
+###############################################################################
+
+if {[info exists setRequestBaseUri]} then {
+  unset -nocomplain requestBaseUri setRequestBaseUri
+}
+
+###############################################################################
+
+if {[info exists setRenewalRelativeUri]} then {
+  unset -nocomplain renewalRelativeUri setRenewalRelativeUri
+}
+
+###############################################################################
+
+if {[info exists setRenewalBaseUri]} then {
+  unset -nocomplain renewalBaseUri setRenewalBaseUri
+}
+
+###############################################################################
+
+if {[info exists setProvisionRelativeUri]} then {
+  unset -nocomplain provisionRelativeUri setProvisionRelativeUri
+}
+
+###############################################################################
+
+if {[info exists setProvisionBaseUri]} then {
+  unset -nocomplain provisionBaseUri setProvisionBaseUri
+}
+
+###############################################################################
+
+if {[info exists setPingBaseUri]} then {
+  unset -nocomplain pingBaseUri setPingBaseUri
+}
+
+###############################################################################
+
+if {[info exists setServerPort]} then {
+  unset -nocomplain serverPort setServerPort
+}
+
+###############################################################################
+
+if {[info exists setAuthorityBaseUri]} then {
+  unset -nocomplain authorityBaseUri setAuthorityBaseUri
+}
+
+###############################################################################
+
+if {![info exists no(serverEnvironmentVariables)]} then {
+  restoreServerEnvironmentVariables savedKapokEnv true
+}
+
+###############################################################################
+
+unset -nocomplain testKapokEnv savedKapokEnv
+
+###############################################################################
+
+if {![haveConstraint quiet] && [info exists savedEnv]} then {
+  set names [array names savedEnv]
+  if {[llength $names] == 0} then {set names <none>}
+
+  tputs $test_channel [appendArgs \
+      "==== WARNING: global \"savedEnv\" array still exists: " \
+      $names \n]
+
+  unset names
+}
+
+###############################################################################
+
+runTestEpilogue

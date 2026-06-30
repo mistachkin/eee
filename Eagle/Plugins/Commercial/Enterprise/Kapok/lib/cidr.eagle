@@ -1,0 +1,286 @@
+###############################################################################
+#
+# cidr.eagle --
+#
+# Extensible Adaptable Generalized Logic Engine (Eagle)
+# Eagle CIDR Package File
+#
+# Copyright (c) 2007-2012 by Joe Mistachkin.  All rights reserved.
+#
+# See the file "license.terms" for information on usage and redistribution of
+# this file, and for a DISCLAIMER OF ALL WARRANTIES.
+#
+# RCS: @(#) $Id: $
+#
+###############################################################################
+
+#
+# NOTE: Use our own namespace here because even though we do not directly
+#       support namespaces ourselves, we do not want to pollute the global
+#       namespace if this script actually ends up being evaluated in Tcl.
+#
+namespace eval ::Eagle {
+  #
+  # NOTE: This procedure attempts to load the specified CIDR configuration
+  #       file into an array variable provided by the caller.  Critically,
+  #       this allows the specified configuration file to populate a caller
+  #       variable named "cidrs" with the logical list(s) of CIDR patterns.
+  #       This procedure does not modify that script variable; instead, it
+  #       simply provides (write?) access to it from within the specified
+  #       configuration file.
+  #
+  proc maybeLoadCidrs {
+          directory fileNameOnly varName force errorOnNotFound } {
+    # <help>
+    # This procedure conditionally loads a CIDR configuration script file into
+    # an array variable in the caller's scope.  It exists so that the OpenAI
+    # proxy server configuration can populate logical lists of CIDR patterns
+    # (such as the allow and deny lists) without re-loading them every time
+    # the configuration is re-evaluated.
+    #
+    # How it works: it links the caller's named array variable to the local
+    # name cidrs via upvar, then checks whether loading is needed -- it is
+    # needed when force is requested, when the caller variable does not yet
+    # exist, or when it exists but is empty.  When loading is needed, it
+    # ensures the Eagle.OpenAI package is provided (so the loader is
+    # available) and delegates the actual search and source operation to
+    # openAI_server_maybe_load_configuration in the caller's directory and
+    # parent.  The configuration script is the thing that actually writes
+    # into the cidrs array; this procedure only exposes that array.
+    #
+    # Tricky details: this procedure does not itself populate the array --
+    # the loaded configuration file does, via the upvar link.  When loading
+    # is skipped because cidrs already has entries, no return value is
+    # produced; only the load path returns the source result.
+    #
+    # Arguments:
+    #   directory        -- The base directory passed through to the
+    #                       configuration loader for resolving the file.
+    #   fileNameOnly     -- The tail file name of the CIDR configuration
+    #                       script to seek and load.
+    #   varName          -- The name of the caller's array variable that
+    #                       holds the logical list(s) of CIDR patterns.
+    #   force            -- When true, the configuration is loaded even
+    #                       when the caller array is already populated.
+    #   errorOnNotFound  -- Pass-through flag: when true, the underlying
+    #                       loader raises an error if no candidate file
+    #                       exists; when false, a missing file is silent.
+    #
+    # Results:
+    #   When loading is performed, returns the result of sourcing the
+    #   configuration file; when loading is skipped, returns the empty
+    #   string.  May raise script errors from the underlying loader.
+    # </help>
+
+    upvar 1 $varName cidrs
+
+    if {$force || ![info exists cidrs] || [array size cidrs] == 0} then {
+      package provide Eagle.OpenAI
+
+      return [openAI_server_maybe_load_configuration \
+          $directory $fileNameOnly $errorOnNotFound]
+    }
+  }
+
+  #
+  # NOTE: This procedure returns the fully qualified file name for the CIDR
+  #       data file associated with the specified country code.  The file
+  #       must exist.
+  #
+  proc getCidrFileName { directory version countryCode } {
+    # <help>
+    # This procedure builds and validates the fully qualified file name of a
+    # CIDR data file for a particular IP version and ISO country code.  It
+    # exists to centralize the naming convention used by the CIDR data tree
+    # (one subdirectory per IP version, one .cidr file per country) and to
+    # ensure callers fail fast on bad inputs rather than later on a missing
+    # file.
+    #
+    # How it works: it validates each argument in turn.  The directory must
+    # be non-empty and must name an existing directory; the version must be
+    # 4 or 6; and the country code must match a strict lowercase two-letter
+    # pattern.  It then composes the path by joining the directory, an
+    # "ipv<version>" subdirectory, and a "<countryCode>.cidr" leaf file.
+    # The composed path must refer to an existing regular file; otherwise
+    # a specific error is raised.
+    #
+    # Tricky details: validation is strict on purpose.  The country code
+    # check is case-sensitive (lowercase only); the IP version is restricted
+    # to the two supported values; and the final file-exists/isfile check is
+    # what makes this procedure suitable as the single source of truth for
+    # the data file location.
+    #
+    # Arguments:
+    #   directory   -- The root directory of the CIDR data tree.
+    #   version     -- The IP version, which must be 4 or 6.
+    #   countryCode -- The ISO two-letter country code, lowercase.
+    #
+    # Results:
+    #   Returns the fully qualified CIDR data file path, or raises a script
+    #   error when any argument is invalid or the file does not exist.
+    # </help>
+
+    if {[string length $directory] == 0} then {
+      error "invalid directory"
+    }
+
+    if {![file isdirectory $directory]} then {
+      error "directory not found"
+    }
+
+    if {$version ni [list 4 6]} then {
+      error "bad IP version: must be 4 or 6"
+    }
+
+    if {![regexp -- {^[a-z]{2}$} $countryCode]} then {
+      error "not a valid country code"
+    }
+
+    set fileName [file join \
+        $directory [appendArgs ipv $version] [appendArgs \
+        $countryCode .cidr]]
+
+    if {![file exists $fileName] || ![file isfile $fileName]} then {
+      error [appendArgs \
+          "IPv" $version " for country \"" $countryCode "\" not found"]
+    }
+
+    return $fileName
+  }
+
+  #
+  # NOTE: This procedure attempts to load the CIDR data file for a given
+  #       country code.
+  #
+  proc loadCidrFileFast {
+          directory version countryCode prefixLength varName } {
+    # <help>
+    # This procedure loads the CIDR data file for one country into an array
+    # in the caller's scope, using the high-performance Utility helpers.  It
+    # exists so a configuration script can populate a named CIDR list (for
+    # example the allow or deny list used by the OpenAI proxy) in one call,
+    # without parsing the file in Eagle script.
+    #
+    # How it works: it resolves the data file via getCidrFileName, then
+    # calls the .NET Utility.LoadForCIDR method to read the file into a
+    # dictionary (with default options plus error-on-empty), with the
+    # specified prefix length and an output count.  On any non-Ok return,
+    # the error object is converted to a string and raised.  It then links
+    # the caller's array variable to the local name cidrs, clears it (via
+    # array set with an empty list), and calls Utility.UpdateVariableWithCIDR
+    # to populate the array from the dictionary; that step is likewise
+    # checked and any failure is converted to a script error.
+    #
+    # Tricky details: the array is cleared before being populated, so any
+    # previous contents are discarded.  Two distinct .NET calls are made,
+    # each of which can fail independently; both follow the same error
+    # protocol of producing an opaque error object that getStringFromObjectHandle
+    # turns into a human-readable string.
+    #
+    # Arguments:
+    #   directory    -- The root directory of the CIDR data tree.
+    #   version      -- The IP version, which must be 4 or 6.
+    #   countryCode  -- The ISO two-letter country code, lowercase.
+    #   prefixLength -- The CIDR prefix length passed to LoadForCIDR for
+    #                   bucketing.
+    #   varName      -- The name of the caller's array variable to populate.
+    #
+    # Results:
+    #   Returns the number of CIDR entries loaded, or raises a script error
+    #   describing the underlying Utility failure.
+    # </help>
+
+    set fileName [getCidrFileName $directory $version $countryCode]
+    set dictionary null; set count 0; set error null
+
+    set code [object invoke \
+        Utility LoadForCIDR $fileName $prefixLength \
+        {Default ErrorOnEmpty} null dictionary count \
+        error]
+
+    if {$code ne "Ok"} then {
+      error [getStringFromObjectHandle $error]
+    }
+
+    upvar 1 $varName cidrs; array set cidrs [list]
+    set error null
+
+    set code [object invoke \
+        Utility UpdateVariableWithCIDR "" cidrs $dictionary error]
+
+    if {$code ne "Ok"} then {
+      error [getStringFromObjectHandle $error]
+    }
+
+    return $count
+  }
+
+  #
+  # NOTE: This procedure attempts to check if an IP address (or hostname)
+  #       matches against the specified logical list of CIDR entries.
+  #
+  proc matchViaCidr { address varName } {
+    # <help>
+    # This procedure decides whether a given IP address (or hostname) falls
+    # inside any CIDR pattern listed under any key of the caller's CIDR
+    # array.  It is the runtime gate used by the OpenAI proxy server to
+    # check incoming addresses against the configured allow and deny lists.
+    #
+    # How it works: it links the caller's named array variable to the local
+    # name cidrs.  If the array exists, it iterates over the array keys in
+    # sorted order; each key is treated as a glob pattern that the address
+    # must first match (via string match) before its CIDR values are even
+    # considered.  When the key matches, a StringList object is reused
+    # (cleared and refilled) with the CIDR values from that key, and the
+    # .NET Utility.MatchViaCIDR is called with the address, the list, and
+    # the Default options.  The first key whose entries match the address
+    # causes an immediate true return.  If the array does not exist, or no
+    # key matches, false is returned.
+    #
+    # Tricky details: the key is a GLOB pattern, not itself a CIDR -- it is
+    # an upstream classifier (for example a hostname pattern) that decides
+    # which subset of CIDR values are even compared, which short-circuits
+    # the search.  A missing array (as opposed to an empty one) is
+    # specifically tolerated so callers can probe lists they may not have
+    # configured.
+    #
+    # Arguments:
+    #   address -- The IP address or hostname being checked.
+    #   varName -- The name of the caller's array variable holding logical
+    #              CIDR lists (the keys are glob patterns, the values are
+    #              lists of CIDR entries).
+    #
+    # Results:
+    #   Returns true if the address matches any CIDR entry under any
+    #   matching key; otherwise returns false.
+    # </help>
+
+    upvar 1 $varName cidrs
+
+    if {[info exists cidrs]} then {
+      set list [object create -alias StringList]
+
+      foreach name [lsort [array names cidrs]] {
+        if {[string match $name $address]} then {
+          $list Clear
+
+          foreach value $cidrs($name) {$list Add $value}
+
+          if {[string is true -strict [object invoke \
+              Utility MatchViaCIDR $address $list Default]]} then {
+            return true
+          }
+        }
+      }
+    }
+
+    return false
+  }
+
+  #
+  # NOTE: Provide the Eagle "CIDR" package to the interpreter.
+  #
+  package provide Eagle.CIDR \
+    [expr {[isEagle] ? [info engine PatchLevel] : "1.0"}]
+}
+

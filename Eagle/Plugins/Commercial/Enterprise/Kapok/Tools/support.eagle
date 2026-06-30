@@ -1,0 +1,184 @@
+###############################################################################
+#
+# support.eagle --
+#
+# Extensible Adaptable Generalized Logic Engine (Eagle)
+# Enterprise Edition Certificate Support Tool
+#
+# Copyright (c) 2007-2012 by Joe Mistachkin.  All rights reserved.
+#
+# See the file "license.terms" for information on usage and redistribution of
+# this file, and for a DISCLAIMER OF ALL WARRANTIES.
+#
+# RCS: @(#) $Id: $
+#
+###############################################################################
+
+proc usage { error } {
+  # <help>
+  # This procedure prints the command-line usage summary for the
+  # certificate support tool and then terminates the process, signaling
+  # failure to whatever invoked it.  It is invoked when the tool is called
+  # with the wrong number of positional arguments.
+  #
+  # How it works: when error is non-empty it is printed first; the usage
+  # line is then printed, naming the host shell executable and this script
+  # followed by the supported positional arguments (the one required: Id;
+  # and the one optional: databaseFile).  Finally it calls exit 1.
+  #
+  # Tricky details: this procedure never returns to its caller; it always
+  # terminates the process with a non-zero status, so it must only be used
+  # on terminal error paths.
+  #
+  # Arguments:
+  #   error -- An optional leading error message.  When non-empty it is
+  #            shown before the usage text; pass an empty string for plain
+  #            usage.
+  #
+  # Results:
+  #   Does not return; the process exits with status code 1.
+  # </help>
+
+  if {[string length $error] > 0} then {puts stdout $error}
+
+  puts stdout "usage: [file tail [getShellExecutableName]]\
+[file tail [info script]] <Id> \[databaseFile\]"
+
+  #
+  # NOTE: Indicate to the caller, if any, that we have failed.
+  #
+  exit 1
+}
+
+if {[llength $argv] >= 1 && [llength $argv] <= 2} then {
+  #
+  # NOTE: This tool requires Eagle.
+  #
+  package require Eagle
+
+  #
+  # NOTE: If the tool base path does not already exist, set it to the directory
+  #       where this script is running from.
+  #
+  if {![info exists path]} then {
+    set path [file normalize [file dirname [info script]]]
+    set path_set true
+  }
+
+  #
+  # NOTE: Grab the time now in UTC.
+  #
+  set utcNow [object invoke -create -alias DateTime UtcNow]
+
+  #
+  # NOTE: Grab the command line arguments we need.
+  #
+  set id [string trim [lindex $argv 0]]
+
+  #
+  # NOTE: Figure out what SQLite database file we are going to use.
+  #
+  if {[llength $argv] >= 2} then {
+    #
+    # NOTE: Use the database file name supplied on the command line.
+    #
+    set databaseFile [string trim [lindex $argv 1]]
+  }
+
+  #
+  # NOTE: Was a valid looking database file name supplied?
+  #
+  if {![info exists databaseFile] || \
+      [string length $databaseFile] == 0} then {
+    #
+    # NOTE: No, then default to "kapok.db" in this directory.
+    #
+    set databaseFile [file join $path kapok.db]
+  }
+
+  #
+  # NOTE: Sanity check all the command line arguments.
+  #
+  if {![regexp -- {^[0-9a-f]{10,}$} $id]} then {
+    error "invalid support id"
+  }
+
+  try {
+    set connection [sql open -type SQLite \
+        [subst {Data Source=${databaseFile}}]]
+
+    set transaction [sql transaction begin $connection]
+
+    set sql {
+      SELECT Id, Active, Expires FROM Support WHERE Id LIKE ?;
+    }
+
+    if {[sql execute -transaction $transaction -execute \
+        readerAndCount -rowsvar support $connection $sql \
+        [list param0 String [appendArgs $id %]]] > 0} then {
+      #
+      # NOTE: There must be exactly one support contract.
+      #
+      set count $support(count)
+
+      if {$count != 1} then {
+        error [appendArgs \
+            "found " $count " support contracts, expected exactly 1"]
+      }
+
+      #
+      # NOTE: Make sure the support contract is active.
+      #
+      if {![getColumnValue $support(1) Active]} then {
+        error "support contract is inactive"
+      }
+
+      #
+      # NOTE: Make sure the support contract is not expired.
+      #
+      if {[[set timeSpan [$utcNow -create -alias Subtract \
+          [getColumnValue $support(1) Expires]]] \
+          TotalSeconds] >= 0} then {
+        error "support contract is expired"
+      }
+
+      #
+      # TODO: Return the actual support contract information here.
+      #
+      return [list \
+          SupportInfo "support contact phone: (800)555-1212" \
+          ServerInfo [info hostname]]; # HACK: Hard-coded.
+    } else {
+      #
+      # NOTE: No results from query, there is no support contract.
+      #
+      error "no matching support contracts were found"
+    }
+  } finally {
+    if {[info exists transaction]} then {
+      if {[llength [info transactions $transaction]] == 1} then {
+        #
+        # BUGBUG: Shouldn't this be commit instead of rollback?
+        #
+        sql transaction commit $transaction
+      }
+
+      unset transaction
+    }
+
+    if {[info exists connection]} then {
+      sql close $connection; unset connection
+    }
+
+    unset -nocomplain utcNow id databaseFile connection transaction \
+        sql count support timeSpan
+
+    if {[info exists path_set]} then {
+      unset -nocomplain path path_set
+    }
+
+    object cleanup
+  }
+} else {
+  usage ""
+}

@@ -1,0 +1,5 @@
+proc threadStart {} { after 0 nop; vwait forever }
+set t [createThread threadStart]
+startThread $t; after 2000 [list demo stop]; demo playmilliseconds 1000
+puts stdout ------------------------------------------------------------------
+exit -force

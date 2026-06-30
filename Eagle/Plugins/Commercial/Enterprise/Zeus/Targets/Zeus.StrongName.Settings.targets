@@ -1,0 +1,54 @@
+<!--
+ *
+ * Zeus.StrongName.Settings.targets -
+ *
+ * WARNING: Contains more evil MSBuild hacks than your doctor recommended.
+ *
+ * Copyright (c) 2007-2012 by Joe Mistachkin.  All rights reserved.
+ *
+ * See the file "license.terms" for information on usage and redistribution of
+ * this file, and for a DISCLAIMER OF ALL WARRANTIES.
+ *
+ * RCS: @(#) $Id: $
+ *
+-->
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!--
+  ******************************************************************************
+  **                          Load Per-User Settings                          **
+  ******************************************************************************
+  -->
+
+  <!--
+      NOTE: If the per-user settings file exists, import it now.  The contained
+            settings, if any, will override the default ones provided below.
+  -->
+  <Import Condition="'$(MSBuildProjectDirectory)' != '' And
+                     !HasTrailingSlash('$(MSBuildProjectDirectory)') And
+                     Exists('$(MSBuildProjectDirectory)\Targets\Zeus.StrongName.Settings.targets.user')"
+          Project="$(MSBuildProjectDirectory)\Targets\Zeus.StrongName.Settings.targets.user" />
+
+  <!--
+  ******************************************************************************
+  **                   Zeus Strong Name Signing Properties                    **
+  ******************************************************************************
+  -->
+
+  <PropertyGroup>
+    <!--
+        NOTE: This is the strong name key prefix for all builds.  This property
+              can be overridden in the project file and is used to help control
+              the name of the strong name key used to sign the output assembly.
+    -->
+    <HarpyStrongNamePluginPrefix Condition="'$(HarpyStrongNamePluginPrefix)' == ''">EagleEnterprisePlugin5</HarpyStrongNamePluginPrefix>
+  </PropertyGroup>
+
+  <!--
+  ******************************************************************************
+  -->
+
+  <Import Condition="'$(HarpyDir)' != '' And
+                     !HasTrailingSlash('$(HarpyDir)') And
+                     Exists('$(HarpyDir)\Targets\Harpy.StrongName.Settings.targets')"
+          Project="$(HarpyDir)\Targets\Harpy.StrongName.Settings.targets" />
+</Project>

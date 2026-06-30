@@ -1,0 +1,451 @@
+<!--
+ *
+ * Harpy.targets -
+ *
+ * WARNING: Contains more evil MSBuild hacks than your doctor recommended.
+ *
+ * Copyright (c) 2007-2012 by Joe Mistachkin.  All rights reserved.
+ *
+ * See the file "license.terms" for information on usage and redistribution of
+ * this file, and for a DISCLAIMER OF ALL WARRANTIES.
+ *
+ * RCS: @(#) $Id: $
+ *
+-->
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!--
+  ******************************************************************************
+  **                          Load Per-User Settings                          **
+  ******************************************************************************
+  -->
+
+  <!--
+      NOTE: If the per-user settings file exists, import it now.  The contained
+            settings, if any, will override the default ones provided below.
+  -->
+  <Import Condition="'$(HarpyDir)' != '' And
+                     !HasTrailingSlash('$(HarpyDir)') And
+                     Exists('$(HarpyDir)\Targets\Harpy.targets.user')"
+          Project="$(HarpyDir)\Targets\Harpy.targets.user" />
+
+  <!--
+  ******************************************************************************
+  **                              Harpy Targets                               **
+  ******************************************************************************
+  -->
+
+  <Target Name="CopyHarpyLibrary"
+          Condition="'$(CopyHarpyLibrary)' != 'false' And
+                     '$(OutputPath)' != '' And
+                     HasTrailingSlash('$(OutputPath)') And
+                     Exists('$(OutputPath)')"
+          Inputs="$(TargetPath)"
+          Outputs="$(TargetPath).CopyHarpyLibrary.done">
+    <CreateItem Condition="'$(HarpyBuildType)' == '' Or
+                           '$(HarpyBuildType)' == 'Default' Or
+                           '$(HarpyBuildType)' == 'DefaultSdk' Or
+                           '$(HarpyBuildType)' == 'MonoDefault' Or
+                           '$(HarpyBuildType)' == 'Enterprise' Or
+                           '$(HarpyBuildType)' == 'EnterpriseSdk' Or
+                           '$(HarpyBuildType)' == 'MonoEnterprise' Or
+                           '$(HarpyBuildType)' == 'Standard' Or
+                           '$(HarpyBuildType)' == 'StandardSdk' Or
+                           '$(HarpyBuildType)' == 'MonoStandard' Or
+                           '$(HarpyBuildType)' == 'Full' Or
+                           '$(HarpyBuildType)' == 'FullSdk' Or
+                           '$(HarpyBuildType)' == 'MonoFull' Or
+                           '$(HarpyBuildType)' == 'Basic' Or
+                           '$(HarpyBuildType)' == 'MonoBasic'"
+                Include="lib\Common\**">
+      <Output ItemName="CopyHarpyLibraryItem1" TaskParameter="Include" />
+    </CreateItem>
+
+    <CreateItem Condition="'$(HarpyBuildType)' == '' Or
+                           '$(HarpyBuildType)' == 'Default' Or
+                           '$(HarpyBuildType)' == 'DefaultSdk' Or
+                           '$(HarpyBuildType)' == 'MonoDefault' Or
+                           '$(HarpyBuildType)' == 'Enterprise' Or
+                           '$(HarpyBuildType)' == 'EnterpriseSdk' Or
+                           '$(HarpyBuildType)' == 'MonoEnterprise' Or
+                           '$(HarpyBuildType)' == 'Standard' Or
+                           '$(HarpyBuildType)' == 'StandardSdk' Or
+                           '$(HarpyBuildType)' == 'MonoStandard' Or
+                           '$(HarpyBuildType)' == 'Full' Or
+                           '$(HarpyBuildType)' == 'FullSdk' Or
+                           '$(HarpyBuildType)' == 'MonoFull' Or
+                           '$(HarpyBuildType)' == 'Basic' Or
+                           '$(HarpyBuildType)' == 'MonoBasic'"
+                Include="lib\Demo\*">
+      <Output ItemName="CopyHarpyLibraryItem2" TaskParameter="Include" />
+    </CreateItem>
+
+    <CreateItem Condition="'$(HarpyBuildType)' == '' Or
+                           '$(HarpyBuildType)' == 'Default' Or
+                           '$(HarpyBuildType)' == 'DefaultSdk' Or
+                           '$(HarpyBuildType)' == 'MonoDefault' Or
+                           '$(HarpyBuildType)' == 'Enterprise' Or
+                           '$(HarpyBuildType)' == 'EnterpriseSdk' Or
+                           '$(HarpyBuildType)' == 'MonoEnterprise' Or
+                           '$(HarpyBuildType)' == 'Standard' Or
+                           '$(HarpyBuildType)' == 'StandardSdk' Or
+                           '$(HarpyBuildType)' == 'MonoStandard' Or
+                           '$(HarpyBuildType)' == 'Full' Or
+                           '$(HarpyBuildType)' == 'FullSdk' Or
+                           '$(HarpyBuildType)' == 'MonoFull'"
+                Include="lib\Dynamic\*">
+      <Output ItemName="CopyHarpyLibraryItem3" TaskParameter="Include" />
+    </CreateItem>
+
+    <CreateItem Condition="'$(HarpyBuildType)' == 'Basic' Or
+                           '$(HarpyBuildType)' == 'MonoBasic'"
+                Include="lib\Basic\*">
+      <Output ItemName="CopyHarpyLibraryItem3" TaskParameter="Include" />
+    </CreateItem>
+
+    <CreateItem Condition="'$(HarpyBuildType)' == '' Or
+                           '$(HarpyBuildType)' == 'Default' Or
+                           '$(HarpyBuildType)' == 'DefaultSdk' Or
+                           '$(HarpyBuildType)' == 'MonoDefault' Or
+                           '$(HarpyBuildType)' == 'Enterprise' Or
+                           '$(HarpyBuildType)' == 'EnterpriseSdk' Or
+                           '$(HarpyBuildType)' == 'MonoEnterprise' Or
+                           '$(HarpyBuildType)' == 'Standard' Or
+                           '$(HarpyBuildType)' == 'StandardSdk' Or
+                           '$(HarpyBuildType)' == 'MonoStandard' Or
+                           '$(HarpyBuildType)' == 'Full' Or
+                           '$(HarpyBuildType)' == 'FullSdk' Or
+                           '$(HarpyBuildType)' == 'MonoFull'"
+                Include="lib\Test\*">
+      <Output ItemName="CopyHarpyLibraryItem4" TaskParameter="Include" />
+    </CreateItem>
+
+    <Copy SourceFiles="@(CopyHarpyLibraryItem1)"
+          DestinationFolder="$(OutputPath)" />
+
+    <Copy SourceFiles="@(CopyHarpyLibraryItem2)"
+          DestinationFolder="$(OutputPath)" />
+
+    <Copy SourceFiles="@(CopyHarpyLibraryItem3)"
+          DestinationFolder="$(OutputPath)" />
+
+    <Copy SourceFiles="@(CopyHarpyLibraryItem4)"
+          DestinationFolder="$(OutputPath)" />
+
+    <Touch AlwaysCreate="true"
+           Files="$(TargetPath).CopyHarpyLibrary.done" />
+  </Target>
+
+  <!--
+  ******************************************************************************
+  -->
+
+  <!--
+      NOTE: This assembly obfuscation build target relies upon having the
+            bundled "PreEmptive Dotfuscator Community Edition" product for
+            Visual Studio 2008 or later installed and fully functional.  In
+            order to properly use this build target, all the following build
+            targets must be present in the BuildDependsOn build property value
+            in exactly the following order:
+
+            Obfuscate1;
+            StrongNameSign;
+  -->
+  <Target Name="Obfuscate1"
+          Condition="'$(Obfuscate1)' != 'false' And
+                     ('$(BuildTool)' == 'MSBuild' Or
+                      '$(BuildTool)' == 'DotNetCore')
+                     '$(OperatingSystem)' == 'Windows' And
+                     '$(Configuration)' != '' And
+                     '$(EagleNative)' != 'false' And
+                     '$(EagleWindows)' != 'false' And
+                     '$(OutputPath)' != '' And
+                     HasTrailingSlash('$(OutputPath)') And
+                     '$(TargetPath)' != '' And
+                     '$(TargetFileName)' != '' And
+                     '$(EagleDir)' != '' And
+                     !HasTrailingSlash('$(EagleDir)') And
+                     '$(HarpyDir)' != '' And
+                     !HasTrailingSlash('$(HarpyDir)') And
+                     Exists('$(HarpyDir)\Tools\dotfuscator.bat') And
+                     Exists('$(HarpyDir)\Tools\data\$(AssemblyName).dxml')"
+          Inputs="$(TargetPath)"
+          Outputs="$(TargetPath).Obfuscate1.done">
+    <CreateItem Condition="Exists('$(OutputPath)Original')"
+                Include="$(OutputPath)Original\*">
+      <Output ItemName="Obfuscate1Item1" TaskParameter="Include" />
+    </CreateItem>
+
+    <CreateItem Condition="Exists('$(OutputPath)Obfuscated')"
+                Include="$(OutputPath)Obfuscated\*">
+      <Output ItemName="Obfuscate1Item2" TaskParameter="Include" />
+    </CreateItem>
+
+    <Delete Condition="'@(Obfuscate1Item1)' != ''"
+            Files="@(Obfuscate1Item1)" />
+
+    <Delete Condition="'@(Obfuscate1Item2)' != ''"
+            Files="@(Obfuscate1Item2)" />
+
+    <Copy SourceFiles="$(OutputPath)$(TargetFileName);$(OutputPath)$(TargetName).pdb"
+          DestinationFolder="$(OutputPath)Original" />
+
+    <Copy SourceFiles="$(OutputPath)$(TargetFileName);$(OutputPath)$(TargetName).pdb"
+          DestinationFolder="$(OutputPath)Unobfuscated" />
+
+    <Exec Command="&quot;$(HarpyDir)\Tools\dotfuscator.bat&quot; &quot;$(Configuration)$(EagleConfigurationSuffix)&quot; &quot;$(HarpyDir)\Tools\data\$(AssemblyName).dxml&quot;" />
+
+    <Copy Condition="Exists('$(OutputPath)Obfuscated\$(TargetFileName)')"
+          SourceFiles="$(OutputPath)Obfuscated\$(TargetFileName)"
+          DestinationFiles="$(OutputPath)$(TargetFileName)" />
+
+    <Touch AlwaysCreate="true"
+           Files="$(TargetPath).Obfuscate1.done" />
+  </Target>
+
+  <!--
+  ******************************************************************************
+  -->
+
+  <!--
+      NOTE: This assembly obfuscation build target relies upon having the
+            Gapotchenko Eazfuscator.NET 3.2 (or later) product installed and
+            fully functional.  In order to properly use this build target, all
+            the following build targets must be present in the BuildDependsOn
+            build property value in exactly the following order:
+
+            Obfuscate2;
+            StrongNameSign;
+  -->
+  <Target Name="Obfuscate2"
+          Condition="'$(Obfuscate2)' != 'false' And
+                     ('$(BuildTool)' == 'MSBuild' Or
+                      '$(BuildTool)' == 'DotNetCore')
+                     '$(OperatingSystem)' == 'Windows' And
+                     '$(Configuration)' != '' And
+                     '$(OutputPath)' != '' And
+                     HasTrailingSlash('$(OutputPath)') And
+                     '$(TargetFileName)' != '' And
+                     '$(EagleDir)' != '' And
+                     !HasTrailingSlash('$(EagleDir)') And
+                     '$(EAZFUSCATOR_NET_HOME)' != '' And
+                     !HasTrailingSlash('$(EAZFUSCATOR_NET_HOME)') And
+                     Exists('$(EAZFUSCATOR_NET_HOME)\Eazfuscator.NET.exe')"
+          Inputs="$(TargetPath)"
+          Outputs="$(TargetPath).Obfuscate2.done">
+    <CreateItem Condition="Exists('$(OutputPath)Original')"
+                Include="$(OutputPath)Original\*">
+      <Output ItemName="Obfuscate2Item1" TaskParameter="Include" />
+    </CreateItem>
+
+    <CreateItem Condition="Exists('$(OutputPath)Obfuscated')"
+                Include="$(OutputPath)Obfuscated\*">
+      <Output ItemName="Obfuscate2Item2" TaskParameter="Include" />
+    </CreateItem>
+
+    <Delete Condition="'@(Obfuscate2Item1)' != ''"
+            Files="@(Obfuscate2Item1)" />
+
+    <Delete Condition="'@(Obfuscate2Item2)' != ''"
+            Files="@(Obfuscate2Item2)" />
+
+    <MakeDir Condition="!Exists('$(OutputPath)Obfuscated')"
+             Directories="$(OutputPath)Obfuscated" />
+
+    <Copy SourceFiles="$(OutputPath)$(TargetFileName);$(OutputPath)$(TargetName).pdb"
+          DestinationFolder="$(OutputPath)Original" />
+
+    <Copy SourceFiles="$(OutputPath)$(TargetFileName);$(OutputPath)$(TargetName).pdb"
+          DestinationFolder="$(OutputPath)Unobfuscated" />
+
+    <!--
+        NOTE: *WARNING* This executable seems to delete the PDB file associated
+              with the assembly being obfuscated.  The obfuscator tool being
+              used here comes from:
+
+              http://www.foss.kharkov.ua/g1/projects/eazfuscator/dotnet/
+    -->
+    <Exec Command="&quot;$(EAZFUSCATOR_NET_HOME)\Eazfuscator.NET.exe&quot; --output &quot;$(OutputPath)Obfuscated\$(TargetFileName)&quot; --probing-paths &quot;$(EagleDir)\bin\$(Configuration)$(EagleConfigurationSuffix)\bin&quot; &quot;$(TargetPath)&quot;" />
+
+    <Copy Condition="Exists('$(OutputPath)Obfuscated\$(TargetFileName)')"
+          SourceFiles="$(OutputPath)Obfuscated\$(TargetFileName)"
+          DestinationFiles="$(OutputPath)$(TargetFileName)" />
+
+    <Touch AlwaysCreate="true"
+           Files="$(TargetPath).Obfuscate2.done" />
+  </Target>
+
+  <!--
+  ******************************************************************************
+  -->
+
+  <!--
+      NOTE: This assembly obfuscation build target relies upon having the
+            LogicNP Software Crypto Obfuscator For .NET 2015 (or later)
+            product installed and fully functional.  In order to properly
+            use this build target, all the following build targets must be
+            present in the BuildDependsOn build property value in exactly
+            the following order:
+
+            Obfuscate3;
+            StrongNameSign;
+  -->
+  <Target Name="Obfuscate3"
+          Condition="'$(Obfuscate3)' != 'false' And
+                     ('$(BuildTool)' == 'MSBuild' Or
+                      '$(BuildTool)' == 'DotNetCore') And
+                     '$(OperatingSystem)' == 'Windows' And
+                     '$(Configuration)' != '' And
+                     '$(MSBuildProjectDirectory)' != '' And
+                     !HasTrailingSlash('$(MSBuildProjectDirectory)') And
+                     '$(OutputPath)' != '' And
+                     HasTrailingSlash('$(OutputPath)') And
+                     '$(TargetFileName)' != '' And
+                     '$(EagleDir)' != '' And
+                     !HasTrailingSlash('$(EagleDir)') And
+                     '$(CRYPTO_OBFUSCATOR_HOME)' != '' And
+                     !HasTrailingSlash('$(CRYPTO_OBFUSCATOR_HOME)') And
+                     Exists('$(CRYPTO_OBFUSCATOR_HOME)\co.exe') And
+                     '$(HarpyDir)' != '' And
+                     !HasTrailingSlash('$(HarpyDir)') And
+                     (Exists('$(HarpyDir)\Tools\data\$(AssemblyName).obproj') Or
+                      ('$(ObfuscatorBuildType)' != '' And
+                       Exists('$(HarpyDir)\Tools\data\$(AssemblyName).$(ObfuscatorBuildType).obproj')))"
+          Inputs="$(TargetPath)"
+          Outputs="$(TargetPath).Obfuscate3.done">
+    <CreateItem Condition="Exists('$(OutputPath)Original')"
+                Include="$(OutputPath)Original\*">
+      <Output ItemName="Obfuscate3Item1" TaskParameter="Include" />
+    </CreateItem>
+
+    <CreateItem Condition="Exists('$(OutputPath)Obfuscated')"
+                Include="$(OutputPath)Obfuscated\*">
+      <Output ItemName="Obfuscate3Item2" TaskParameter="Include" />
+    </CreateItem>
+
+    <Delete Condition="'@(Obfuscate3Item1)' != ''"
+            Files="@(Obfuscate3Item1)" />
+
+    <Delete Condition="'@(Obfuscate3Item2)' != ''"
+            Files="@(Obfuscate3Item2)" />
+
+    <MakeDir Condition="!Exists('$(OutputPath)Obfuscated')"
+             Directories="$(OutputPath)Obfuscated" />
+
+    <Copy SourceFiles="$(OutputPath)$(TargetFileName);$(OutputPath)$(TargetName).pdb"
+          DestinationFolder="$(OutputPath)Original" />
+
+    <Copy SourceFiles="$(OutputPath)$(TargetFileName);$(OutputPath)$(TargetName).pdb"
+          DestinationFolder="$(OutputPath)Unobfuscated" />
+
+    <CreateProperty Condition="'$(ObfuscatorBuildType)' == '' Or
+                               !Exists('$(HarpyDir)\Tools\data\$(AssemblyName).$(ObfuscatorBuildType).obproj')"
+                        Value="$(HarpyDir)\Tools\data\$(AssemblyName).obproj">
+      <Output TaskParameter="Value" PropertyName="Obfuscate3ProjectFile" />
+    </CreateProperty>
+
+    <CreateProperty Condition="'$(ObfuscatorBuildType)' != '' And
+                               Exists('$(HarpyDir)\Tools\data\$(AssemblyName).$(ObfuscatorBuildType).obproj')"
+                        Value="$(HarpyDir)\Tools\data\$(AssemblyName).$(ObfuscatorBuildType).obproj">
+      <Output TaskParameter="Value" PropertyName="Obfuscate3ProjectFile" />
+    </CreateProperty>
+
+    <!--
+        NOTE: The obfuscator tool being used here comes from:
+
+              http://www.ssware.com/
+
+        NOTE: This "Exec" task covers all assemblies except Kapok.
+    -->
+    <Exec Condition="'$(Obfuscate3ProjectFile)' != '' And
+                     Exists('$(Obfuscate3ProjectFile)') And
+                     Exists('$(EagleDir)\bin\$(Configuration)$(EagleConfigurationSuffix)\lib\$(AssemblyName)1.0\$(AssemblyName).dll')"
+          Command="&quot;$(CRYPTO_OBFUSCATOR_HOME)\co.exe&quot; &quot;projectfile=$(Obfuscate3ProjectFile)&quot; &quot;mapfileslocation=$(OutputPath)Obfuscated&quot; &quot;CRYPTO_OBFUSCATOR_OUTPUTROOT=$(EagleDir)\bin\$(Configuration)$(EagleConfigurationSuffix)&quot; &quot;CRYPTO_OBFUSCATOR_KEYFILE=$(AssemblyPrivateKeyFile)&quot;" />
+
+    <!--
+        NOTE: This "Exec" task covers only covers the Kapok assembly for the
+              various versions of the .NET Framework.
+    -->
+    <Exec Condition="'$(Obfuscate3ProjectFile)' != '' And
+                     Exists('$(Obfuscate3ProjectFile)') And
+                     '$(BuildTool)' == 'MSBuild' And
+                     Exists('$(MSBuildProjectDirectory)\bin\$(AssemblyName).dll')"
+          Command="&quot;$(CRYPTO_OBFUSCATOR_HOME)\co.exe&quot; &quot;projectfile=$(Obfuscate3ProjectFile)&quot; &quot;mapfileslocation=$(MSBuildProjectDirectory)\bin\Obfuscated&quot; &quot;CRYPTO_OBFUSCATOR_OUTPUTROOT=$(MSBuildProjectDirectory)\bin&quot; &quot;CRYPTO_OBFUSCATOR_KEYFILE=$(AssemblyPrivateKeyFile)&quot;" />
+
+    <!--
+        NOTE: This "Exec" task covers only covers the Kapok assembly for the
+              various versions of the .NET Standard.
+    -->
+    <Exec Condition="'$(Obfuscate3ProjectFile)' != '' And
+                     Exists('$(Obfuscate3ProjectFile)') And
+                     '$(BuildTool)' == 'DotNetCore' And
+                     (Exists('$(EagleDir)\bin\$(Configuration)$(EagleConfigurationSuffix)\bin\netcoreapp2.0\$(AssemblyName).dll') Or
+                      Exists('$(EagleDir)\bin\$(Configuration)$(EagleConfigurationSuffix)\bin\netcoreapp3.0\$(AssemblyName).dll'))"
+          Command="&quot;$(CRYPTO_OBFUSCATOR_HOME)\co.exe&quot; &quot;projectfile=$(Obfuscate3ProjectFile)&quot; &quot;mapfileslocation=$(OutputPath)Obfuscated&quot; &quot;CRYPTO_OBFUSCATOR_OUTPUTROOT=$(EagleDir)\bin\$(Configuration)$(EagleConfigurationSuffix)&quot; &quot;CRYPTO_OBFUSCATOR_KEYFILE=$(AssemblyPrivateKeyFile)&quot;" />
+
+    <Copy Condition="Exists('$(OutputPath)Obfuscated\$(TargetFileName)')"
+          SourceFiles="$(OutputPath)Obfuscated\$(TargetFileName)"
+          DestinationFiles="$(OutputPath)$(TargetFileName)" />
+
+    <Copy Condition="Exists('$(OutputPath)Obfuscated\$(TargetName).pdb')"
+          SourceFiles="$(OutputPath)Obfuscated\$(TargetName).pdb"
+          DestinationFiles="$(OutputPath)$(TargetName).pdb" />
+
+    <Touch AlwaysCreate="true"
+           Files="$(TargetPath).Obfuscate3.done" />
+  </Target>
+
+  <!--
+  ******************************************************************************
+  -->
+
+  <!--
+      NOTE: The following build targets can be used to cleanup for either the
+            "Obfuscate1", "Obfuscate2", or "Obfuscate3" build targets.
+  -->
+  <Target Name="CleanOriginalFiles"
+          Condition="'$(CleanOriginalFiles)' != 'false' And
+                     '$(OutputPath)' != '' And
+                     HasTrailingSlash('$(OutputPath)') And
+                     Exists('$(OutputPath)Original')">
+    <CreateItem Include="$(OutputPath)Original\*">
+      <Output ItemName="CleanOriginalFilesItem" TaskParameter="Include" />
+    </CreateItem>
+
+    <Delete Condition="'@(CleanOriginalFilesItem)' != ''"
+            Files="@(CleanOriginalFilesItem)" />
+  </Target>
+
+  <!--
+  ******************************************************************************
+  -->
+
+  <Target Name="CleanObfuscateFiles"
+          Condition="'$(CleanObfuscateFiles)' != 'false' And
+                     '$(OutputPath)' != '' And
+                     HasTrailingSlash('$(OutputPath)') And
+                     Exists('$(OutputPath)Obfuscated')">
+    <CreateItem Include="$(OutputPath)Obfuscated\*">
+      <Output ItemName="CleanObfuscateFilesItem" TaskParameter="Include" />
+    </CreateItem>
+
+    <Delete Condition="'@(CleanObfuscateFilesItem)' != ''"
+            Files="@(CleanObfuscateFilesItem)" />
+  </Target>
+
+  <!--
+  ******************************************************************************
+  -->
+
+  <Target Name="CleanUnobfuscateFiles"
+          Condition="'$(CleanUnobfuscateFiles)' != 'false' And
+                     '$(OutputPath)' != '' And
+                     HasTrailingSlash('$(OutputPath)') And
+                     Exists('$(OutputPath)Unobfuscated')">
+    <CreateItem Include="$(OutputPath)Unobfuscated\*">
+      <Output ItemName="CleanUnobfuscateFilesItem" TaskParameter="Include" />
+    </CreateItem>
+
+    <Delete Condition="'@(CleanUnobfuscateFilesItem)' != ''"
+            Files="@(CleanUnobfuscateFilesItem)" />
+  </Target>
+</Project>

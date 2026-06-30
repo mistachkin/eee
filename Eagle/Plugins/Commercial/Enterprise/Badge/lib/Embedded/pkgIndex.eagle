@@ -1,0 +1,73 @@
+###############################################################################
+#
+# pkgIndex.eagle --
+#
+# Extensible Adaptable Generalized Logic Engine (Eagle)
+# Package Index File
+#
+# Copyright (c) 2007-2012 by Joe Mistachkin.  All rights reserved.
+#
+# See the file "license.terms" for information on usage and redistribution of
+# this file, and for a DISCLAIMER OF ALL WARRANTIES.
+#
+# RCS: @(#) $Id: $
+#
+###############################################################################
+
+if {![package vsatisfies [package provide Tcl] 8.4]} then {return}
+if {![package vsatisfies [package provide Eagle] 1.0]} then {return}
+
+###############################################################################
+
+if {[string length [package ifneeded Badge.Enterprise 1.0]] == 0} then {
+  if {[info exists tag]} then {
+    package ifneeded Badge.Enterprise 1.0 \
+        [list apply [list [list dir tag args] {
+      load -publickeytoken $tag \
+          -maybeverifiedonly -maybetrustedonly -- \
+          [file join $dir Badge.dll] Badge.Enterprise
+    }] $dir $tag] +Locked
+  } else {
+    package ifneeded Badge.Enterprise 1.0 \
+        [list apply [list [list dir args] {
+      load -maybeverifiedonly -maybetrustedonly -- \
+          [file join $dir Badge.dll] Badge.Enterprise
+    }] $dir] +Locked
+  }
+}
+
+###############################################################################
+
+if {[string length [package ifneeded Security.Certificates 1.0]] == 0} then {
+  #
+  # NOTE: This package is shared with the "Badge.Basic.dll" assembly
+  #       from the "Basic" SKU.
+  #
+  if {[info exists tag]} then {
+    package ifneeded Security.Certificates 1.0 \
+        [list apply [list [list dir tag args] {
+      foreach fileNameOnly [list Badge.dll Badge.Basic.dll] {
+        set fileName [file join $dir $fileNameOnly]
+
+        if {[file exists $fileName]} then {
+          return [load -publickeytoken $tag \
+              -maybeverifiedonly -maybetrustedonly -- \
+              $fileName Security.Certificates]
+        }
+      }
+    }] $dir $tag] +Locked
+  } else {
+    package ifneeded Security.Certificates 1.0 \
+        [list apply [list [list dir args] {
+      foreach fileNameOnly [list Badge.dll Badge.Basic.dll] {
+        set fileName [file join $dir $fileNameOnly]
+
+        if {[file exists $fileName]} then {
+          return [load \
+              -maybeverifiedonly -maybetrustedonly -- \
+              $fileName Security.Certificates]
+        }
+      }
+    }] $dir] +Locked
+  }
+}

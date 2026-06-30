@@ -1,0 +1,570 @@
+###############################################################################
+#
+# complaintForm.eagle --
+#
+# Extensible Adaptable Generalized Logic Engine (Eagle)
+# Complaint Form Setup
+#
+# Copyright (c) 2007-2012 by Joe Mistachkin.  All rights reserved.
+#
+# See the file "license.terms" for information on usage and redistribution of
+# this file, and for a DISCLAIMER OF ALL WARRANTIES.
+#
+# RCS: @(#) $Id: $
+#
+###############################################################################
+
+#
+# NOTE: This code uses a namespace; however, that is not strictly a
+#       requirement.
+#
+namespace eval ::ComplaintForm {
+  #
+  # NOTE: This procedure creates a new script thread and sends the initial
+  #       script to it.  It is used to create the form and setup the event
+  #       handlers.
+  #
+  proc setupComplaintForm {} {
+    # <help>
+    # This procedure creates the complaint-form display window in a brand-new
+    # script thread and arranges for that thread to receive every complaint
+    # raised in this application domain.  It exists because the form is a Win
+    # Forms object that wants its own message pump: hosting it in a dedicated
+    # ScriptThread keeps the form responsive without blocking the interpreter
+    # that triggered the complaint.
+    #
+    # How it works: it asks the ScriptThread Create factory for a new
+    # interpreter with the interface-use flags configured for namespaces and
+    # without cancel/abort support, stashing the returned thread handle in the
+    # namespace variable complaintFormScriptThread; if creation fails it
+    # raises an error.  When the host interpreter is configured to start the
+    # hot-key manager form minimized (the HotKey.Forms.HotKeyManagerForm_
+    # Minimized variable is set), it forwards that preference into the new
+    # thread.  It then ships a single script block to the thread that defines
+    # the ::ComplaintFormScriptThread namespace, declares its UI helpers
+    # (makeFont, handleFormShown, handleFormClosing, appendToTextBox,
+    # setupForm, shouldComplain, complainCallback, setupComplain), and
+    # finally calls setupForm to construct and show the form and setupComplain
+    # to install the cross-interpreter complaint hook.
+    #
+    # Tricky details: the form lives entirely in the worker thread; this
+    # interpreter only holds the thread handle.  The minimize preference must
+    # be propagated explicitly because the worker has its own interpreter
+    # state.  The Send call returns a code that is "Ok" on success; any other
+    # value is converted to an error.
+    #
+    # Arguments:
+    #   None.
+    #
+    # Results:
+    #   Returns the empty string; the side effect is creation of the worker
+    #   thread, the form, and the complaint handler.
+    # </help>
+
+    variable complaintFormScriptThread
+
+    #
+    # NOTE: Attempt to create a new script thread for user-interface use.
+    #
+    set result null
+
+    set complaintFormScriptThread [object invoke -alias \
+        ScriptThread Create null {InterfaceUse NoCancel Verbose NoAbort} \
+        {ScriptThreadUse UseNamespaces} ScriptThreadUse null null null \
+        null null null ::forever 0 10000 result]
+
+    #
+    # NOTE: If we could not create a new script thread, fail.
+    #
+    if {![isNonNullObjectHandle $complaintFormScriptThread]} then {
+      error [appendArgs \
+          "failed to create script thread: " \
+          [getStringFromObjectHandle $result <unknown>]]
+    }
+
+    #
+    # NOTE: If the minimize-on-shown variable is set in this interpreter,
+    #       make sure it ends up in the script thread interpreter as well.
+    #
+    if {[info exists ::HotKey.Forms.HotKeyManagerForm_Minimized]} then {
+      #
+      # NOTE: Send the script block to the new script thread.
+      #
+      set code [$complaintFormScriptThread Send {
+        set ::HotKey.Forms.HotKeyManagerForm_Minimized 1
+      } result]
+
+      #
+      # NOTE: If we could not send a script to the new thread, fail.
+      #
+      if {$code ne "Ok"} then {
+        error [appendArgs \
+            "failed to send script to thread: " \
+            [getStringFromObjectHandle $result <unknown>]]
+      }
+    }
+
+    #
+    # NOTE: Send the script block to the new script thread.
+    #
+    set code [$complaintFormScriptThread Send {
+      #
+      # NOTE: This code uses a namespace; however, that is not strictly a
+      #       requirement.
+      #
+      namespace eval ::ComplaintFormScriptThread {
+        #
+        # NOTE: This procedure creates a new font from scratch or from a
+        #       pre-existing font, optionally using the specified font
+        #       family.
+        #
+        proc makeFont { font fontFamily } {
+          # <help>
+          # This procedure builds a Font object suitable for the complaint
+          # form's output text box, optionally seeded from an existing font
+          # and an explicit font family.  It exists because the default text
+          # box font may not render the way the form needs (the form wants a
+          # monospaced look), so a replacement font is constructed and
+          # applied after the text box is created.
+          #
+          # How it works: if an existing font handle was supplied, the new
+          # font is created from its size doubled, plus its style, unit,
+          # GDI character set, and GDI vertical flag, using the supplied
+          # font family.  If no font was supplied but a font family was, a
+          # plain 8.25-point regular point font is created with that family.
+          # If neither was supplied, the generic sans serif font family is
+          # used as a default.  All created objects carry +NoDispose so the
+          # caller controls their lifetime.
+          #
+          # Arguments:
+          #   font       -- An optional existing Font handle from which to
+          #                 copy size, style, unit, character set, and
+          #                 vertical flag; pass the empty string to skip.
+          #   fontFamily -- The FontFamily handle to use for the new font;
+          #                 may be empty when no font is also supplied.
+          #
+          # Results:
+          #   Returns a handle (alias) to the newly created Font object.
+          # </help>
+
+          if {[string length $font] > 0} then {
+            set newFont [object create -alias -objectflags +NoDispose \
+                Font $fontFamily [expr {[$font Size] * 2}] [$font Style] \
+                [$font Unit] [$font GdiCharSet] [$font GdiVerticalFont]]
+          } elseif {[string length $fontFamily] > 0} then {
+            set newFont [object create -alias -objectflags +NoDispose \
+                Font $fontFamily 8.25 Regular Point 0 false]
+          } else {
+            set newFontFamily [object invoke -alias -objectflags +NoDispose \
+                FontFamily GenericSansSerif]
+
+            set newFont [object create -alias -objectflags +NoDispose \
+                Font $newFontFamily 8.25 Regular Point 0 false]
+          }
+
+          return $newFont
+        }
+
+        #######################################################################
+
+        #
+        # NOTE: This procedure handles the Shown event for the form.
+        #
+        proc handleFormShown { sender e } {
+          # <help>
+          # This procedure is the Shown event handler for the complaint
+          # form.  It exists so the form can honor the manager's "start
+          # minimized" preference at the moment it first becomes visible.
+          #
+          # How it works: when the variable HotKey.Forms.HotKeyManagerForm_
+          # Minimized exists in the worker interpreter, it sets the form's
+          # WindowState property to Minimized.
+          #
+          # Arguments:
+          #   sender -- The sender object handle supplied by the event
+          #             dispatcher; unused.
+          #   e      -- The EventArgs handle supplied by the event
+          #             dispatcher; unused.
+          #
+          # Results:
+          #   Returns the empty string.
+          # </help>
+
+          variable form
+
+          if {[info exists ::HotKey.Forms.HotKeyManagerForm_Minimized]} then {
+            $form WindowState Minimized
+          }
+        }
+
+        #######################################################################
+
+        #
+        # NOTE: This procedure handles the Closing event for the form.
+        #
+        proc handleFormClosing { sender e } {
+          # <help>
+          # This procedure is the Closing event handler for the complaint
+          # form.  It exists so that closing the form both releases the
+          # per-application-domain instance counter maintained by the
+          # plugin and causes the script-thread message loop to exit
+          # cleanly, allowing the thread itself to wind down.
+          #
+          # How it works: it invokes the non-public ExitLevel method on
+          # HotKey.Components.Private.ComplaintFormOps inside a catch so
+          # that an exception thrown by the .NET side cannot prevent the
+          # subsequent shutdown step.  It then sets the global "forever"
+          # variable to 1, which is what the ScriptThread.Create call was
+          # told to wait on; setting it unblocks the worker thread's main
+          # loop and lets it terminate.
+          #
+          # Tricky details: the global variable name must match the wait
+          # variable supplied to ScriptThread.Create (which is "forever").
+          # ExitLevel decrements an internal counter; if it is not called
+          # the plugin may refuse to create another complaint form later
+          # because it believes one already exists.
+          #
+          # Arguments:
+          #   sender -- The sender object handle supplied by the event
+          #             dispatcher; unused.
+          #   e      -- The CancelEventArgs handle supplied by the event
+          #             dispatcher; unused.
+          #
+          # Results:
+          #   Returns the empty string; the side effects are the counter
+          #   decrement and signaling the worker thread to exit.
+          # </help>
+
+          #
+          # NOTE: Decrease the count of complaint forms in this application
+          #       domain.  This should allow another instance of this form
+          #       to be created (later), if necessary.
+          #
+          catch {
+            object invoke -flags +NonPublic \
+                HotKey.Components.Private.ComplaintFormOps ExitLevel
+          }
+
+          #
+          # NOTE: Causes the ThreadStart method of this ScriptThread class
+          #       instance to exit.
+          #
+          set ::forever 1; # NOTE: Must match the variable name from the
+                           #       call to the ScriptThread.Create method.
+        }
+
+        #######################################################################
+
+        #
+        # NOTE: This procedure appends the specified text to the output text
+        #       box.
+        #
+        proc appendToTextBox { text } {
+          # <help>
+          # This procedure appends a chunk of text to the complaint form's
+          # output text box, automatically marshaling onto the UI thread
+          # when called from a worker thread.  It exists because the
+          # complainCallback can fire on any interpreter thread, but Win
+          # Forms controls must only be touched from the thread that owns
+          # their underlying window.
+          #
+          # How it works: it asks the text box whether an invoke is
+          # required; if so it re-dispatches itself onto the UI thread via
+          # Invoke (passing the same text), and otherwise it calls
+          # AppendText directly on the text box.
+          #
+          # Tricky details: the recursive form goes through namespace code
+          # so the target proc is resolved in this script-thread namespace
+          # when the Invoke fires.  The InvokeRequired/Invoke dance is the
+          # standard Win Forms pattern for safe cross-thread UI updates.
+          #
+          # Arguments:
+          #   text -- The text to append.
+          #
+          # Results:
+          #   Returns the empty string; the effect is appended text in the
+          #   form's read-only text box.
+          # </help>
+
+          variable textBox
+
+          if {[$textBox InvokeRequired]} then {
+            $textBox Invoke [namespace code [list appendToTextBox $text]]
+          } else {
+            $textBox AppendText $text
+          }
+        }
+
+        #######################################################################
+
+        #
+        # NOTE: This procedure creates the form and its text box.  The form
+        #       is also shown.
+        #
+        proc setupForm {} {
+          # <help>
+          # This procedure constructs the complaint form and its single
+          # output text box and shows it.  It is invoked once, at the end
+          # of the worker-thread setup script, to bring the UI online.
+          #
+          # How it works: it imports the System.Drawing and
+          # System.Windows.Forms namespaces, creates a Form and a TextBox,
+          # configures the text box for read-only multiline output (auto
+          # size off, word wrap off, both scroll bars on, docked to fill
+          # the form), and swaps the default font for a monospaced one
+          # built by makeFont using the GenericFontFamilies.Monospace
+          # member.  It then wires the Shown and Closing events to
+          # handleFormShown and handleFormClosing, adds the text box to
+          # the form's Controls collection, sets the title to "Complaint
+          # Form" and TopMost true, and finally calls Show on the form.
+          #
+          # Tricky details: the form is created without a parent, runs
+          # always-on-top, and its lifetime is tied to the worker thread's
+          # message loop.  Both UI handles are stored in namespace
+          # variables (form, textBox) so the event handlers and
+          # appendToTextBox can reach them.
+          #
+          # Arguments:
+          #   None.
+          #
+          # Results:
+          #   Returns the empty string; the side effect is a visible form
+          #   ready to display incoming complaints.
+          # </help>
+
+          variable form
+          variable textBox
+
+          object load -import System.Drawing
+          object load -import System.Windows.Forms
+
+          set form [object create -alias Form]
+          set textBox [object create -alias TextBox]
+
+          $textBox ReadOnly true
+          $textBox AutoSize false
+          $textBox Multiline true
+          $textBox WordWrap false
+          $textBox ScrollBars Both
+          $textBox Dock Fill
+
+          set font [$textBox -alias -objectflags +NoDispose Font]
+
+          set fontFamily [object create \
+              -objectflags +NoDispose -parametertypes [list \
+              GenericFontFamilies] FontFamily Monospace]
+
+          $textBox Font [makeFont $font $fontFamily]
+
+          unset -nocomplain fontFamily font
+
+          $form add_Shown [namespace code [list handleFormShown]]
+          $form add_Closing [namespace code [list handleFormClosing]]
+          $form Controls.Add $textBox
+          $form Text "Complaint Form"
+          $form TopMost true
+          $form Show
+        }
+
+        #######################################################################
+
+        #
+        # NOTE: This procedure returns non-zero if the current complaint
+        #       should be considered valid and emitted into the text box.
+        #
+        proc shouldComplain { message } {
+          # <help>
+          # This procedure decides whether a particular complaint message
+          # is worth displaying in the form.  It exists to filter out the
+          # noise produced when the hot-key plugin deliberately cancels a
+          # script: those cancellations surface as "eval canceled" and
+          # "eval unwound" complaints that the user does not want to see.
+          #
+          # How it works: it asks the non-public IsPendingCancel method
+          # on HotKey.Components.Private.HotKeyOps whether the plugin is
+          # currently in a cancel-in-progress state.  Only when that is
+          # true does it inspect the message: messages ending in "eval
+          # canceled" or "eval unwound" are filtered out (return false);
+          # any other message is allowed through (return true).  If the
+          # method invocation itself fails, the call is treated as
+          # non-pending and the complaint is allowed through.
+          #
+          # Tricky details: this hooks into private hot-key plugin state
+          # by name, so it requires the worker thread to live in the
+          # same application domain as the plugin -- which is the
+          # configured arrangement for hot-key complaint forms.
+          #
+          # Arguments:
+          #   message -- The candidate complaint text.
+          #
+          # Results:
+          #   Returns true when the complaint should be shown, false to
+          #   suppress it.
+          # </help>
+
+          #
+          # HACK: This relies on being in the same application domain as
+          #       the hot-key plugin.
+          #
+          if {[catch {
+            object invoke -flags +NonPublic \
+                HotKey.Components.Private.HotKeyOps IsPendingCancel
+          } result] == 0 && $result} then {
+            #
+            # NOTE: Only skip over complaints about script cancellation.
+            #
+            if {[string match "* eval canceled" $message] || \
+                [string match "* eval unwound" $message]} then {
+              return false
+            }
+          }
+
+          return true
+        }
+
+        #######################################################################
+
+        #
+        # NOTE: This procedure is called when a complaint is raised in the
+        #       configured interpreter.
+        #
+        proc complainCallback { message } {
+          # <help>
+          # This procedure is the complaint sink installed by
+          # setupComplain.  Whenever any interpreter in the application
+          # domain raises a complaint, this is the procedure the test
+          # subsystem calls to deliver it.
+          #
+          # How it works: it consults shouldComplain to decide whether the
+          # message should be displayed; if so, it prepends "COMPLAIN: "
+          # and a CRLF line ending and forwards the formatted string to
+          # appendToTextBox, which routes it onto the UI thread.
+          #
+          # Tricky details: this can be invoked from any thread, but it
+          # never touches the form directly -- appendToTextBox handles the
+          # cross-thread marshaling.  The CRLF line ending is used so the
+          # text box renders one complaint per line on Windows.
+          #
+          # Arguments:
+          #   message -- The complaint message text.
+          #
+          # Results:
+          #   Returns the empty string; the visible effect is one new line
+          #   in the complaint form's output text box (when not filtered).
+          # </help>
+
+          #
+          # NOTE: If the hot-key plugin is currently canceling scripts, do
+          #       not emit any output.
+          #
+          if {[shouldComplain $message]} then {
+            appendToTextBox [appendArgs "COMPLAIN: " $message \r\n]
+          }
+        }
+
+        #######################################################################
+
+        #
+        # NOTE: This procedure arranges for our custom complaint handing to be
+        #       called for all interpreters in this application domain.
+        #
+        proc setupComplain {} {
+          # <help>
+          # This procedure installs complainCallback as the global script
+          # complaint handler for every interpreter in this application
+          # domain.  It exists so the complaint form actually receives the
+          # messages it is supposed to display.
+          #
+          # How it works: it lazily creates an Eagle._Tests.Default
+          # instance, caches it in the namespace variable "test", and then
+          # invokes TestSetScriptComplainCallback on it.  The arguments
+          # are: the empty interpreter selector (meaning all
+          # interpreters), the fully-qualified namespace name of
+          # complainCallback, and two boolean flags (passed as true) that
+          # tell the test subsystem to apply the callback globally and
+          # persistently.
+          #
+          # Tricky details: the Eagle._Tests.Default object is the
+          # canonical accessor for the test-subsystem extensions; it is
+          # used here purely as a back door to register a cross-
+          # interpreter complain hook (this code does not run a test).
+          #
+          # Arguments:
+          #   None.
+          #
+          # Results:
+          #   Returns whatever TestSetScriptComplainCallback returns; the
+          #   side effect is that complainCallback is now the active
+          #   complaint sink for the application domain.
+          # </help>
+
+          variable test
+
+          if {![info exists test] || [string length $test] == 0} then {
+            set test [object create -alias Eagle._Tests.Default]
+          }
+
+          $test TestSetScriptComplainCallback "" [namespace name \
+              complainCallback] true true
+        }
+
+        #######################################################################
+
+        setupForm; # NOTE: Create the form on startup.
+        setupComplain; # NOTE: Hookup the complaint handler.
+      }
+    } result]
+
+    #
+    # NOTE: If we could not send a script to the new thread, fail.
+    #
+    if {$code ne "Ok"} then {
+      error [appendArgs \
+          "failed to send script to thread: " \
+          [getStringFromObjectHandle $result <unknown>]]
+    }
+  }
+
+  #
+  # NOTE: This procedure cleans up the state in this interpreter setup
+  #       when the script thread was created.
+  #
+  proc cleanupComplaintForm {} {
+    # <help>
+    # This procedure tears down the per-interpreter state created by
+    # setupComplaintForm: it disposes the worker script thread (if any)
+    # and forgets the handle.  It is the counterpart to setupComplaintForm
+    # and is intended to be called when the host interpreter is shutting
+    # down or no longer needs the complaint form.
+    #
+    # How it works: when the namespace variable complaintFormScriptThread
+    # exists and still holds a non-null object handle, the thread is
+    # disposed via "object dispose"; either way, the variable is unset
+    # with -nocomplain.
+    #
+    # Tricky details: disposing the thread releases the worker
+    # interpreter and any UI objects it owns; this is the expected
+    # shutdown path for the form when the user has not closed it
+    # interactively.  This procedure does not directly close the form --
+    # it relies on the thread teardown to do that.
+    #
+    # Arguments:
+    #   None.
+    #
+    # Results:
+    #   Returns the empty string; the side effects are thread disposal
+    #   and clearing of the cached thread handle.
+    # </help>
+
+    variable complaintFormScriptThread
+
+    if {[info exists complaintFormScriptThread] && \
+        [isNonNullObjectHandle $complaintFormScriptThread]} then {
+      object dispose $complaintFormScriptThread
+    }
+
+    unset -nocomplain complaintFormScriptThread
+  }
+
+  setupComplaintForm
+}

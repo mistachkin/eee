@@ -1,0 +1,330 @@
+###############################################################################
+#
+# import.eagle --
+#
+# Extensible Adaptable Generalized Logic Engine (Eagle)
+# Enterprise Edition Certificate Import Tool
+#
+# Copyright (c) 2007-2012 by Joe Mistachkin.  All rights reserved.
+#
+# See the file "license.terms" for information on usage and redistribution of
+# this file, and for a DISCLAIMER OF ALL WARRANTIES.
+#
+# RCS: @(#) $Id: $
+#
+###############################################################################
+
+proc usage { error } {
+  # <help>
+  # This procedure prints the command-line usage summary for the
+  # certificate import tool and then terminates the process, signaling
+  # failure to whatever invoked it.  It is invoked when the tool is called
+  # with the wrong number of positional arguments.
+  #
+  # How it works: when error is non-empty it is printed first; the usage
+  # line is then printed, naming the host shell executable and this script
+  # followed by the supported positional arguments (the three required:
+  # certificateFileName, verify, subscription; and the two optional ones:
+  # databaseFile, publicKeyFile).  Finally it calls exit 1.
+  #
+  # Tricky details: this procedure never returns to its caller; it always
+  # terminates the process with a non-zero status, so it must only be used
+  # on terminal error paths.
+  #
+  # Arguments:
+  #   error -- An optional leading error message.  When non-empty it is
+  #            shown before the usage text; pass an empty string for plain
+  #            usage.
+  #
+  # Results:
+  #   Does not return; the process exits with status code 1.
+  # </help>
+
+  if {[string length $error] > 0} then {puts stdout $error}
+
+  puts stdout "usage: [file tail [getShellExecutableName]]\
+[file tail [info script]] <certificateFileName> <verify> <subscription>\
+\[databaseFile\] \[publicKeyFile\]"
+
+  #
+  # NOTE: Indicate to the caller, if any, that we have failed.
+  #
+  exit 1
+}
+
+if {[llength $argv] >= 3 && [llength $argv] <= 5} then {
+  #
+  # set argv [list import.eagle.harpy 1 1 ""]
+  # source import.eagle
+  #
+  #############################################################################
+
+  package require Eagle
+  package require Licensing.Enterprise
+
+  #
+  # NOTE: If the tool base path does not already exist, set it to the
+  #       directory where this script is running from.
+  #
+  if {![info exists path]} then {
+    set path [file normalize [file dirname [info script]]]
+    set path_set true
+  }
+
+  #
+  # NOTE: Grab the required command line arguments.
+  #
+  set certificateFileName [string trim [lindex $argv 0]]
+  set verifyCertificate [string trim [lindex $argv 1]]
+
+  if {[string length $verifyCertificate] == 0 || \
+      ![string is boolean -strict $verifyCertificate]} then {
+    set verifyCertificate false
+  }
+
+  set addSubscription [string trim [lindex $argv 2]]
+
+  if {[string length $addSubscription] == 0 || \
+      ![string is boolean -strict $addSubscription]} then {
+    set addSubscription false
+  }
+
+  #
+  # NOTE: Figure out what SQLite database file we are going to use.
+  #
+  if {[llength $argv] >= 4} then {
+    #
+    # NOTE: Use the database file name supplied on the command line.
+    #
+    set databaseFile [string trim [lindex $argv 3]]
+  }
+
+  #
+  # NOTE: Was a valid looking database file name supplied?
+  #
+  if {![info exists databaseFile] || \
+      [string length $databaseFile] == 0} then {
+    #
+    # NOTE: No, then default to "kapok.db" in this directory.
+    #
+    set databaseFile [file join $path kapok.db]
+  }
+
+  #
+  # NOTE: Build the file names for the public and/or private strong
+  #       name keys that will be used to sign and verify the data
+  #       file.
+  #
+  if {[llength $argv] >= 5} then {
+    #
+    # NOTE: Use the public key file name supplied on the command line.
+    #
+    set publicKeyFile [string trim [lindex $argv 4]]
+  } elseif {[info exists env(EagleEnterprisePublicKey)]} then {
+    #
+    # NOTE: Use the public key file name supplied via the environment
+    #       variable.
+    #
+    set publicKeyFile $env(EagleEnterprisePublicKey)
+  } elseif {[info exists env(Eagle)]} then {
+    #
+    # NOTE: Use the public key file name supplied via the environment
+    #       variable.
+    #
+    set publicKeyFile [file join \
+        $env(Eagle) Keys EagleEnterprisePluginRootPublic.snk]
+  }
+
+  #
+  # NOTE: Was a valid looking public key file name supplied?
+  #
+  if {![info exists publicKeyFile] || \
+      [string length $publicKeyFile] == 0} then {
+    #
+    # NOTE: No, then default to "EagleEnterprisePluginRootPublic.snk"
+    #       in the current directory.
+    #
+    set publicKeyFile EagleEnterprisePluginRootPublic.snk
+  }
+
+  #
+  # NOTE: If the certificate needs to be verified (later), open the
+  #       public key now.  If this fails, an error will be generated
+  #       and nothing else will be done.
+  #
+  if {$verifyCertificate} then {
+    set publicKey [keypair open -alias -public $publicKeyFile]
+  }
+
+  try {
+    #
+    # NOTE: Import the certificate from the specified file name now.
+    #
+    set certificate [certificate import -alias $certificateFileName]
+
+    #
+    # NOTE: If requested, verify the imported certificate now.  If this
+    #       fails, an error will be generated and nothing else will be
+    #       done.
+    #
+    if {$verifyCertificate} then {
+      certificate verify $certificate $publicKey
+    }
+
+    #
+    # NOTE: Grab the Guid format used for the certificates.
+    #
+    set guidFormat [object invoke \
+        Licensing.Components.Public.Utility GetDefaultGuidFormat]
+
+    #
+    # NOTE: Grab the DateTime format used for the certificates.
+    #
+    set dateFormat [object invoke \
+        Licensing.Components.Public.Utility GetDefaultTimeStampFormat]
+
+    #
+    # NOTE: Setup the SQL for inserting the certificate data into the
+    #       database.
+    #
+    set sql {
+      INSERT INTO Certificates (
+        Id, Protocol, ProtocolVersion, Vendor, Origin, Authority,
+        Agreement, Support, TimeStamp, Duration, Key, Number,
+        SerialNumber, HashAlgorithm, Signature, Type, EntityType,
+        EntityName, EntityValue, ExtraData, Quantity, Product,
+        Version, Features, Restrictions
+      ) VALUES (
+        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+        ?, ?, ?, ?, ?, ?
+      );
+    }
+
+    #
+    # NOTE: Create list of column names in the Certificates table.
+    #       This must match the list of columns in the above SQL
+    #       INSERT query.
+    #
+    set names [list \
+        Id Protocol ProtocolVersion Vendor Origin Authority \
+        Agreement Support TimeStamp Duration Key Number \
+        SerialNumber HashAlgorithm Signature Type EntityType \
+        EntityName EntityValue ExtraData Quantity Product \
+        Version Features Restrictions]
+
+    #
+    # NOTE: Setup the parameter values used with the SQL prepared
+    #       INSERT statement.  Several of the data types used by
+    #       the columns require special value handling.
+    #
+    set parameters [list]
+
+    foreach name $names {
+      set value [$certificate $name]
+
+      switch -exact -- $name {
+        TimeStamp {
+          set value [$certificate \
+              TimeStamp.ToString $dateFormat]
+        }
+        Number {
+          if {$value == 0} then {
+            set value null
+          }
+        }
+        Key {
+          if {$value ne "null"} then {
+            set value [object invoke \
+                Licensing.Components.Public.Utility \
+                FormatPublicKeyToken $value]
+          }
+        }
+        Signature {
+          if {$value ne "null"} then {
+            set value [object invoke \
+                Convert ToBase64String $value]
+          }
+        }
+        default {
+          if {[string length $value] == 0} then {
+            set value null
+          }
+        }
+      }
+
+      lappend parameters \
+          [list [appendArgs param $name] String $value]
+    }
+
+    #
+    # NOTE: Open the database connection, begin the transaction, and
+    #       then execute the first INSERT query.  If any of this fails,
+    #       any pending changes will be rolled back.
+    #
+    set connection [sql open -type SQLite \
+        [subst {Data Source=${databaseFile}}]]
+
+    set transaction [sql transaction begin $connection]
+
+    set result [eval sql execute -transaction [list $transaction] \
+        -verbatim [list $connection] [list $sql] $parameters]
+
+    puts stdout [appendArgs \
+        "Certificate was imported with result: " $result]
+
+    if {$addSubscription} then {
+      #
+      # NOTE: Setup the SQL for inserting the subscription data into
+      #       the database.
+      #
+      set sql {
+        INSERT INTO Subscriptions (
+          CertificateId, Duration, Active, Expires
+        ) VALUES (?, ?, ?, ?);
+      }
+
+      #
+      # NOTE: Perform the SQL INSERT for the subscription.  If this
+      #       fails, the other changes will be rolled back and an
+      #       error will be generated.
+      #
+      set result [sql execute -transaction $transaction \
+          -verbatim $connection $sql [list param0 String \
+          [$certificate Id.ToString $guidFormat]] [list \
+          param1 String [$certificate Duration]] [list \
+          param2 Int32 1] [list param3 String [$certificate \
+          TimeStamp.ToString $dateFormat]]]
+
+      puts stdout [appendArgs \
+          "Subscription was added with result: " $result]
+    }
+  } finally {
+    if {[info exists transaction]} then {
+      if {[llength [info transactions $transaction]] == 1} then {
+        #
+        # BUGBUG: Shouldn't this be commit instead of rollback?
+        #
+        sql transaction commit $transaction
+      }
+
+      unset transaction
+    }
+
+    if {[info exists connection]} then {
+      sql close $connection; unset connection
+    }
+
+    unset -nocomplain certificateFileName verifyCertificate \
+        addSubscription databaseFile publicKeyFile publicKey \
+        certificate guidFormat dateFormat sql names parameters \
+        name value connection transaction result
+
+    if {[info exists path_set]} then {
+      unset -nocomplain path path_set
+    }
+
+    object cleanup
+  }
+} else {
+  usage ""
+}
