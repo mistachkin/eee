@@ -2,21 +2,29 @@
 #
 # link.sh --
 #
-# Eagle Enterprise Edition (EEE) -- meld the enterprise overlay into the parent
-# Eagle core checkout using symbolic links, so that the enterprise solutions,
-# plugin projects, signing keys, and shared sources appear at the core-relative
-# paths their project files expect.
+# Eagle Enterprise Edition (EEE) -- meld the enterprise overlay and the parent
+# Eagle core checkout together with symbolic links, so the whole thing builds
+# from one tree.  Linking happens in BOTH directions:
+#
+#   overlay -> core : every file/directory under `<eee>/Eagle/` is linked into
+#     the matching path of the parent core checkout, so the enterprise
+#     solutions, plugin projects, and signing keys appear at the core-relative
+#     paths their project files expect.
+#
+#   core -> overlay : the plugin `.csproj` files use EagleDir = `<eee>/Eagle`
+#     and reference the core Library project and Targets as `<eee>/Eagle/Library`
+#     and `<eee>/Eagle/Targets`, so those names are linked back to the core's own
+#     `Library/` and `Targets/` directories (see CORE_DIR_LINKS below).
 #
 # Intended use: clone the Eagle core super-repository with submodules
 # (`git clone --recurse-submodules ...`), then run this script from the `eee`
-# submodule.  It links every file/directory under `<eee>/Eagle/` into the
-# matching path of the parent core checkout.  The links are RELATIVE, so the
-# melded clone is self-contained and relocatable.
+# submodule.  All links are RELATIVE, so the melded clone is self-contained and
+# relocatable.
 #
 # It is idempotent (re-running re-uses existing correct links), refuses to
-# overwrite real core files (reports a conflict instead), and fails fast if it
-# cannot create symbolic links.  Use `--unlink` to remove the links it created
-# and `--dry-run` to preview.
+# overwrite real files (reports a conflict instead), and fails fast if it cannot
+# create symbolic links.  Use `--unlink` to remove the links it created and
+# `--dry-run` to preview.
 #
 # Options:
 #   --dry-run        show what would happen; make no changes
@@ -30,12 +38,19 @@
 set -eu
 
 OVERLAY_SUBDIR=Eagle
+
+# Directory names that live under `<eee>/Eagle` as links BACK to the core
+# checkout (the "core -> overlay" direction described above).  The core must
+# actually provide each one; a name the core lacks is skipped.
+CORE_DIR_LINKS="Library Targets"
+
 DRY_RUN=0
 ACTION=link
 CORE_OVERRIDE=
 
 usage() {
-    sed -n '3,33p' "$0" | sed 's/^# \{0,1\}//'
+    # print this script's leading comment block (minus the shebang), unprefixed
+    sed -n '2,/^[^#]/p' "$0" | sed '$d; s/^# \{0,1\}//'
 }
 
 while [ $# -gt 0 ]; do
@@ -144,6 +159,59 @@ do_unlink() {       # rel
     removed=$((removed + 1))
 }
 
+# --- core -> overlay links ---------------------------------------------------
+
+# Relative symlink target from `<eee>/<OVERLAY_SUBDIR>` up to `<core>/<name>`:
+# one '../' per path component in `<sub_rel>/<OVERLAY_SUBDIR>`, then <name>.
+core_uplink_target() {  # name
+    local name rest up
+    name=$1; rest="$sub_rel/$OVERLAY_SUBDIR"; up=""
+    while [ -n "$rest" ]; do
+        up="../$up"
+        case "$rest" in */*) rest=${rest%/*} ;; *) rest="" ;; esac
+    done
+    printf '%s%s' "$up" "$name"
+}
+
+# Create (or, with --unlink, remove) one core-dir link: `<eee>/Eagle/<name>`
+# -> `<core>/<name>`.  Lives in the overlay, points back at the core.
+do_core_link() {    # name
+    local name src tgt cur
+    name=$1; src="$overlay/$name"; tgt=$(core_uplink_target "$name")
+
+    if [ -L "$src" ]; then
+        cur=$(readlink "$src")
+        if [ "$cur" != "$tgt" ]; then
+            echo "CONFLICT: '$OVERLAY_SUBDIR/$name' is a symlink to an unexpected target: $cur" >&2
+            exit 1
+        fi
+        if [ "$ACTION" = unlink ]; then
+            if [ "$DRY_RUN" = 1 ]; then echo "  unlink  $OVERLAY_SUBDIR/$name"; else rm -f "$src"; echo "  removed $OVERLAY_SUBDIR/$name"; fi
+            removed=$((removed + 1))
+        else
+            echo "  ok      $OVERLAY_SUBDIR/$name -> $tgt"; skipped=$((skipped + 1))
+        fi
+        return
+    fi
+
+    [ "$ACTION" = unlink ] && return   # nothing of ours to remove
+
+    if [ -e "$src" ]; then
+        echo "CONFLICT: '$OVERLAY_SUBDIR/$name' already exists in the overlay and is not an EEE link." >&2
+        exit 1
+    fi
+    if [ ! -d "$core_root/$name" ]; then
+        echo "  skip    $OVERLAY_SUBDIR/$name (core has no '$name/')"
+        return
+    fi
+    if [ "$DRY_RUN" = 1 ]; then
+        echo "  link    $OVERLAY_SUBDIR/$name -> $tgt"
+    else
+        ln -s "$tgt" "$src"; echo "  linked  $OVERLAY_SUBDIR/$name -> $tgt"
+    fi
+    created=$((created + 1))
+}
+
 # --- recursive overlay walk --------------------------------------------------
 
 walk() {            # base ('' for the overlay root)
@@ -152,6 +220,11 @@ walk() {            # base ('' for the overlay root)
     for src in "$overlay${base:+/$base}"/*; do
         [ -e "$src" ] || [ -L "$src" ] || continue   # empty-glob guard
         name=${src##*/}
+        # at the overlay root, the core-dir links point the other way (core ->
+        # overlay) and are handled by do_core_link, so skip them here.
+        if [ -z "$base" ]; then
+            case " $CORE_DIR_LINKS " in *" $name "*) continue ;; esac
+        fi
         rel="${base:+$base/}$name"
         dst="$core_root/$rel"
 
@@ -185,7 +258,15 @@ echo "Submodule   : $sub_rel"
 echo "Action      : $ACTION$([ "$DRY_RUN" = 1 ] && echo ' (dry-run)')"
 echo
 
-walk ""
+# core -> overlay links first when creating (so the tree is complete), last when
+# removing; the overlay -> core walk skips these names either way.
+if [ "$ACTION" = link ]; then
+    for name in $CORE_DIR_LINKS; do do_core_link "$name"; done
+    walk ""
+else
+    walk ""
+    for name in $CORE_DIR_LINKS; do do_core_link "$name"; done
+fi
 
 echo
 if [ "$ACTION" = unlink ]; then

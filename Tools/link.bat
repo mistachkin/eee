@@ -13,14 +13,24 @@
 ::
 :: RCS: @(#) $Id: $
 ::
-:: Melds the enterprise overlay (under "<eee>\Eagle") into the parent Eagle core
-:: checkout using directory junctions (for whole directories) and file symbolic
-:: links (for loose files), so that the enterprise solutions, plugin projects,
-:: signing keys, and shared sources appear at the core-relative paths their
-:: project files expect.  See "link.sh" for the POSIX equivalent.
+:: Melds the enterprise overlay (under "<eee>\Eagle") and the parent Eagle core
+:: checkout together with directory junctions (for whole directories) and file
+:: symbolic links (for loose files).  Linking happens in BOTH directions:
+::
+::   overlay -> core : everything under "<eee>\Eagle" appears at the matching
+::     core-relative path, so the enterprise solutions, plugin projects, and
+::     signing keys are where their project files expect them.
+::
+::   core -> overlay : the plugin ".csproj" files use EagleDir=<eee>\Eagle and
+::     reference the core Library project and Targets as "<eee>\Eagle\Library"
+::     and "<eee>\Eagle\Targets", so those names are junctioned back to the
+::     core's own "Library" and "Targets" directories (see CORE_DIR_LINKS).
+::
+:: See "link.sh" for the POSIX equivalent.
 ::
 :: Creating file symbolic links on Windows requires elevated administrator
 :: privileges or Developer Mode; this tool refuses to run without that ability.
+:: (Directory junctions do not require elevation.)
 ::
 
 REM ****************************************************************************
@@ -37,6 +47,7 @@ IF NOT DEFINED _VECHO (SET _VECHO=REM)
 %_AECHO% Running %0 %*
 
 SET OVERLAY_SUBDIR=Eagle
+SET CORE_DIR_LINKS=Library Targets
 SET ACTION=link
 SET DRY_RUN=
 SET CORE_OVERRIDE=
@@ -142,7 +153,15 @@ IF DEFINED DRY_RUN (
 )
 ECHO.
 
-CALL :fn_Walk ""
+REM Create the core -> overlay links first when melding (so the tree is complete
+REM before the walk), and last when unmelding; the walk skips these names.
+IF /I "%ACTION%" == "link" (
+  FOR %%N IN (%CORE_DIR_LINKS%) DO CALL :fn_CoreLink "%%N"
+  CALL :fn_Walk ""
+) ELSE (
+  CALL :fn_Walk ""
+  FOR %%N IN (%CORE_DIR_LINKS%) DO CALL :fn_CoreLink "%%N"
+)
 
 IF EXIST "%CONFLICT_MARKER%" (
   DEL /F /Q "%CONFLICT_MARKER%" 2>NUL
@@ -167,7 +186,14 @@ REM ****************************************************************************
     IF DEFINED REL (CALL :fn_Process "%REL%\%%~nxF" F) ELSE (CALL :fn_Process "%%~nxF" F)
   )
   FOR /D %%D IN (*) DO (
-    IF DEFINED REL (CALL :fn_Process "%REL%\%%~nxD" D) ELSE (CALL :fn_Process "%%~nxD" D)
+    IF DEFINED REL (
+      CALL :fn_Process "%REL%\%%~nxD" D
+    ) ELSE (
+      REM At the overlay root, the core-dir links point the other way and are
+      REM handled by fn_CoreLink, so skip them here.
+      CALL :fn_IsCoreLink "%%~nxD"
+      IF NOT DEFINED IS_CORE_LINK CALL :fn_Process "%%~nxD" D
+    )
   )
   POPD
   ENDLOCAL
@@ -237,6 +263,52 @@ REM ****************************************************************************
   ECHO   removed  %RELPATH%
   GOTO :EOF
 
+:fn_IsCoreLink
+  REM Set IS_CORE_LINK=1 when %1 names one of the CORE_DIR_LINKS, else clear it.
+  SETLOCAL
+  SET RESULT=
+  FOR %%N IN (%CORE_DIR_LINKS%) DO IF /I "%%N" == "%~1" SET RESULT=1
+  ENDLOCAL & SET IS_CORE_LINK=%RESULT%
+  GOTO :EOF
+
+:fn_CoreLink
+  REM Create (or, with --unlink, remove) a core-dir link: a directory junction at
+  REM "<eee>\Eagle\%1" pointing back at the core's own "%1" directory.
+  SET NAME=%~1
+  SET LINKPATH=%OVERLAY%\%NAME%
+  SET LINKTGT=%CORE%\%NAME%
+  IF EXIST "%CONFLICT_MARKER%" GOTO :EOF
+  IF EXIST "%LINKPATH%" GOTO fcl_exists
+  REM Absent in the overlay: create it (when melding) if the core provides it.
+  IF /I "%ACTION%" == "unlink" GOTO :EOF
+  IF NOT EXIST "%LINKTGT%\" (
+    ECHO   skip     %OVERLAY_SUBDIR%\%NAME% ^(core has no "%NAME%\"^)
+    GOTO :EOF
+  )
+  IF DEFINED DRY_RUN (ECHO   junction %OVERLAY_SUBDIR%\%NAME% & GOTO :EOF)
+  mklink /J "%LINKPATH%" "%LINKTGT%" >NUL 2>&1
+  IF ERRORLEVEL 1 (
+    ECHO Failed to create link for "%OVERLAY_SUBDIR%\%NAME%".
+    ECHO conflict> "%CONFLICT_MARKER%"
+    GOTO :EOF
+  )
+  ECHO   junction %OVERLAY_SUBDIR%\%NAME%
+  GOTO :EOF
+:fcl_exists
+  REM Present already: it must be a reparse point (one of ours) to touch it.
+  fsutil reparsepoint query "%LINKPATH%" >NUL 2>&1
+  IF ERRORLEVEL 1 (
+    IF /I "%ACTION%" == "unlink" GOTO :EOF
+    ECHO CONFLICT: "%OVERLAY_SUBDIR%\%NAME%" already exists in the overlay and is not an EEE link.
+    ECHO conflict> "%CONFLICT_MARKER%"
+    GOTO :EOF
+  )
+  IF /I NOT "%ACTION%" == "unlink" (ECHO   ok       %OVERLAY_SUBDIR%\%NAME% & GOTO :EOF)
+  IF DEFINED DRY_RUN (ECHO   unlink   %OVERLAY_SUBDIR%\%NAME% & GOTO :EOF)
+  RMDIR "%LINKPATH%" >NUL 2>&1
+  ECHO   removed  %OVERLAY_SUBDIR%\%NAME%
+  GOTO :EOF
+
 :fn_ResetErrorLevel
   VERIFY > NUL
   GOTO :EOF
@@ -262,8 +334,8 @@ REM ****************************************************************************
   ECHO Usage: %~nx0 [--dry-run] [--unlink] [--core ^<dir^>]
   ECHO.
   ECHO Melds the Eagle Enterprise Edition overlay ^(under "^<eee^>\%OVERLAY_SUBDIR%"^)
-  ECHO into the parent Eagle core checkout using directory junctions and file
-  ECHO symbolic links.
+  ECHO and the parent Eagle core checkout together using directory junctions and
+  ECHO file symbolic links ^(in both directions; see the header of this script^).
   ECHO.
   ECHO   --dry-run      show what would happen; make no changes
   ECHO   --unlink       remove the EEE links from the core ^(instead of creating^)

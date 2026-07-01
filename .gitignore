@@ -1,0 +1,109 @@
+# Converted from Fossil .fossil-settings/ignore-glob.
+#
+# Notes on the translation:
+#   * Fossil globs match the full repo-relative path (root-anchored) and the
+#     "*" wildcard crosses "/" directory separators. Git's "*" does NOT cross
+#     "/", but for a "dir/*" pattern git excludes any matched subdirectory
+#     wholesale, so the net set of excluded files is identical.
+#   * Patterns containing a "/" are already root-anchored in git, so they are
+#     copied verbatim.
+#   * "no.cron" and "pending-*.cron" are root-anchored in Fossil; a leading "/"
+#     is added so they do not also float into subdirectories under git.
+
+[Bb]in/
+[Oo]bj/
+
+Eagle/Build/*
+Eagle/ChangeLog
+Eagle/Eagle.sln
+Eagle/Eagle.url
+Eagle/Eagle2005.sln
+Eagle/Eagle2008.sln
+Eagle/Eagle2010.sln
+Eagle/Eagle2012.sln
+Eagle/Eagle2013.sln
+Eagle/Eagle2015.sln
+Eagle/Eagle2017.sln
+Eagle/Eagle2019.sln
+Eagle/Eagle2022.sln
+Eagle/EagleCommercial.sln
+Eagle/EagleCommercial2005.sln
+Eagle/EagleCommercial2008.sln
+Eagle/EagleCommercial2010.sln
+Eagle/EagleCommercial2012.sln
+Eagle/EagleCommercial2013.sln
+Eagle/EagleCommercial2015.sln
+Eagle/EagleCommercial2017.sln
+Eagle/EagleCommercial2019.sln
+Eagle/EagleCommercial2022.sln
+Eagle/EagleCore.sln
+Eagle/EagleCore2005.sln
+Eagle/EagleCore2008.sln
+Eagle/EagleCore2010.sln
+Eagle/EagleCore2012.sln
+Eagle/EagleCore2013.sln
+Eagle/EagleCore2015.sln
+Eagle/EagleCore2017.sln
+Eagle/EagleCore2019.sln
+Eagle/EagleCore2022.sln
+Eagle/EagleNetStandard2X.sln
+Eagle/EaglePlugins.sln
+Eagle/EaglePlugins2005.sln
+Eagle/EaglePlugins2008.sln
+Eagle/EaglePlugins2010.sln
+Eagle/EaglePlugins2012.sln
+Eagle/EaglePlugins2013.sln
+Eagle/EaglePlugins2015.sln
+Eagle/EaglePlugins2017.sln
+Eagle/EaglePlugins2019.sln
+Eagle/EaglePlugins2022.sln
+Eagle/Example/*
+Eagle/Externals/*
+Eagle/Installer/*
+Eagle/Keys/*.db
+Eagle/Keys/*.tc
+Eagle/Keys/*Private*.snk
+Eagle/Keys/*Proprietary*.snk
+Eagle/Keys/EagleBetaPublic.snk
+Eagle/Keys/EagleFastPublic.snk
+Eagle/Keys/EagleStrongPublic.snk
+Eagle/Keys/MistachkinPublic.snk
+Eagle/Keys/TestTrustRootPublic.snk
+Eagle/Library
+Eagle/Library/*
+Eagle/Makefile
+Eagle/Makefile.eagle
+Eagle/Management/*
+Eagle/MonoDevelop/*
+Eagle/Native/*
+Eagle/NuGet/*
+Eagle/Personal/*
+Eagle/Plugins/Commercial/Enterprise/Badge/Tests/settings.*.eagle*
+Eagle/Plugins/Commercial/Enterprise/Demo/Tests/settings.*.eagle*
+Eagle/Plugins/Commercial/Enterprise/Harpy/Resources/internal-certificate.xml
+Eagle/Plugins/Commercial/Enterprise/Harpy/Tests/settings.*.eagle*
+Eagle/Plugins/Commercial/Enterprise/HotKey/Tests/settings.*.eagle*
+Eagle/Plugins/Commercial/Enterprise/Kapok/Tests/settings.*.eagle*
+Eagle/Plugins/Commercial/Enterprise/Zeus/Tests/settings.*.eagle*
+Eagle/Plugins/Proprietary/*
+Eagle/README
+Eagle/Sample/*
+Eagle/Service/*
+Eagle/Setup/*
+Eagle/Shell/*
+Eagle/Stub/*
+Eagle/Targets
+Eagle/Targets/*
+Eagle/Test/*
+Eagle/Toolkit/*
+Eagle/Update/*
+Eagle/data/*
+Eagle/doc/*
+Eagle/images/*
+Eagle/lib/*
+Eagle/license.terms
+Eagle/web/*
+*.LACHRYMOSE.eagle*
+*.LACHRYMOSE.eeagle*
+/no.cron
+/pending-*.cron
