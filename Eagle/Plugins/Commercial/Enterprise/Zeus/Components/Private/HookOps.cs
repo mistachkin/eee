@@ -1539,6 +1539,7 @@ namespace Zeus.Components.Private
 
         ///////////////////////////////////////////////////////////////////////
 
+#if UNIX
         //
         // NOTE: This is the name of the file that contains memory page
         //       information, e.g. permissions, on Linux.
@@ -1550,6 +1551,7 @@ namespace Zeus.Components.Private
         /// permissions) on Linux.
         /// </summary>
         private static string linuxMemoryPageMapFileName = "/proc/self/maps";
+#endif
         #endregion
 
         ///////////////////////////////////////////////////////////////////////
