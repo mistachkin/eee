@@ -27,7 +27,7 @@
   <Import Project="$(MSBuildProjectDirectory)\Targets\Featherlight.Settings.targets" />
   <PropertyGroup Condition="'$(EaglePackageOutputPath)' != ''">
     <OutputPath>$(EaglePackageOutputPath)</OutputPath>
-    <DocumentationFile Condition="'$(EagleDocumentationFile)' != 'false'">$(EaglePackageOutputPath)$(AssemblyName).xml</DocumentationFile>
+    <DocumentationFile Condition="'$(EagleDocumentationFile)' != 'false'">$(EagleDocumentationOutputPath)$(AssemblyName).xml</DocumentationFile>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <DebugSymbols>true</DebugSymbols>
