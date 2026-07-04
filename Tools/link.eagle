@@ -594,5 +594,5 @@ namespace eval ::Tools {
   #
   # NOTE: This is the entry point for this tool.
   #
-  run $argv
+  run $::argv
 }

@@ -112,6 +112,7 @@ Eagle/web/*
 /pending-*.cron
 
 # Fossil SCM checkout files
+manifest
 _FOSSIL_
 .fslckout
 .fossil-settings/*
