@@ -1,0 +1,598 @@
+###############################################################################
+#
+# link.eagle --
+#
+# Extensible Adaptable Generalized Logic Engine (Eagle)
+# Eagle Enterprise Edition Git Sub-Module Meld Tool
+#
+# Copyright (c) 2007-2012 by Joe Mistachkin.  All rights reserved.
+#
+# See the file "license.terms" for information on usage and redistribution of
+# this file, and for a DISCLAIMER OF ALL WARRANTIES.
+#
+# RCS: @(#) $Id: $
+#
+###############################################################################
+#
+# This tool melds the Eagle Enterprise Edition overlay (under "<eee>/Eagle")
+# and the parent Eagle core checkout together, using directory junctions on
+# Windows (or directory symbolic links elsewhere) for whole directories, and
+# file symbolic links for loose files.
+#
+###############################################################################
+
+namespace eval ::Tools {
+  #
+  # NOTE: What script file is currently being evaluated?
+  #
+  variable script [info script]
+
+  #
+  # NOTE: The overlay sub-directory, relative to the EEE checkout root.
+  #
+  variable overlaySubDirectory Eagle
+
+  #
+  # NOTE: Overlay items linked into the core root ([glob] patterns, relative
+  #       to the overlay); a directory becomes a junction, a file a symbolic
+  #       link.
+  #
+  variable overlayLinks [list Plugins EagleEnterprise*.sln EagleExtra*.sln]
+
+  #
+  # NOTE: Core directories junctioned back into the overlay, so the plugin
+  #       project files can resolve to "Eagle/Library" and "Eagle/Targets".
+  #
+  variable coreLinks [list Library Targets]
+
+  #
+  # NOTE: Sibling sub-modules mounted into the overlay plugin tree, each as
+  #       {mountPath submodule}: junction at "<eee>/Eagle/<mountPath>" that
+  #       points at "<core>/<subModule>".
+  #
+  variable mounts [list \
+      [list [file join Plugins Proprietary Vadium] vplugins]]
+
+  #
+  # NOTE: Sub-module directories containing the solution files (relative to
+  #       "<core>") which need to be individually linked into the core root,
+  #       right beside the other solution files.
+  #
+  variable solutionSubDirectories [list [file join vplugins Solutions]]
+
+  #############################################################################
+
+  variable overlayDirectory ""; # NOTE: Absolute path to "<eee>/Eagle".
+  variable coreDirectory "";    # NOTE: Absolute path to core checkout.
+
+  proc usage {} {
+    # <help>
+    # Emits this tool's command-line usage message.  It is raised as an error
+    # (rather than returned) so the shell reports it and exits non-zero; the
+    # command-line parser uses it as the "unrecognized argument" handler.
+    #
+    # Arguments:
+    #   None.
+    #
+    # Results:
+    #   Does not return -- always raises an error whose message is the usage
+    #   text.
+    # </help>
+
+    variable script
+
+    set message [string map [list %script% [file tail $script]] {
+      Usage: %script% ?--whatIf? ?--unlink?
+
+             --whatIf : Do nothing, just show what would happen.
+             --unlink : Delete links instead of creating them.
+    }]
+
+    error $message
+  }
+
+  proc junctionExe {} {
+    # <help>
+    # Locates the Sysinternals "junction.exe" utility used to create and remove
+    # directory junctions on Windows.  If the EagleJunctionDir environment
+    # variable is set, only "<EagleJunctionDir>/junction.exe" is considered (and
+    # its absence there is an error); otherwise each directory in PATH is
+    # searched and the first "junction.exe" found is returned.
+    #
+    # Arguments:
+    #   None.
+    #
+    # Results:
+    #   The fully qualified path to "junction.exe", or raises an error when the
+    #   tool cannot be found.  Callers able to fall back to a built-in
+    #   ("mklink /J", [file rmdir]) wrap this in [catch].
+    # </help>
+
+    if {[info exists ::env(EagleJunctionDir)]} then {
+      set fileName [file join $::env(EagleJunctionDir) junction.exe]
+
+      if {[file exists $fileName]} then {
+        return $fileName
+      } else {
+        error [appendArgs "missing junction tool: " $fileName]
+      }
+    }
+
+    if {[info exists ::env(PATH)] && \
+        [info exists ::tcl_platform(pathSeparator)]} then {
+      foreach directory [split \
+          $::env(PATH) $::tcl_platform(pathSeparator)] {
+        set fileName [file join $directory junction.exe]
+
+        if {[file exists $fileName]} then {
+          return $fileName
+        }
+      }
+    }
+
+    error "junction tool is not present in PATH"
+  }
+
+  proc report { status label } {
+    # <help>
+    # Emits a single status line to the interpreter host, of the form
+    # "<status> ==> <label>", used to narrate each link as it is created,
+    # removed, or skipped.
+    #
+    # Arguments:
+    #   status -- A short status token (e.g. "linked", "unlinked",
+    #             "already_linked").
+    #   label  -- The item the status applies to (typically a link name).
+    #
+    # Results:
+    #   None; writes one line to the host.
+    # </help>
+
+    host result Ok [appendArgs $status " ==> " $label \n]
+  }
+
+  proc isLink { path } {
+    # <help>
+    # Determines whether a path is one of the links this tool creates -- a
+    # reparse point on Windows, a symbolic link elsewhere -- as opposed to a
+    # real file or directory.  It is the safety gate for removal: only a true
+    # result is ever deleted, so a real file or directory is never touched.
+    #
+    # How it works: the path is queried with "fsutil reparsepoint query" on
+    # Windows and "readlink" elsewhere, treating a zero (success) exit as "is a
+    # link".
+    #
+    # Arguments:
+    #   path -- The path to test.
+    #
+    # Results:
+    #   Non-zero if the path is a link/reparse point, zero otherwise (including
+    #   for real files and directories, and for a path that does not exist).
+    # </help>
+
+    set path [appendArgs \" $path \"]
+
+    if {[isWindows]} then {
+      return [expr {[catch {
+        exec -success Success -- fsutil reparsepoint query $path
+      }] == 0}]
+    } else {
+      return [expr {[catch {
+        exec -success Success -- readlink $path
+      }] == 0}]
+    }
+  }
+
+  proc createDirectoryLink { link directory } {
+    # <help>
+    # Creates a directory link at "link" that points at the existing directory
+    # "directory": a junction on Windows, a symbolic link everywhere else.  On
+    # Windows it prefers the Sysinternals "junction.exe" but falls back to the
+    # built-in "mklink /J" when that tool is unavailable (neither requires an
+    # administrator).
+    #
+    # Arguments:
+    #   link      -- The new link to create.
+    #   directory -- The existing target directory it should point at.
+    #
+    # Results:
+    #   None; raises an error if the underlying tool fails.
+    # </help>
+
+    set link [appendArgs \" $link \"]
+    set directory [appendArgs \" $directory \"]
+
+    if {[isWindows]} then {
+      if {[catch {junctionExe} junctionTool] == 0} then {
+        exec -success Success -- $junctionTool $link $directory
+      } else {
+        exec -success Success -- \
+            $::env(ComSpec) /c MKLINK /J $link $directory
+      }
+    } else {
+      exec -success Success -- ln -s $directory $link
+    }
+  }
+
+  proc createFileLink { link fileName } {
+    # <help>
+    # Creates a file symbolic link at "link" that points at the existing file
+    # "fileName": "mklink" on Windows, "ln -s" everywhere else.  On Windows this
+    # requires an administrator account, which [run] enforces up front.
+    #
+    # Arguments:
+    #   link     -- The new link to create.
+    #   fileName -- The existing target file it should point at.
+    #
+    # Results:
+    #   None; raises an error if the underlying tool fails.
+    # </help>
+
+    set link [appendArgs \" $link \"]
+    set fileName [appendArgs \" $fileName \"]
+
+    if {[isWindows]} then {
+      exec -success Success -- $::env(ComSpec) /c MKLINK $link $fileName
+    } else {
+      exec -success Success -- ln -s $fileName $link
+    }
+  }
+
+  proc removeLink { link isDirectory } {
+    # <help>
+    # Removes one of the links this tool created, leaving its target intact.  A
+    # Windows directory junction is removed with "junction.exe -d" (or, when
+    # that tool is unavailable, [file rmdir], which deletes the reparse point
+    # without recursing into the target); every symbolic link -- all Unix links
+    # and Windows file links -- is removed with [file delete].
+    #
+    # Arguments:
+    #   link        -- The link to remove.
+    #   isDirectory -- Non-zero if the link is a directory junction/link.
+    #
+    # Results:
+    #   None; raises an error if removal fails.
+    # </help>
+
+    if {[isWindows] && $isDirectory} then {
+      if {[catch {junctionExe} junctionTool] == 0} then {
+        set link [appendArgs \" $link \"]
+        exec -success Success -- $junctionTool -d $link
+      } else {
+        file rmdir $link; # NOTE: Not [exec], no quotes.
+      }
+    } else {
+      file delete $link; # NOTE: Not [exec], no quotes.
+    }
+  }
+
+  proc applyLink { install whatIf link path isDirectory label } {
+    # <help>
+    # Applies the current action to a single link.  When installing, it creates
+    # the link idempotently: an existing one is reported "already_linked", a
+    # real file already occupying the path raises a conflict, and otherwise a
+    # directory or file link is created as appropriate.  When uninstalling, it
+    # removes the link, but only if it is actually one of ours (a real file or
+    # directory is left alone and reported "not_linked").
+    #
+    # Arguments:
+    #   install     -- Non-zero to create the link, zero to remove it.
+    #   whatIf      -- Non-zero to report the action without performing it.
+    #   link        -- The link path (in the core, or the overlay).
+    #   path        -- The target the link should point at.
+    #   isDirectory -- Non-zero for a directory link/junction.
+    #   label       -- The label to report for this item.
+    #
+    # Results:
+    #   None; reports status via [report], and raises on a real-file conflict
+    #   or a link-tool failure.
+    # </help>
+
+    if {!$install} then {
+      if {![isLink $link]} then {
+        report not_linked $label
+        return
+      }
+
+      if {!$whatIf} then {
+        removeLink $link $isDirectory
+      }
+
+      report unlinked $label
+      return
+    }
+
+    if {[isLink $link]} then {
+      report already_linked $label
+      return
+    }
+
+    if {[file exists $link]} then {
+      error [appendArgs \
+          "cannot create link, file already exists: " $link]
+    }
+
+    if {!$whatIf} then {
+      if {$isDirectory} then {
+        createDirectoryLink $link $path
+      } else {
+        createFileLink $link $path
+      }
+    }
+
+    report linked $label
+    return
+  }
+
+  proc doOverlayLinks { install whatIf } {
+    # <help>
+    # Applies the action to every overlay item linked into the core root (the
+    # "overlayLinks" [glob] patterns): each match under the overlay becomes a
+    # link at the matching name in the core root -- a junction for a directory,
+    # a symbolic link for a file.
+    #
+    # Arguments:
+    #   install -- Non-zero to create the links, zero to remove them.
+    #   whatIf  -- Non-zero to preview only.
+    #
+    # Results:
+    #   None.
+    # </help>
+
+    variable coreDirectory
+    variable overlayDirectory
+    variable overlayLinks
+
+    foreach pattern $overlayLinks {
+      foreach fileName [lsort \
+          [glob -nocomplain -directory $overlayDirectory $pattern]] {
+        set fileNameOnly [file tail $fileName]
+
+        applyLink $install $whatIf \
+            [file join $coreDirectory $fileNameOnly] $fileName \
+            [file isdirectory $fileName] $fileNameOnly
+      }
+    }
+  }
+
+  proc doCoreLinks { install whatIf } {
+    # <help>
+    # Applies the action to the core directories linked back into the overlay
+    # (the "coreLinks" list), so the plugin project files can resolve them
+    # under "<eee>/Eagle".  Every named directory must exist in the core: all
+    # are validated first, then linked, so a missing one aborts before any
+    # change is made.
+    #
+    # Arguments:
+    #   install -- Non-zero to create the links, zero to remove them.
+    #   whatIf  -- Non-zero to preview only.
+    #
+    # Results:
+    #   None; raises an error if the core is missing a required directory.
+    # </help>
+
+    variable coreDirectory
+    variable coreLinks
+    variable overlayDirectory
+
+    foreach linkOnly $coreLinks {
+      set directory [file join $coreDirectory $linkOnly]
+
+      if {![file isdirectory $directory]} then {
+        error [appendArgs \
+            "core checkout missing directory: " $directory]
+      }
+    }
+
+    foreach linkOnly $coreLinks {
+      set directory [file join $coreDirectory $linkOnly]
+
+      applyLink $install $whatIf [file join \
+          $overlayDirectory $linkOnly] $directory true $linkOnly
+    }
+  }
+
+  proc doMounts { install whatIf } {
+    # <help>
+    # Applies the action to the sibling sub-module mounts (the "mounts" list):
+    # each is a junction in the overlay's plugin tree pointing at a peer
+    # sub-module under the core.  Every sub-module is validated first; then,
+    # when installing, the mount's parent directory is created if needed and
+    # the mount is made.
+    #
+    # Arguments:
+    #   install -- Non-zero to create the mounts, zero to remove them.
+    #   whatIf  -- Non-zero to preview only.
+    #
+    # Results:
+    #   None; raises an error if a sub-module is missing.
+    # </help>
+
+    variable coreDirectory
+    variable mounts
+    variable overlayDirectory
+
+    foreach mount $mounts {
+      set subDirectory [lindex $mount 1]
+
+      set directory [file join $coreDirectory $subDirectory]
+
+      if {![file isdirectory $directory]} then {
+        error [appendArgs \
+            "core checkout missing directory: " $directory]
+      }
+    }
+
+    foreach mount $mounts {
+      set mountPath [lindex $mount 0]
+      set subDirectory [lindex $mount 1]
+
+      set directory [file join $coreDirectory $subDirectory]
+
+      set link [file join $overlayDirectory $mountPath]
+      set linkParentDirectory [file dirname $link]
+
+      if {$install && !$whatIf && \
+          ![file isdirectory $linkParentDirectory]} then {
+        file mkdir $linkParentDirectory
+      }
+
+      applyLink $install $whatIf $link $directory true $mountPath
+    }
+  }
+
+  proc doSolutionLinks { install whatIf } {
+    # <help>
+    # Applies the action to the sub-module solution files (the
+    # "solutionSubDirectories" list): every "*.sln" in each directory is linked
+    # individually into the core root, beside the other solution files.  Each
+    # directory is validated first, so a missing one aborts before any change.
+    #
+    # Arguments:
+    #   install -- Non-zero to create the links, zero to remove them.
+    #   whatIf  -- Non-zero to preview only.
+    #
+    # Results:
+    #   None; raises an error if a solutions directory is missing.
+    # </help>
+
+    variable coreDirectory
+    variable solutionSubDirectories
+
+    foreach subDirectory $solutionSubDirectories {
+      set directory [file join $coreDirectory $subDirectory]
+
+      if {![file isdirectory $directory]} then {
+        error [appendArgs \
+            "core checkout missing directory: " $directory]
+      }
+    }
+
+    foreach subDirectory $solutionSubDirectories {
+      set directory [file join $coreDirectory $subDirectory]
+
+      foreach fileName [lsort \
+          [glob -nocomplain -directory $directory *.sln]] {
+        set fileNameOnly [file tail $fileName]
+
+        applyLink $install $whatIf [file join \
+            $coreDirectory $fileNameOnly] $fileName false \
+            $fileNameOnly
+      }
+    }
+  }
+
+  proc run { argv } {
+    # <help>
+    # The entry point for this tool.  It parses the command line (--whatIf and
+    # --unlink; any other argument prints usage), resolves the overlay
+    # ("<eee>/Eagle") and the core checkout (EEE_CORE_ROOT, else the parent of
+    # the EEE checkout), enforces the Windows administrator requirement for
+    # link creation, and then melds (install) or un-melds (uninstall) the tree.
+    #
+    # How it works: on install the core links and mounts are created before the
+    # overlay links that refer to them; on uninstall that order is reversed.
+    #
+    # Arguments:
+    #   argv -- The raw command-line argument list.
+    #
+    # Results:
+    #   None; raises an error on an unrecognized argument (via [usage]), a
+    #   missing overlay/core, a lack of administrator access on Windows, or any
+    #   link failure.
+    # </help>
+
+    variable coreDirectory
+    variable overlayDirectory
+    variable overlaySubDirectory
+    variable script
+
+    set install true
+    set whatIf false
+
+    for {set index 0} {$index < [llength $argv]} {incr index} {
+      switch -exact -- [lindex $argv $index] {
+        --unlink  {
+          set install false
+        }
+        --whatIf {
+          set whatIf true
+        }
+        default {
+          usage; # NOTE: Does not return.
+        }
+      }
+    }
+
+    #
+    # NOTE: Where is the root directory relative to the script file that is
+    #       currently being evaluated?  It should be the directory that is
+    #       the parent of its (containing) directory.
+    #
+    set rootDirectory [file normalize [file dirname [file dirname $script]]]
+
+    #
+    # NOTE: This tool lives in the "<eee>/Tools" directory and the overlay
+    #       directory is our peer, namely "<eee>/Eagle".
+    #
+    set overlayDirectory [file normalize \
+        [file join $rootDirectory $overlaySubDirectory]]
+
+    if {![file isdirectory $overlayDirectory]} then {
+      error [appendArgs \
+          "overlay directory \"" $overlayDirectory "\" does not exist"]
+    }
+
+    #
+    # NOTE: Check the EEE_CORE_ROOT environment variable, then fallback to
+    #       the parent directory of the EEE checkout.
+    #
+    if {[info exists ::env(EEE_CORE_ROOT)]} then {
+      set coreDirectory [file normalize $::env(EEE_CORE_ROOT)]
+    } else {
+      set coreDirectory [file dirname $rootDirectory]
+    }
+
+    if {![file isdirectory $coreDirectory]} then {
+      error [appendArgs \
+          "core directory \"" $coreDirectory "\" does not exist"]
+    }
+
+    #
+    # NOTE: On Windows, creating symbolic links requires an administrator
+    #       account.
+    #
+    if {$install && !$whatIf && [isWindows] && ![isAdministrator]} then {
+      error "need administrator access to create symbolic links to files"
+    }
+
+    host result Ok [appendArgs "Overlay : " $overlayDirectory \n]
+    host result Ok [appendArgs "Core    : " $coreDirectory \n]
+
+    host result Ok [appendArgs "Action  : " \
+        [expr {$install ? "install" : "uninstall"}] \
+        [expr {$whatIf ? " (what-if)" : ""}] \n]
+
+    #
+    # NOTE: When melding, create core links and mounts first so the tree
+    #       is complete before the overlay links refer to it; reverse the
+    #       order when unmelding.
+    #
+    if {$install} then {
+      doCoreLinks $install $whatIf
+      doMounts $install $whatIf
+      doSolutionLinks $install $whatIf
+      doOverlayLinks $install $whatIf
+    } else {
+      doOverlayLinks $install $whatIf
+      doSolutionLinks $install $whatIf
+      doMounts $install $whatIf
+      doCoreLinks $install $whatIf
+    }
+  }
+
+  #
+  # NOTE: This is the entry point for this tool.
+  #
+  run $argv
+}

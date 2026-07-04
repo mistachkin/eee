@@ -10,9 +10,11 @@
 #   * "no.cron" and "pending-*.cron" are root-anchored in Fossil; a leading "/"
 #     is added so they do not also float into subdirectories under git.
 
+# Build output directories
 [Bb]in/
 [Oo]bj/
 
+# Eagle core repository stuff
 Eagle/Build/*
 Eagle/ChangeLog
 Eagle/Eagle.sln
@@ -97,6 +99,7 @@ Eagle/Targets/*
 Eagle/Test/*
 Eagle/Toolkit/*
 Eagle/Update/*
+Eagle/audit/*
 Eagle/data/*
 Eagle/doc/*
 Eagle/images/*
@@ -107,3 +110,8 @@ Eagle/web/*
 *.LACHRYMOSE.eeagle*
 /no.cron
 /pending-*.cron
+
+# Fossil SCM checkout files
+_FOSSIL_
+.fslckout
+.fossil-settings/*
