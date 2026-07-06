@@ -14859,8 +14859,8 @@ runTest {test harpy-56.2 {encrypted configuration files only} -setup [subst {
       HarpyEncryptedConfigurationsOnly NoLicensingPackageUnknown]
 
   unset -nocomplain counts name fileName configurations
-} -constraints {eagle command.harpy compile.XML} -isolationLevel Maximum \
--noSecurity true -result {1 1}}
+} -constraints {eagle command.harpy compile.OFFICIAL compile.XML} \
+-isolationLevel Maximum -noSecurity true -result {1 1}}
 
 ###############################################################################
 
