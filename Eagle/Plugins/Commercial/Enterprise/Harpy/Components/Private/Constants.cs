@@ -578,7 +578,18 @@ namespace Licensing.Components.Private
         /// <summary>
         /// The explanatory reason text for the enterprise key case.
         /// </summary>
-        public const string EnterpriseKeyReason = "it is the assembly key pair";
+        public const string EnterpriseKeyReason =
+            "it is the enterprise assembly key pair";
+
+        ///////////////////////////////////////////////////////////////////////
+
+#if DEBUG
+        /// <summary>
+        /// The explanatory reason text for the build machine key case.
+        /// </summary>
+        public const string BuildKeyReason =
+            "it is the build machine key pair";
+#endif
 
         ///////////////////////////////////////////////////////////////////////
 
@@ -2227,6 +2238,22 @@ namespace Licensing.Components.Private
 
         ///////////////////////////////////////////////////////////////////////
 
+#if DEBUG
+        //
+        // NOTE: This is the public key token normally used to sign this
+        //       assembly on build machines, as a prefixed hexadecimal
+        //       string value.
+        //
+        /// <summary>
+        /// The build machine public key token string.
+        /// </summary>
+        /* CORE */
+        private const string BuildPublicKeyTokenString =
+            "0x645d697a1b3acac5"; /* MAY BE NULL */
+#endif
+
+        ///////////////////////////////////////////////////////////////////////
+
         //
         // NOTE: This is the public key token normally used to sign this
         //       assembly, as an array of bytes.
@@ -2238,6 +2265,23 @@ namespace Licensing.Components.Private
         public static readonly byte[] EnterprisePublicKeyTokenBytes =
             CertificateDataOps.ParsePublicKeyToken(
                 EnterprisePublicKeyTokenString); /* throw */
+
+        ///////////////////////////////////////////////////////////////////////
+
+#if DEBUG
+        //
+        // NOTE: This is the public key token normally used to sign this
+        //       assembly on build machines, as an array of bytes.
+        //
+        /// <summary>
+        /// The build machine public key token represented as an array of
+        /// bytes.
+        /// </summary>
+        /* CORE */
+        public static readonly byte[] BuildPublicKeyTokenBytes =
+            CertificateDataOps.ParsePublicKeyToken(
+                BuildPublicKeyTokenString); /* throw */
+#endif
 
         ///////////////////////////////////////////////////////////////////////
 

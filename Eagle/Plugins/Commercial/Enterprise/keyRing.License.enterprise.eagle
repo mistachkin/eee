@@ -96,9 +96,11 @@ set keyUsage(EagleEnterprisePluginRootPublic.snk) {
 #       The Harpy and Badge plugins (both) use the public key provided by
 #       this key ring file, which has the public key token:
 #
-#       8bf43b4749e46a0b (Harpy)
+#       8bf43b4749e46a0b (Harpy / official)
+#       645d697a1b3acac5 (Harpy / altKeyPair)
 #
 set keyGroups(EagleEnterprisePluginRootPublic.snk) {
+  0x645d697a1b3acac5
   0xa98da1538d38809e
   0xc339cf39bcc248dd
   0x5b11bfd370fb0412

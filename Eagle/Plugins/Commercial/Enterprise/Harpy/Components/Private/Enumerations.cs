@@ -1687,30 +1687,30 @@ namespace Licensing.Components.Private
         /// </summary>
         Pass1 = 0x200,  /* Verify overwrite, signatures,
                          * gather backup file names. */
-        Pass2 = 0x400,  /* Perform backup of existing
         /// <summary>
         /// Perform backup of existing files, if any.
         /// </summary>
+        Pass2 = 0x400,  /* Perform backup of existing
                          * files, if any. */
-        Pass3 = 0x800,  /* Commit all source files to
-                         * target directory. */
         /// <summary>
         /// Commit all source files to the target directory.
         /// </summary>
-        Pass4 = 0x1000, /* Rollback all source files within
+        Pass3 = 0x800,  /* Commit all source files to
                          * target directory. */
         /// <summary>
         /// Rollback all source files within the target directory.
         /// </summary>
-        Pass5 = 0x2000, /* Maybe cleanup (delete) the "backup"
-                         * files. */
+        Pass4 = 0x1000, /* Rollback all source files within
+                         * target directory. */
         /// <summary>
         /// Maybe cleanup (delete) the backup files.
         /// </summary>
-        Pass6 = 0x4000  /* Post-evaluate manifest files, if
+        Pass5 = 0x2000, /* Maybe cleanup (delete) the "backup"
+                         * files. */
         /// <summary>
         /// Post-evaluate manifest files, if any.
         /// </summary>
+        Pass6 = 0x4000  /* Post-evaluate manifest files, if
                          * any. */
     }
 #endif
@@ -2653,10 +2653,10 @@ namespace Licensing.Components.Private
         /// </summary>
         Interpreter = 0x400, /* Modify core library per-interpreter
                               * policy tracing setting? */
-        Global = 0x800,      /* Modify core library global policy
         /// <summary>
         /// Modify the core library global policy tracing setting.
         /// </summary>
+        Global = 0x800,      /* Modify core library global policy
                               * tracing setting? */
 
         ///////////////////////////////////////////////////////////////////////

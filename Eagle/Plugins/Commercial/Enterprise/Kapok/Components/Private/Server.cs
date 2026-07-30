@@ -828,6 +828,10 @@ namespace Kapok.Components.Private
         ///////////////////////////////////////////////////////////////////////
 
         #region Destructor
+        /// <summary>
+        /// Finalizes this server, releasing any resources that were not
+        /// released by an explicit call to <see cref="Dispose()" />.
+        /// </summary>
         ~Server()
         {
             Dispose(false);

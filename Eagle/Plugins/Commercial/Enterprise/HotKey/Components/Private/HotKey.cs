@@ -1965,6 +1965,10 @@ namespace HotKey.Components.Private
         ///////////////////////////////////////////////////////////////////////
 
         #region Destructor
+        /// <summary>
+        /// Finalizes this object, releasing any resources that were not
+        /// released by an explicit call to <see cref="Dispose()" />.
+        /// </summary>
         ~HotKey()
         {
             Dispose(false);

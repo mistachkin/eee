@@ -36,7 +36,7 @@ commands are available to scripts like any other.  See the
 ## Repository Structure
 
 EEE is a **submodule** of the Eagle core super-repository.  Everything under
-`Eagle/` is an *overlay*: the meld tool (`Tools/link.sh` / `Tools/link.bat`)
+`Eagle/` is an *overlay*: the meld tool (`Tools/link.eagle`, an Eagle script)
 links it into the matching paths of the parent core checkout, so the enterprise
 solutions, plugin projects, signing keys, and shared sources appear where the
 core's own project files expect them.
@@ -51,7 +51,7 @@ core's own project files expect them.
 │   │   └── certificate.exml, keyRing.*, license.terms
 │   ├── Keys/                             Enterprise/demo public signing keys (*.snk)
 │   └── Library/Components/Shared/        Shared enterprise sources (e.g. BinaryLicense.cs)
-├── Tools/                                The meld tool: link.sh (POSIX), link.bat (Windows)
+├── Tools/                                The meld tool: link.eagle (signed; run by Eagle)
 ├── license.terms                         License (permissive; see below)
 ├── CONTRIBUTING.md  CLA.md               How to contribute (+ contributor agreement)
 ├── CODE_OF_CONDUCT.md  SECURITY.md       Community and security policies
@@ -60,7 +60,9 @@ core's own project files expect them.
 
 ## Building EEE
 
-EEE builds as part of the Eagle core super-repository:
+EEE builds as part of the Eagle core super-repository.  Because the meld tool is
+itself an Eagle script (`Tools/link.eagle`), the **core is built first**, so the
+Eagle shell exists to run it:
 
 1. **Clone the core with submodules** (this brings EEE in under `eee/`):
 
@@ -71,21 +73,27 @@ EEE builds as part of the Eagle core super-repository:
    In an existing clone, instead run:
    `git submodule update --init --recursive`
 
-2. **Meld the overlay into the core checkout** by running the tool from the
-   `eee` submodule:
+2. **Build the Eagle core** from the checkout root, producing a runnable
+   `EagleShell`:
+
+   - Visual Studio: open `Eagle.sln` (version-specific variants `Eagle2005.sln`
+     through `Eagle2022.sln` are provided), or
+   - .NET SDK: `dotnet build EagleNetStandard2X.sln`
+
+3. **Meld the overlay** by running `link.eagle` with the `EagleShell` built in
+   step 2, from the core checkout root:
 
    ```sh
-   cd eagle
-   eee/Tools/link.sh       # macOS / Linux
-   eee\Tools\link.bat      # Windows (run elevated, or enable Developer Mode)
+   EagleShell eee/Tools/link.eagle
    ```
 
    This creates the links (directory junctions on Windows) that place the
    enterprise solutions, plugin projects, keys, and shared sources at the
-   core-relative paths their project files expect.  It is idempotent and safe
-   to re-run; use `--dry-run` to preview and `--unlink` to remove the links.
+   core-relative paths their project files expect.  It is idempotent and safe to
+   re-run; pass `--whatIf` to preview and `--unlink` to remove the links.
 
-3. **Build from the core checkout root** (not from `eee/`):
+4. **Build the Enterprise Edition** from the core checkout root (not from
+   `eee/`):
 
    - Visual Studio: open `EagleEnterprise.sln` (version-specific variants
      `EagleEnterprise2005.sln` through `EagleEnterprise2022.sln` are provided), or

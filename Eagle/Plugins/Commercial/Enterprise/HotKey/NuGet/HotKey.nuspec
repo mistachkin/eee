@@ -27,9 +27,14 @@
   <files>
     <file src="lib\HotKey1.0\HotKey.dll" target="build\net40\lib\HotKey1.0" />
     <file src="lib\HotKey1.0\Interop.wshom.dll" target="build\net40\lib\HotKey1.0" />
-    <file src="lib\HotKey1.0\SciLexer.dll" target="build\net40\lib\HotKey1.0" />
-    <file src="lib\HotKey1.0\SciLexer64.dll" target="build\net40\lib\HotKey1.0" />
-    <file src="lib\HotKey1.0\SciLexerARM.dll" target="build\net40\lib\HotKey1.0" />
+    <file src="lib\HotKey1.0\Scintilla.dll" target="build\net40\lib\HotKey1.0" />
+    <file src="lib\HotKey1.0\Scintilla64.dll" target="build\net40\lib\HotKey1.0" />
+    <file src="lib\HotKey1.0\ScintillaARM.dll" target="build\net40\lib\HotKey1.0" />
+    <file src="lib\HotKey1.0\ScintillaARM64.dll" target="build\net40\lib\HotKey1.0" />
+    <file src="lib\HotKey1.0\Lexilla.dll" target="build\net40\lib\HotKey1.0" />
+    <file src="lib\HotKey1.0\Lexilla64.dll" target="build\net40\lib\HotKey1.0" />
+    <file src="lib\HotKey1.0\LexillaARM.dll" target="build\net40\lib\HotKey1.0" />
+    <file src="lib\HotKey1.0\LexillaARM64.dll" target="build\net40\lib\HotKey1.0" />
     <file src="lib\HotKey1.0\ScintillaNET.dll" target="build\net40\lib\HotKey1.0" />
     <file src="lib\HotKey1.0\pkgIndex.eagle" target="build\net40\lib\HotKey1.0\pkgIndex_1265135207d01249.eagle" />
     <file src="lib\HotKey1.0\pkgIndex.eagle.harpy" target="build\net40\lib\HotKey1.0\pkgIndex_1265135207d01249.eagle.harpy" />

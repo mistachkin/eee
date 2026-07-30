@@ -272,9 +272,14 @@ set hotkey_manifests(nuGetNetFx40) {
   HotKey.nuspec
   build/net40/lib/HotKey1.0/HotKey.dll
   build/net40/lib/HotKey1.0/Interop.wshom.dll
-  build/net40/lib/HotKey1.0/SciLexer.dll
-  build/net40/lib/HotKey1.0/SciLexer64.dll
-  build/net40/lib/HotKey1.0/SciLexerARM.dll
+  build/net40/lib/HotKey1.0/Scintilla.dll
+  build/net40/lib/HotKey1.0/Scintilla64.dll
+  build/net40/lib/HotKey1.0/ScintillaARM.dll
+  build/net40/lib/HotKey1.0/ScintillaARM64.dll
+  build/net40/lib/HotKey1.0/Lexilla.dll
+  build/net40/lib/HotKey1.0/Lexilla64.dll
+  build/net40/lib/HotKey1.0/LexillaARM.dll
+  build/net40/lib/HotKey1.0/LexillaARM64.dll
   build/net40/lib/HotKey1.0/ScintillaNET.dll
   build/net40/lib/HotKey1.0/pkgIndex_1265135207d01249.eagle
   build/net40/lib/HotKey1.0/pkgIndex_1265135207d01249.eagle.harpy

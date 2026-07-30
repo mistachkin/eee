@@ -490,6 +490,10 @@ namespace Featherlight.Shell
         ///////////////////////////////////////////////////////////////////////
 
         #region Destructor
+        /// <summary>
+        /// Finalizes this object, releasing any resources that were not
+        /// released by an explicit call to <see cref="Dispose()" />.
+        /// </summary>
         ~WindowRegistrar()
         {
             Dispose(false);

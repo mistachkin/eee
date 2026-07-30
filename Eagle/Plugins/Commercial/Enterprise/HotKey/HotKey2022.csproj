@@ -432,23 +432,53 @@
     <None Include="$(EagleScintillaNetDirectory)\ScintillaNET.dll">
       <Link>Externals\ScintillaNET\ScintillaNET.dll</Link>
     </None>
-    <None Include="$(EagleDir)\Externals\Scintilla\x86\SciLexer.dll">
-      <Link>Externals\Scintilla\x86\SciLexer.dll</Link>
+    <None Include="$(EagleDir)\Externals\Scintilla\x86\Scintilla.dll">
+      <Link>Externals\Scintilla\x86\Scintilla.dll</Link>
     </None>
-    <None Include="$(EagleDir)\Externals\Scintilla\x86\SciLexer.pdb">
-      <Link>Externals\Scintilla\x86\SciLexer.pdb</Link>
+    <None Include="$(EagleDir)\Externals\Scintilla\x86\Scintilla.pdb">
+      <Link>Externals\Scintilla\x86\Scintilla.pdb</Link>
     </None>
-    <None Include="$(EagleDir)\Externals\Scintilla\x64\SciLexer64.dll">
-      <Link>Externals\Scintilla\x64\SciLexer64.dll</Link>
+    <None Include="$(EagleDir)\Externals\Scintilla\x86\Lexilla.dll">
+      <Link>Externals\Scintilla\x86\Lexilla.dll</Link>
     </None>
-    <None Include="$(EagleDir)\Externals\Scintilla\x64\SciLexer64.pdb">
-      <Link>Externals\Scintilla\x64\SciLexer64.pdb</Link>
+    <None Include="$(EagleDir)\Externals\Scintilla\x86\Lexilla.pdb">
+      <Link>Externals\Scintilla\x86\Lexilla.pdb</Link>
     </None>
-    <None Include="$(EagleDir)\Externals\Scintilla\ARM\SciLexerARM.dll">
-      <Link>Externals\Scintilla\ARM\SciLexerARM.dll</Link>
+    <None Include="$(EagleDir)\Externals\Scintilla\x64\Scintilla64.dll">
+      <Link>Externals\Scintilla\x64\Scintilla64.dll</Link>
     </None>
-    <None Include="$(EagleDir)\Externals\Scintilla\ARM\SciLexerARM.pdb">
-      <Link>Externals\Scintilla\ARM\SciLexerARM.pdb</Link>
+    <None Include="$(EagleDir)\Externals\Scintilla\x64\Scintilla64.pdb">
+      <Link>Externals\Scintilla\x64\Scintilla64.pdb</Link>
+    </None>
+    <None Include="$(EagleDir)\Externals\Scintilla\x64\Lexilla64.dll">
+      <Link>Externals\Scintilla\x64\Lexilla64.dll</Link>
+    </None>
+    <None Include="$(EagleDir)\Externals\Scintilla\x64\Lexilla64.pdb">
+      <Link>Externals\Scintilla\x64\Lexilla64.pdb</Link>
+    </None>
+    <None Include="$(EagleDir)\Externals\Scintilla\ARM\ScintillaARM.dll">
+      <Link>Externals\Scintilla\ARM\ScintillaARM.dll</Link>
+    </None>
+    <None Include="$(EagleDir)\Externals\Scintilla\ARM\ScintillaARM.pdb">
+      <Link>Externals\Scintilla\ARM\ScintillaARM.pdb</Link>
+    </None>
+    <None Include="$(EagleDir)\Externals\Scintilla\ARM\LexillaARM.dll">
+      <Link>Externals\Scintilla\ARM\LexillaARM.dll</Link>
+    </None>
+    <None Include="$(EagleDir)\Externals\Scintilla\ARM\LexillaARM.pdb">
+      <Link>Externals\Scintilla\ARM\LexillaARM.pdb</Link>
+    </None>
+    <None Include="$(EagleDir)\Externals\Scintilla\ARM64\ScintillaARM64.dll">
+      <Link>Externals\Scintilla\ARM64\ScintillaARM64.dll</Link>
+    </None>
+    <None Include="$(EagleDir)\Externals\Scintilla\ARM64\ScintillaARM64.pdb">
+      <Link>Externals\Scintilla\ARM64\ScintillaARM64.pdb</Link>
+    </None>
+    <None Include="$(EagleDir)\Externals\Scintilla\ARM64\LexillaARM64.dll">
+      <Link>Externals\Scintilla\ARM64\LexillaARM64.dll</Link>
+    </None>
+    <None Include="$(EagleDir)\Externals\Scintilla\ARM64\LexillaARM64.pdb">
+      <Link>Externals\Scintilla\ARM64\LexillaARM64.pdb</Link>
     </None>
   </ItemGroup>
   <ItemGroup>

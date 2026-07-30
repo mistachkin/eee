@@ -411,6 +411,10 @@ namespace Featherlight.Components.Private
         ///////////////////////////////////////////////////////////////////////
 
         #region Destructor
+        /// <summary>
+        /// Finalizes this stream, releasing any resources that were not
+        /// released by an explicit call to <see cref="Stream.Dispose()" />.
+        /// </summary>
         ~HostStream()
         {
             Dispose(false);

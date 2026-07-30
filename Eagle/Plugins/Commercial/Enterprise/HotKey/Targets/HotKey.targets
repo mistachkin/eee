@@ -83,6 +83,11 @@
       <Output ItemName="CopyScintillaExternalsItem3" TaskParameter="Include" />
     </CreateItem>
 
+    <CreateItem Include="$(EagleDir)\Externals\Scintilla\ARM64\*"
+                Exclude="$(EagleDir)\Externals\Scintilla\ARM64\no_*">
+      <Output ItemName="CopyScintillaExternalsItem4" TaskParameter="Include" />
+    </CreateItem>
+
     <Copy SourceFiles="@(CopyScintillaExternalsItem1)"
           DestinationFolder="$(OutputPath)" />
 
@@ -90,6 +95,9 @@
           DestinationFolder="$(OutputPath)" />
 
     <Copy SourceFiles="@(CopyScintillaExternalsItem3)"
+          DestinationFolder="$(OutputPath)" />
+
+    <Copy SourceFiles="@(CopyScintillaExternalsItem4)"
           DestinationFolder="$(OutputPath)" />
 
     <Touch AlwaysCreate="true"

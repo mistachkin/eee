@@ -29,8 +29,8 @@ using _Public = Eagle._Components.Public;
 namespace HotKey.Components.Private
 {
     /// <summary>
-    /// Provides the integration with the Scintilla source-editing control used
-    /// by the editor forms: locating and pre-loading its native library,
+    /// Provides the integration with the Scintilla source-editing control
+    /// used by the editor forms: locating and pre-loading its native library,
     /// configuring the control (lexer, styles, margins, and properties) for
     /// the Eagle language, and getting, appending, and clicking text.
     /// </summary>
@@ -42,8 +42,25 @@ namespace HotKey.Components.Private
         // NOTE: This is the name of the script variable that contains the
         //       loaded native module handle, if any.
         //
+        /// <summary>
+        /// The script variable that holds the loaded Scintilla native module
+        /// handle.
+        /// </summary>
         private static readonly string NativeLibraryModuleVariableName =
             "::" + typeof(Enterprise).FullName + "_ScintillaModule";
+
+        ///////////////////////////////////////////////////////////////////////
+
+        //
+        // NOTE: This is the name of the script variable that contains the
+        //       loaded Lexilla native module handle, if any.
+        //
+        /// <summary>
+        /// The script variable that holds the loaded Lexilla native module
+        /// handle.
+        /// </summary>
+        private static readonly string NativeLibraryLexerModuleVariableName =
+            "::" + typeof(Enterprise).FullName + "_LexillaModule";
 
         ///////////////////////////////////////////////////////////////////////
 
@@ -56,7 +73,20 @@ namespace HotKey.Components.Private
         /// <summary>
         /// The module name prefix of the Scintilla native library.
         /// </summary>
-        private static string NativeLibraryModulePrefix = "SciLexer";
+        private static string NativeLibraryModulePrefix = "Scintilla";
+
+        ///////////////////////////////////////////////////////////////////////
+
+        //
+        // NOTE: Scintilla 5.x split the lexers into a separate "Lexilla"
+        //       native module; it must be pre-loaded alongside the core.
+        //
+        // HACK: This is purposely not read-only.
+        //
+        /// <summary>
+        /// The module name prefix of the Lexilla native library.
+        /// </summary>
+        private static string NativeLibraryLexerModulePrefix = "Lexilla";
 
         ///////////////////////////////////////////////////////////////////////
 
@@ -82,7 +112,22 @@ namespace HotKey.Components.Private
         /// <summary>
         /// The file name of the Scintilla native library module.
         /// </summary>
-        private static string NativeLibraryFileName = GetModuleName();
+        private static string NativeLibraryFileName = GetModuleName(
+            NativeLibraryModulePrefix);
+
+        ///////////////////////////////////////////////////////////////////////
+
+        //
+        // NOTE: This is the file name for the Lexilla native library needed
+        //       by this process (i.e. 32-bit or 64-bit).
+        //
+        // HACK: This is purposely not read-only.
+        //
+        /// <summary>
+        /// The file name of the Lexilla native library module.
+        /// </summary>
+        private static string NativeLibraryLexerFileName = GetModuleName(
+            NativeLibraryLexerModulePrefix);
 
         ///////////////////////////////////////////////////////////////////////
 
@@ -91,10 +136,18 @@ namespace HotKey.Components.Private
         //       native Scintilla library needed by this process (i.e. 32-bit
         //       or 64-bit).
         //
+        /// <summary>
+        /// The script that force-loads and locks the native Scintilla and
+        /// Lexilla modules.
+        /// </summary>
         private static readonly string NativeLibraryPreLoadScript =
-            String.Format("set {0} [library checkload -locked -- {1}];",
+            String.Format(
+            "set {0} [library checkload -locked -- {1}]; " +
+            "set {2} [library checkload -locked -- {3}];",
             Parser.Quote(NativeLibraryModuleVariableName), Parser.Quote(
-            Path.Combine(NativeLibraryDirectory, NativeLibraryFileName)));
+            Path.Combine(NativeLibraryDirectory, NativeLibraryFileName)),
+            Parser.Quote(NativeLibraryLexerModuleVariableName), Parser.Quote(
+            Path.Combine(NativeLibraryDirectory, NativeLibraryLexerFileName)));
 
         //
         // NOTE: This is the script used to attempt to cleanup the native
@@ -102,9 +155,16 @@ namespace HotKey.Components.Private
         //       64-bit).  It does not actually unload the native library
         //       as that cannot be done safely.
         //
+        /// <summary>
+        /// The script that releases the pre-loaded native module handles
+        /// (the locked libraries themselves remain loaded, as they cannot
+        /// be unloaded safely).
+        /// </summary>
         private static readonly string NativeLibraryCleanupScript =
-            String.Format("library unload [set {0}];", Parser.Quote(
-            NativeLibraryModuleVariableName));
+            String.Format(
+            "library unload [set {0}]; library unload [set {1}];",
+            Parser.Quote(NativeLibraryModuleVariableName),
+            Parser.Quote(NativeLibraryLexerModuleVariableName));
 
         ///////////////////////////////////////////////////////////////////////
 
@@ -132,6 +192,10 @@ namespace HotKey.Components.Private
         //       the file name containing a ScintillaNET configuration file to
         //       use.
         //
+        /// <summary>
+        /// The optional script variable naming a ScintillaNET configuration
+        /// file to use.
+        /// </summary>
         private static readonly string ConfigureFileNameVariableName =
             "::" + typeof(Enterprise).FullName + "_ScintillaConfigureFileName(" +
             VersionElementName + ")";
@@ -143,6 +207,10 @@ namespace HotKey.Components.Private
         //       the script that is used to pre-configure the Scintilla control
         //       via an opaque object handle provided by the hot-key plugin.
         //
+        /// <summary>
+        /// The optional script variable holding the script that pre-configures
+        /// the Scintilla control.
+        /// </summary>
         private static readonly string PreConfigureScriptVariableName =
             "::" + typeof(Enterprise).FullName + "_ScintillaPreConfigureScript(" +
             VersionElementName + ")";
@@ -154,6 +222,10 @@ namespace HotKey.Components.Private
         //       the script that is used to configure the Scintilla control via
         //       an opaque object handle provided by the hot-key plugin.
         //
+        /// <summary>
+        /// The optional script variable holding the script that configures
+        /// the Scintilla control.
+        /// </summary>
         private static readonly string ConfigureScriptVariableName =
             "::" + typeof(Enterprise).FullName + "_ScintillaConfigureScript(" +
             VersionElementName + ")";
@@ -165,6 +237,10 @@ namespace HotKey.Components.Private
         //       the script that is used to customize the Scintilla control via
         //       an opaque object handle provided by the hot-key plugin.
         //
+        /// <summary>
+        /// The optional script variable holding the script that customizes
+        /// the Scintilla control.
+        /// </summary>
         private static readonly string SetPropertyScriptVariableName =
             "::" + typeof(Enterprise).FullName + "_ScintillaSetPropertyScript(" +
             VersionElementName + ")";
@@ -176,6 +252,10 @@ namespace HotKey.Components.Private
         //       the theme that is used to build the XML resource name that is
         //       used to configure the Scintilla control syntax highlighting.
         //
+        /// <summary>
+        /// The optional script variable holding the theme used to build the
+        /// Scintilla syntax-highlighting resource name.
+        /// </summary>
         private static readonly string ThemeVariableName =
             "::" + typeof(Enterprise).FullName + "_ScintillaTheme(" +
             VersionElementName + ")";
@@ -250,30 +330,30 @@ namespace HotKey.Components.Private
         /// <returns>
         /// The native library module file name.
         /// </returns>
-        private static string GetModuleName()
+        private static string GetModuleName(string prefix)
         {
             switch (Utility.GetProcessorArchitecture())
             {
                 case _Public.ProcessorArchitecture.Intel:
                 case _Public.ProcessorArchitecture.IA32_on_Win64:
                     {
-                        return NativeLibraryModulePrefix;
+                        return prefix;
                     }
                 case _Public.ProcessorArchitecture.ARM:
                     {
-                        return NativeLibraryModulePrefix + "ARM";
+                        return prefix + "ARM";
                     }
                 case _Public.ProcessorArchitecture.ARM64:
                     {
-                        return NativeLibraryModulePrefix + "ARM64";
+                        return prefix + "ARM64";
                     }
                 case _Public.ProcessorArchitecture.IA64:
                     {
-                        return NativeLibraryModulePrefix + "Itanium";
+                        return prefix + "Itanium";
                     }
                 case _Public.ProcessorArchitecture.AMD64:
                     {
-                        return NativeLibraryModulePrefix + "64";
+                        return prefix + "64";
                     }
                 default:
                     {
@@ -365,6 +445,17 @@ namespace HotKey.Components.Private
         {
             ReturnCode code;
             Result result = null;
+
+            //
+            // NOTE: Point ScintillaNET at the same directory we pre-load
+            //       (and lock) the native Scintilla / Lexilla modules
+            //       from, so both sides resolve the identical files.
+            //
+            if (!String.IsNullOrEmpty(NativeLibraryDirectory) &&
+                Path.IsPathRooted(NativeLibraryDirectory))
+            {
+                Scintilla.SetModulePath(NativeLibraryDirectory);
+            }
 
             code = ScriptOps.Evaluate(
                 interpreter, NativeLibraryPreLoadScript, false, false,

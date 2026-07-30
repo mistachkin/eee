@@ -238,6 +238,10 @@ namespace Licensing.Sdk.Private
         private const CreateFlags SdkPluginCreateFlags =
             CreateFlags.ProbePlugins;
 #else
+        /// <summary>
+        /// These are the extra, plugin-isolated related, creation flags used
+        /// to create interpreters that are only for use by this class.
+        /// </summary>
         private const CreateFlags SdkPluginCreateFlags = CreateFlags.None;
 #endif
 

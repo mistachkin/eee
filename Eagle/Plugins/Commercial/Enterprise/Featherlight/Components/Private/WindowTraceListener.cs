@@ -309,6 +309,10 @@ namespace Featherlight.Components.Private
         ///////////////////////////////////////////////////////////////////////
 
         #region Destructor
+        /// <summary>
+        /// Finalizes this trace listener, releasing any resources that were
+        /// not by an explicit call to <see cref="TraceListener.Dispose()" />.
+        /// </summary>
         ~WindowTraceListener()
         {
             Dispose(false);

@@ -1045,6 +1045,10 @@ namespace Demo
         ///////////////////////////////////////////////////////////////////////
 
         #region Destructor
+        /// <summary>
+        /// Finalizes this plugin, releasing any resources that were not
+        /// released by an explicit call to <see cref="Dispose()" />.
+        /// </summary>
         ~Enterprise()
         {
             Dispose(false);

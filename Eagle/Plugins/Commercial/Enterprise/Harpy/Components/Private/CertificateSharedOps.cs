@@ -8679,6 +8679,15 @@ namespace Licensing.Components.Private
                 return true;
             }
 
+#if DEBUG
+            if (DataOps.MatchPublicKeyToken(
+                    publicKeyToken, Constants.BuildPublicKeyTokenBytes))
+            {
+                reason = Constants.BuildKeyReason;
+                return true;
+            }
+#endif
+
 #if DEMO_KEY_PAIRS || DEMO_EDITION
             //
             // TODO: Maybe remove this and simply rely on the Promotional
@@ -8742,9 +8751,11 @@ namespace Licensing.Components.Private
                 new StringPair(_PublicKeyToken.Class1, "<class1>"),
                 new StringPair(_PublicKeyToken.Class2, "<class2>"),
                 new StringPair(_PublicKeyToken.Demo, "<demo>"),
-                new StringPair(_PublicKeyToken.Mistachkin, "<mistachkin>"),
+#if DEBUG
                 new StringPair(_PublicKeyToken.Build, "<build>"),
-                new StringPair(_PublicKeyToken.Test, "<test>")
+                new StringPair(_PublicKeyToken.Test, "<test>"),
+#endif
+                new StringPair(_PublicKeyToken.Mistachkin, "<mistachkin>")
             };
 
             foreach (StringPair pair in pairs)
