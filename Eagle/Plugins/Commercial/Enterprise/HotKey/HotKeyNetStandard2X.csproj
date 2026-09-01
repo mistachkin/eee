@@ -333,7 +333,7 @@
             sibling of the Eagle checkout) so it is rebuilt alongside HotKey.
   -->
   <ItemGroup Condition="'$(Scintilla)' != 'false'">
-    <ProjectReference Include="..\..\..\..\..\..\ScintillaNET\src\ScintillaNET\ScintillaNET_NetStandard2X.csproj">
+    <ProjectReference Include="..\..\..\..\Externals\ScintillaNET\prj\src\ScintillaNET\ScintillaNET_NetStandard2X.csproj">
       <Project>{3A578A21-666A-4327-BEF8-111714C78FF3}</Project>
       <Name>ScintillaNET_NetStandard2X</Name>
       <Private>True</Private>

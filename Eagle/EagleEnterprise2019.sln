@@ -71,7 +71,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BadgeNetStandard2X", "Plugi
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HotKeyNetStandard2X", "Plugins\Commercial\Enterprise\HotKey\HotKeyNetStandard2X.csproj", "{B2D7A262-BE84-41A0-8A6E-FB708595A12D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ScintillaNET_NetStandard2X", "..\..\ScintillaNET\src\ScintillaNET\ScintillaNET_NetStandard2X.csproj", "{3A578A21-666A-4327-BEF8-111714C78FF3}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ScintillaNET_NetStandard2X", "Externals\ScintillaNET\prj\src\ScintillaNET\ScintillaNET_NetStandard2X.csproj", "{3A578A21-666A-4327-BEF8-111714C78FF3}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HotKey2019", "Plugins\Commercial\Enterprise\HotKey\HotKey2019.csproj", "{CF256A1F-0F9D-4B2E-90CA-1983282E318D}"
 	ProjectSection(ProjectDependencies) = postProject
